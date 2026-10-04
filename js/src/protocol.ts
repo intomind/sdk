@@ -1154,7 +1154,7 @@ export interface Prediction {
   readonly gapInWindow: boolean;
   /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
-  /** Whether lead-off was active at any point in the window. */
+  /** Whether an electrode was off at some point in the window. */
   readonly leadoffInWindow: boolean;
   /** The head's outputs for this window. */
   readonly outputs: number[];
@@ -1213,7 +1213,7 @@ export interface PredictionFields {
   gapInWindow?: boolean;
   /** Whether the device skipped windows to stay within its compute budget. */
   dutyReduced?: boolean;
-  /** Whether lead-off was active at any point in the window. */
+  /** Whether an electrode was off at some point in the window. */
   leadoffInWindow?: boolean;
   /** What the window was taken from, an `INPUT_SOURCES` value. */
   inputSource?: number;
@@ -2176,7 +2176,7 @@ export interface Embedding {
   readonly gapInWindow: boolean;
   /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
-  /** Whether lead-off was active at any point in the window. */
+  /** Whether an electrode was off at some point in the window. */
   readonly leadoffInWindow: boolean;
   /** Quantized values: the encoder's output times 4096. */
   readonly values: number[];
@@ -2240,7 +2240,7 @@ export interface EmbeddingFields {
   gapInWindow?: boolean;
   /** Whether the device skipped windows to stay within its compute budget. */
   dutyReduced?: boolean;
-  /** Whether lead-off was active at any point in the window. */
+  /** Whether an electrode was off at some point in the window. */
   leadoffInWindow?: boolean;
   /** The values carried in this notification. */
   values: ArrayLike<number>;
@@ -2289,7 +2289,7 @@ export interface EmbeddingWindow {
   readonly gapInWindow: boolean;
   /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
-  /** Whether lead-off was active at any point in the window. */
+  /** Whether an electrode was off at some point in the window. */
   readonly leadoffInWindow: boolean;
   /** The window embedding, quantized, when asked for. */
   readonly embedding: number[] | null;
