@@ -170,6 +170,21 @@ pub fn layout(blob: &[u8], embed_dim: u16, max_outputs: u8) -> Result<HeadLayout
     layout_of(blob, header)
 }
 
+/// The head stored at the start of a slot: as many bytes as its header says
+/// it has. A slot is larger than the head in it, and `layout` holds a blob to
+/// its exact length, so a slot is read through this first. A slot whose
+/// header does not read, an erased one, or whose header claims more than the
+/// slot holds, is returned whole, and `layout` then refuses it.
+pub fn stored(slot: &[u8]) -> &[u8] {
+    match HeadHeader::parse(slot) {
+        Ok(h) => match blob_len(h.version, h.in_dim, h.out_dim) {
+            n if n <= slot.len() => &slot[..n],
+            _ => slot,
+        },
+        Err(_) => slot,
+    }
+}
+
 /// The layout of a head of any input width: what a device needs to list a
 /// stored head whose width is not the loaded encoder's. Such a head is
 /// described and never run.
@@ -285,6 +300,31 @@ pub fn encode_unhashed(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_head_reads_back_from_a_slot_larger_than_itself() {
+        let header = HeadHeader { version: FORMAT_VERSION_2, kind: KIND_LINEAR, in_dim: 76, out_dim: 1, name: [b'a'; 16], encoder_id: [0xE2; 8] };
+        let n = blob_len(FORMAT_VERSION_2, 76, 1);
+        assert_eq!(n, 156, "the open age head's size");
+        // A 4 KB slot, erased, with the head written at its start.
+        let mut slot = [0xFFu8; 4096];
+        let len = encode_unhashed(&header, &[1; 76], &[0], &[1.0], &mut slot).unwrap();
+        assert_eq!(len, n);
+        // The whole slot is not a head: this is how every stored head read
+        // as empty until 1.4.1.
+        assert_eq!(layout_any(&slot, 32), Err(HeadError::Length));
+        let l = layout_any(stored(&slot), 32).unwrap();
+        assert_eq!((l.header.in_dim, l.header.out_dim, l.hashed.len(), l.hash.len()), (76, 1, n - HASH_LEN, HASH_LEN));
+        assert_eq!(layout(stored(&slot), 76, 32).unwrap().header, header);
+        // An erased slot reads as no head at all.
+        let erased = [0xFFu8; 4096];
+        assert_eq!(stored(&erased).len(), 4096);
+        assert_eq!(layout_any(stored(&erased), 32), Err(HeadError::Malformed));
+        // A header that claims more than the slot holds is refused, not cut.
+        let short = &slot[..100];
+        assert_eq!(stored(short).len(), 100);
+        assert_eq!(layout_any(stored(short), 32), Err(HeadError::Length));
+    }
 
     #[test]
     fn the_embedding_quantizes_to_the_published_scale() {
