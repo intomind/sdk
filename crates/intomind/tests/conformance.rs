@@ -309,15 +309,31 @@ fn the_registers_and_the_embeddings_decode_and_a_window_comes_back_whole() {
     }
 
     let parts = find(&v, "decode", "embedding");
-    let window = Embedding::parse(&bytes_of(parts[0]["bytes"].as_str().unwrap())).unwrap();
-    assert_eq!((window.token, window.embed_dim, window.values.len()), (None, 96, 96));
-    assert!(window.leadoff_in_window && !window.more_parts);
-    let want: Vec<i16> = parts[0]["fields"]["values"].as_array().unwrap().iter().map(|x| x.as_i64().unwrap() as i16).collect();
-    assert_eq!(window.values, want);
-    let one = Embedding::parse(&bytes_of(parts[1]["bytes"].as_str().unwrap())).unwrap();
-    let two = Embedding::parse(&bytes_of(parts[2]["bytes"].as_str().unwrap())).unwrap();
-    assert_eq!((one.token, one.first, one.values.len(), one.more_parts), (Some(17), 0, 108, true));
-    assert_eq!((two.token, two.first, two.values.len(), two.more_parts), (Some(17), 108, 20, false));
+    let values_of = |e: &serde_json::Value| -> Vec<i16> { e["fields"]["values"].as_array().unwrap().iter().map(|x| x.as_i64().unwrap() as i16).collect() };
+    // The launch model's window embedding as a device sends it from 1.4.2:
+    // two parts, each within the 156 byte limit (1.4, section 27).
+    for i in [0, 1, 3, 4] {
+        assert!(bytes_of(parts[i]["bytes"].as_str().unwrap()).len() <= protocol::NOTIFICATION_MAX, "{}", parts[i]["name"]);
+    }
+    let head = Embedding::parse(&bytes_of(parts[0]["bytes"].as_str().unwrap())).unwrap();
+    let tail = Embedding::parse(&bytes_of(parts[1]["bytes"].as_str().unwrap())).unwrap();
+    assert_eq!((head.token, head.embed_dim, head.first, head.values.len(), head.more_parts), (None, 76, 0, 64, true));
+    assert_eq!((tail.token, tail.first, tail.values.len(), tail.more_parts), (None, 64, 12, false));
+    assert!(head.leadoff_in_window);
+    assert_eq!(head.values, values_of(parts[0]));
+    // The same vector as firmware before 1.4.2 sent it, in one notification,
+    // reads the same, and the two parts put back together equal it.
+    let whole = Embedding::parse(&bytes_of(parts[2]["bytes"].as_str().unwrap())).unwrap();
+    assert_eq!((whole.first, whole.values.len(), whole.more_parts), (0, 76, false));
+    let mut joined = Assembler::new(1, 1, Form::Window);
+    assert!(joined.feed(head).is_none());
+    let w = joined.feed(tail).expect("the second part completes the window embedding");
+    assert_eq!(w.embedding, Some(whole.values.clone()));
+    assert_eq!(whole.values, values_of(parts[2]));
+    let one = Embedding::parse(&bytes_of(parts[3]["bytes"].as_str().unwrap())).unwrap();
+    let two = Embedding::parse(&bytes_of(parts[4]["bytes"].as_str().unwrap())).unwrap();
+    assert_eq!((one.token, one.first, one.values.len(), one.more_parts), (Some(17), 0, 64, true));
+    assert_eq!((two.token, two.first, two.values.len(), two.more_parts), (Some(17), 64, 64, false));
 
     // A whole window from notifications in any order: one channel, three
     // tokens of four values, and the window embedding, one token in two parts.
@@ -369,7 +385,7 @@ fn the_registers_and_the_embeddings_decode_and_a_window_comes_back_whole() {
     // The session hands an embedding notification on as an event.
     let mut s = session_with_info(&v);
     let ev = s.on_notification(protocol::uuid_fill::EMBEDDINGS, &bytes_of(parts[0]["bytes"].as_str().unwrap()));
-    assert!(matches!(ev.as_slice(), [intomind::Event::Embedding(e)] if e.embed_dim == 96));
+    assert!(matches!(ev.as_slice(), [intomind::Event::Embedding(e)] if e.embed_dim == 76 && e.more_parts));
 }
 
 #[test]

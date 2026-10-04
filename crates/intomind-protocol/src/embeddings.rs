@@ -14,8 +14,13 @@ pub const HEADER_LEN: usize = 28;
 /// The `token` byte of a window embedding. A token's own index otherwise,
 /// channel-major over all channels: `channel * tokens_per_channel + slice`.
 pub const WINDOW_TOKEN: u8 = 0xFF;
-/// Values one notification carries at the smallest MTU the contract allows.
-pub const MAX_VALUES_PER_PACKET: usize = (244 - HEADER_LEN) / 2;
+/// Values one notification carries: as many as fit
+/// [`NOTIFICATION_MAX`](crate::NOTIFICATION_MAX) after the header, so that
+/// every part of every vector arrives whole at the smallest MTU the
+/// contract allows. A wider vector goes in parts (section 27 of 1.4).
+/// Until firmware 1.4.2 a part carried 108 values, 244 bytes, which a host
+/// below an MTU of 247 received cut short.
+pub const MAX_VALUES_PER_PACKET: usize = (crate::NOTIFICATION_MAX - HEADER_LEN) / 2;
 
 pub mod flags {
     pub const GAP_IN_WINDOW: u8 = 1 << 0;
@@ -162,20 +167,20 @@ mod tests {
     }
 
     #[test]
-    fn a_window_embedding_round_trips_in_one_notification() {
-        let h = header(0, WINDOW_TOKEN, flags::LEADOFF_IN_WINDOW);
-        let values: [i16; 96] = core::array::from_fn(|i| (i as i16 - 48) * 100);
-        let mut buf = [0u8; 244];
+    fn a_vector_that_fits_round_trips_in_one_notification() {
+        let mut h = header(0, WINDOW_TOKEN, flags::LEADOFF_IN_WINDOW);
+        h.embed_dim = 64;
+        let values: [i16; 64] = core::array::from_fn(|i| (i as i16 - 32) * 100);
+        let mut buf = [0u8; crate::NOTIFICATION_MAX];
         let n = h.encode(&values, &mut buf).unwrap();
-        assert_eq!(n, HEADER_LEN + 192);
-        assert!(n <= 244);
+        assert_eq!(n, crate::NOTIFICATION_MAX);
         let (h2, v) = EmbeddingHeader::parse(&buf[..n]).unwrap();
         assert_eq!(h2, h);
-        assert_eq!(v.len(), 96);
-        assert_eq!(v.get(0), Some(-4800));
-        assert_eq!(v.get(95), Some(4700));
-        assert!(v.get(96).is_none());
-        assert_eq!(v.iter().count(), 96);
+        assert_eq!(v.len(), 64);
+        assert_eq!(v.get(0), Some(-3200));
+        assert_eq!(v.get(63), Some(3100));
+        assert!(v.get(64).is_none());
+        assert_eq!(v.iter().count(), 64);
         assert!(h2.is_last_part());
     }
 
@@ -183,24 +188,24 @@ mod tests {
     fn a_wide_vector_goes_in_parts_that_name_their_place() {
         let mut h = header(0, 17, flags::MORE_PARTS);
         h.embed_dim = 128;
-        let mut buf = [0u8; 244];
+        let mut buf = [0u8; crate::NOTIFICATION_MAX];
         let n = h.encode(&[7i16; MAX_VALUES_PER_PACKET], &mut buf).unwrap();
-        assert_eq!(n, 244);
+        assert_eq!(n, crate::NOTIFICATION_MAX);
         let (p1, v1) = EmbeddingHeader::parse(&buf[..n]).unwrap();
         assert!(!p1.is_last_part());
-        assert_eq!((p1.first, v1.len(), p1.token), (0, 108, 17));
-        let h2 = EmbeddingHeader { first: 108, flags: 0, ..h };
-        let n = h2.encode(&[9i16; 20], &mut buf).unwrap();
+        assert_eq!((p1.first, v1.len(), p1.token), (0, 64, 17));
+        let h2 = EmbeddingHeader { first: 64, flags: 0, ..h };
+        let n = h2.encode(&[9i16; 64], &mut buf).unwrap();
         let (p2, v2) = EmbeddingHeader::parse(&buf[..n]).unwrap();
         assert!(p2.is_last_part());
-        assert_eq!((p2.first, v2.len()), (108, 20));
+        assert_eq!((p2.first, v2.len()), (64, 64));
         assert_eq!(p2.first as usize + v2.len(), p2.embed_dim as usize);
     }
 
     #[test]
     fn values_outside_the_vector_and_odd_payloads_are_refused() {
         let h = header(90, WINDOW_TOKEN, 0);
-        let mut buf = [0u8; 244];
+        let mut buf = [0u8; crate::NOTIFICATION_MAX];
         assert_eq!(h.encode(&[1i16; 7], &mut buf), Err(Error::Invalid));
         assert_eq!(h.encode(&[], &mut buf), Err(Error::Invalid));
         let n = h.encode(&[1i16; 6], &mut buf).unwrap();
@@ -213,9 +218,32 @@ mod tests {
         assert_eq!(EmbeddingHeader::parse(&buf[..n]), Err(Error::Invalid));
     }
 
+    /// Every part of every vector the format can carry fits the limit, and
+    /// the parts tile the vector exactly. The launch model's 76 values go
+    /// in two parts, 64 and 12. With the 108-value parts of firmware 1.4.1
+    /// and before, its one part was 180 bytes, more than an MTU of 159
+    /// carries.
     #[test]
-    fn the_launch_model_fits_one_notification_per_vector() {
-        assert!(HEADER_LEN + 96 * 2 <= 244);
-        assert_eq!(MAX_VALUES_PER_PACKET, 108);
+    fn every_part_of_every_vector_fits_one_notification() {
+        assert_eq!(MAX_VALUES_PER_PACKET, 64);
+        assert_eq!(HEADER_LEN + 2 * MAX_VALUES_PER_PACKET, crate::NOTIFICATION_MAX);
+        for dim in 1..=u8::MAX as usize {
+            let mut first = 0;
+            let mut parts = 0;
+            while first < dim {
+                let n = (dim - first).min(MAX_VALUES_PER_PACKET);
+                let more = first + n < dim;
+                let h = EmbeddingHeader { embed_dim: dim as u8, first: first as u8, ..header(0, 3, if more { flags::MORE_PARTS } else { 0 }) };
+                let mut buf = [0u8; crate::NOTIFICATION_MAX];
+                let len = h.encode(&[1i16; MAX_VALUES_PER_PACKET][..n], &mut buf).unwrap();
+                assert!(len <= crate::NOTIFICATION_MAX);
+                let (p, v) = EmbeddingHeader::parse(&buf[..len]).unwrap();
+                assert_eq!((p.first as usize, v.len(), p.is_last_part()), (first, n, !more));
+                first += n;
+                parts += 1;
+            }
+            assert_eq!(parts, dim.div_ceil(MAX_VALUES_PER_PACKET));
+        }
+        assert_eq!(76usize.div_ceil(MAX_VALUES_PER_PACKET), 2);
     }
 }

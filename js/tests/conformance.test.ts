@@ -466,7 +466,7 @@ test("every message decodes to the fields the contract states", () => {
     check(vector, decode(bytesOf(vector.bytes), vector), FLOAT_KINDS.has(vector.kind) ? 1e-6 : 1e-9);
   }
   assert.equal(seen.size, 22, "every kind the contract carries has a decoder");
-  assert.equal(VECTORS.decode.length, 70, "the contract carries seventy messages, and all of them were read");
+  assert.equal(VECTORS.decode.length, 72, "the contract carries seventy two messages, and all of them were read");
 });
 
 test("every message encodes back to the bytes it came from", () => {
@@ -704,6 +704,22 @@ test("the timeline is judged by the contract's rule", () => {
   const wrapped = P.continuity(0xfffffffc, 5, 3, false);
   assert.equal(wrapped.verdict, "gap");
   assert.equal(wrapped.lost, 2);
+});
+
+test("an embedding arrives in parts of at most 156 bytes, and the parts make the whole vector", () => {
+  const parts = VECTORS.decode.filter((v) => v.kind === "embedding");
+  for (const i of [0, 1, 3, 4]) assert.ok(bytesOf(parts[i]!.bytes).length <= 156, parts[i]!.name);
+  const head = P.decodeEmbedding(bytesOf(parts[0]!.bytes));
+  const tail = P.decodeEmbedding(bytesOf(parts[1]!.bytes));
+  assert.deepEqual([head.embedDim, head.first, head.values.length, head.moreParts], [76, 0, 64, true]);
+  assert.deepEqual([tail.first, tail.values.length, tail.moreParts], [64, 12, false]);
+  // The same vector as firmware before 1.4.2 sent it, in one notification,
+  // reads the same, and the two parts put back together equal it.
+  const whole = P.decodeEmbedding(bytesOf(parts[2]!.bytes));
+  assert.deepEqual([whole.first, whole.values.length, whole.moreParts], [0, 76, false]);
+  const joined = new P.EmbeddingAssembler(1, 1, "window");
+  assert.equal(joined.feed(head), null);
+  assert.deepEqual(joined.feed(tail)?.embedding, [...whole.values]);
 });
 
 test("an embedding quantizes to the published scale", () => {

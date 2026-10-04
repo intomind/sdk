@@ -576,7 +576,7 @@ pub fn encode_request_with_payload(opcode: Opcode, payload: &[u8], out: &mut [u8
 /// The longest answer on Control Response, opcode and status included: an
 /// indication at the smallest MTU the contract allows for anything but
 /// EEG Data, 159, less its three byte header (section 3 of 1.0).
-pub const RESPONSE_MAX: usize = 156;
+pub const RESPONSE_MAX: usize = crate::NOTIFICATION_MAX;
 
 /// The longest payload an answer may carry.
 pub const PAYLOAD_MAX: usize = RESPONSE_MAX - 2;

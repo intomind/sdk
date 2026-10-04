@@ -4,6 +4,11 @@ use crate::Error;
 
 pub const PACKET_TYPE_PREDICTION: u8 = 0x02;
 pub const HEADER_LEN: usize = 28;
+/// The most outputs one prediction carries: as many four byte values as fit
+/// [`NOTIFICATION_MAX`](crate::NOTIFICATION_MAX) after the header, so a
+/// prediction always arrives whole. A head may have no more outputs than
+/// this, and the device reports it as `head_max_outputs`.
+pub const MAX_OUTPUTS: usize = (crate::NOTIFICATION_MAX - HEADER_LEN) / 4;
 
 pub mod flags {
     pub const GAP_IN_WINDOW: u8 = 1 << 0;

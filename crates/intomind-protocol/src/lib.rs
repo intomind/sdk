@@ -1,17 +1,19 @@
 //! The IntoMind BLE protocol, version 1.4: the wire format as code.
 //!
-//! This crate is the executable form of the contract in
-//! the protocol specification. The wire formats of v0.1 are unchanged in
-//! v1.0; 1.1 only adds the processing chain, the model's input, the bias
-//! drive, two capability bits, and two bytes that were reserved; 1.2 only
-//! adds the status lamp, the read-only converter registers, embeddings
-//! over the air, three capability bits, and one byte appended to the model
-//! info; 1.3 adds the model's cadence, the device's name, the synthetic
-//! signal, the second capability word, five bytes appended to the model
-//! info, and the encoder identity a head carries; 1.4 adds one control
-//! status, refused while USB power is present. Both the device firmware
-//! and the host tooling build this same crate, so an encode on one side and
-//! a decode on the other are the same code and cannot drift apart.
+//! This crate is the executable form of the contract in the protocol
+//! specification. The wire formats of v0.1 are unchanged in v1.0. Version 1.1
+//! only adds the processing chain, the model's input, the bias drive, two
+//! capability bits, and two bytes that were reserved. Version 1.2 only adds
+//! the status lamp, the read-only converter registers, embeddings over the
+//! air, three capability bits, and one byte appended to the model info.
+//! Version 1.3 adds the model's cadence, the device's name, the synthetic
+//! signal, the second capability word, five bytes appended to the model info,
+//! and the encoder identity a head carries. Version 1.4 adds one control
+//! status, refused while USB power is present, a request for the encoder each
+//! head names, and the 156 byte limit on every embedding notification. Both
+//! the device firmware and the host tooling build this same crate, so an
+//! encode on one side and a decode on the other are the same code and cannot
+//! drift apart.
 //!
 //! `no_std`, no dependencies, no allocation. Every message parses from a
 //! borrowed byte slice and encodes into a caller-provided buffer. Nothing
@@ -33,6 +35,14 @@ pub mod update;
 
 /// Protocol major.minor spoken by this codec.
 pub const PROTOCOL_VERSION: (u8, u8) = (1, 4);
+
+/// The longest notification or indication the device sends on anything but
+/// EEG Data: an MTU of 159, the smallest the contract allows for them, less
+/// the three byte header (section 3 of 1.0). An answer on Control Response,
+/// an embedding, a prediction, a status message and an update indication
+/// each fit it whole, so every host the contract admits receives them
+/// unshortened. EEG Data packets are sized to the negotiated MTU instead.
+pub const NOTIFICATION_MAX: usize = 156;
 
 /// 128-bit UUID base: `f3a1xxxx-2c4b-4d1e-9a6f-1b2c3d4e5f60`.
 /// The sixteen-bit fill for each characteristic.
