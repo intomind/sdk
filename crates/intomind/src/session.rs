@@ -269,8 +269,21 @@ impl Session {
         Ok(self.command(Opcode::ListHeads, None))
     }
 
+    /// Ask which encoder each head names (1.4). The answer arrives as an
+    /// `Event::Answer`, and `protocol::control::HeadEncoders` reads it: one
+    /// record for each `ListHeads` record. A device before 1.4 is not asked,
+    /// and its heads say nothing of their encoder.
+    pub fn list_head_encoders(&self) -> Result<Command, Error> {
+        self.require(p::device_info::capability::HEADS, "heads")?;
+        if self.info.map(|i| i.proto_version < (1, 4)).unwrap_or(true) {
+            return Err(Error::NotCapable("head encoders"));
+        }
+        Ok(self.command(Opcode::ListHeadEncoders, None))
+    }
+
     /// Erase a head slot. Slot zero is the device's own and cannot be
-    /// erased, which the device enforces.
+    /// erased, and no slot is erased while streaming, both of which the
+    /// device enforces.
     pub fn remove_head(&self, slot: u8) -> Result<Command, Error> {
         if !self.can(p::device_info::capability::HEADS) {
             return Err(Error::NotCapable("heads"));

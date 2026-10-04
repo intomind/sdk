@@ -306,6 +306,7 @@ test("a capability the device does not claim is not asked for", () => {
     ["model", () => s.getModelInfo()],
     ["heads", () => s.selectHead(1)],
     ["heads", () => s.listHeads()],
+    ["heads", () => s.listHeadEncoders()],
     ["heads", () => s.removeHead(1)],
     ["battery_voltage", () => s.getBattery()],
     ["test_signal", () => s.setMode(1)],
@@ -322,6 +323,17 @@ test("a capability the device does not claim is not asked for", () => {
   assert.deepEqual(s.startStream().bytes, new Uint8Array([0x01]));
   assert.deepEqual(s.setMode(0).bytes, new Uint8Array([0x20, 0x00]));
   assert.deepEqual(s.setRate(250).bytes, new Uint8Array([0x10, 0x06]));
+});
+
+test("only a 1.4 device is asked which encoder its heads name", () => {
+  for (const [minor, asked] of [[3, false], [4, true], [5, true]] as Array<[number, boolean]>) {
+    const raw = INFO_BYTES.slice();
+    raw[1] = minor;
+    const s = new Session();
+    s.onDeviceInfo(raw);
+    if (asked) assert.deepEqual(s.listHeadEncoders().bytes, new Uint8Array([0x8a]), `1.${minor}`);
+    else assert.throws(() => s.listHeadEncoders(), NotCapable, `1.${minor}`);
+  }
 });
 
 test("a time exchange goes to the timebase the device's tick rate built", () => {

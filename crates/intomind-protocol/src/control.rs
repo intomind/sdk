@@ -44,6 +44,9 @@ pub enum Opcode {
     /// 1.3: the interval between the windows the model describes.
     SetModelInterval = 0x88,
     GetModelInterval = 0x89,
+    /// 1.4: the encoder id each head names, one record for each LIST_HEADS
+    /// record.
+    ListHeadEncoders = 0x8A,
     /// 1.3: the name and the adjective the device composes its name from.
     GetName = 0x47,
     SetName = 0x48,
@@ -87,6 +90,7 @@ impl Opcode {
             0x87 => Self::SetEmbeddings,
             0x88 => Self::SetModelInterval,
             0x89 => Self::GetModelInterval,
+            0x8A => Self::ListHeadEncoders,
             0x47 => Self::GetName,
             0x48 => Self::SetName,
             0x90 => Self::GetPipelineCatalog,
@@ -155,6 +159,107 @@ impl Opcode {
     /// claims the capability behind them.
     pub fn new_in_1_3(self) -> bool {
         matches!(self, Self::SetModelInterval | Self::GetModelInterval | Self::GetName | Self::SetName)
+    }
+
+    /// Whether the opcode is new in 1.4. A device before 1.4 answers it with
+    /// status 1, so a host sends it only to a device that reports 1.4 or
+    /// later.
+    pub fn new_in_1_4(self) -> bool {
+        matches!(self, Self::ListHeadEncoders)
+    }
+
+    /// Every opcode the contract defines.
+    pub const ALL: [Opcode; 37] = [
+        Self::StartStream,
+        Self::StopStream,
+        Self::SetRate,
+        Self::SetGain,
+        Self::SetMode,
+        Self::SetLeadoff,
+        Self::TimeSync,
+        Self::SetSamplesPerPacket,
+        Self::GetBattery,
+        Self::GetBootInfo,
+        Self::ResetEpoch,
+        Self::ClearBonds,
+        Self::SetPredictions,
+        Self::SelectHead,
+        Self::ListHeads,
+        Self::RemoveHead,
+        Self::GetModelInfo,
+        Self::SetPredictionInput,
+        Self::GetPredictionInput,
+        Self::SetBias,
+        Self::GetBiasDiagnostic,
+        Self::GetConverterRegisters,
+        Self::GetIndicator,
+        Self::SetIndicator,
+        Self::Identify,
+        Self::SetEmbeddings,
+        Self::SetModelInterval,
+        Self::GetModelInterval,
+        Self::ListHeadEncoders,
+        Self::GetName,
+        Self::SetName,
+        Self::GetPipelineCatalog,
+        Self::GetPipeline,
+        Self::SetPipeline,
+        Self::ClearPipeline,
+        Self::RestorePipelineDefault,
+        Self::SoftReset,
+    ];
+
+    /// The longest payload this opcode's answer carries on a device with
+    /// `head_slots` user head slots and `catalog_kinds` stage kinds in its
+    /// processing catalog. Every opcode has one, so a new opcode cannot be
+    /// added without saying how long its answer can be, and a device checks
+    /// at build time that every answer fits `RESPONSE_MAX`.
+    pub const fn answer_max(self, head_slots: usize, catalog_kinds: usize) -> usize {
+        match self {
+            Self::StartStream
+            | Self::StopStream
+            | Self::SetRate
+            | Self::SetGain
+            | Self::SetMode
+            | Self::SetLeadoff
+            | Self::ResetEpoch
+            | Self::ClearBonds
+            | Self::SetPredictions
+            | Self::SelectHead
+            | Self::RemoveHead
+            | Self::SetPredictionInput
+            | Self::SetBias
+            | Self::SetIndicator
+            | Self::Identify
+            | Self::SetEmbeddings
+            | Self::SetModelInterval
+            | Self::SetName
+            | Self::SetPipeline
+            | Self::ClearPipeline
+            | Self::RestorePipelineDefault
+            | Self::SoftReset => 0,
+            // `u64 device_time`.
+            Self::TimeSync => 8,
+            // `u8 applied`.
+            Self::SetSamplesPerPacket => 1,
+            Self::GetBattery => BatteryInfo::LEN,
+            Self::GetBootInfo => BootInfo::LEN,
+            Self::GetModelInfo => ModelInfo::LEN,
+            Self::GetModelInterval => interval::ModelInterval::LEN,
+            Self::GetBiasDiagnostic => crate::pipeline::BiasDiagnostic::LEN,
+            // `u8 level`.
+            Self::GetIndicator => 1,
+            // `family, first, count`, then the values.
+            Self::GetConverterRegisters => 3 + ConverterRegisters::MAX_VALUES,
+            // Two lengths and two parts, each at most a whole name.
+            Self::GetName => 2 + 2 * name::MAX_COMPOSED,
+            // `u8 origin` or `u8 source`, then a chain.
+            Self::GetPipeline | Self::GetPredictionInput => 1 + crate::pipeline::MAX_ENCODED_LEN,
+            Self::GetPipelineCatalog => 1 + catalog_kinds * crate::pipeline::CatalogEntry::LEN,
+            // The built-in slot and the user slots.
+            Self::ListHeads => 2 + (1 + head_slots) * HeadEntry::LEN,
+            Self::ListHeadEncoders => 1 + (1 + head_slots) * HeadEncoder::LEN,
+        }
     }
 }
 
@@ -468,6 +573,39 @@ pub fn encode_request_with_payload(opcode: Opcode, payload: &[u8], out: &mut [u8
     Ok(n)
 }
 
+/// The longest answer on Control Response, opcode and status included: an
+/// indication at the smallest MTU the contract allows for anything but
+/// EEG Data, 159, less its three byte header (section 3 of 1.0).
+pub const RESPONSE_MAX: usize = 156;
+
+/// The longest payload an answer may carry.
+pub const PAYLOAD_MAX: usize = RESPONSE_MAX - 2;
+
+/// The status and length of an answer whose payload was just composed: OK
+/// and the payload's length, or status 5 and nothing when it could not be
+/// composed. A device never answers 2, or a short OK, for an answer it
+/// failed to compose (section 26.3 of 1.4).
+pub fn composed(r: Result<usize, Error>) -> (Status, usize) {
+    match r {
+        Ok(n) => (Status::Ok, n),
+        Err(_) => (Status::Hardware, 0),
+    }
+}
+
+/// Compose an answer into a buffer of the contract's size and return its
+/// length, never zero. A payload longer than an answer may carry is
+/// answered status 5 with nothing after it.
+pub fn compose_response(opcode: u8, status: Status, payload: &[u8], out: &mut [u8; RESPONSE_MAX]) -> usize {
+    match encode_response_raw(opcode, status, payload, out) {
+        Ok(n) => n,
+        Err(_) => {
+            out[0] = opcode;
+            out[1] = Status::Hardware as u8;
+            2
+        }
+    }
+}
+
 /// An outbound response, device side. `payload` is appended verbatim.
 /// For a reserved or unknown opcode the device echoes the raw byte, so this
 /// takes the number rather than the enum.
@@ -617,9 +755,9 @@ pub mod head_state {
     pub const WIDTH_MISMATCH: u8 = 3;
 }
 
-/// One LIST_HEADS record, 30 bytes, plus (1.3) the encoder the head says it
-/// was trained beside, carried after all the records so a 1.2 host's parse
-/// is undisturbed. All zero when the head does not say.
+/// One LIST_HEADS record, 30 bytes, and (1.3) the encoder the head says it
+/// was trained beside, all zero when the head does not say. A device sends
+/// the encoder in LIST_HEAD_ENCODERS (1.4), never in LIST_HEADS.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeadEntry {
     pub slot: u8,
@@ -666,8 +804,9 @@ impl HeadEntry {
     }
 }
 
-/// LIST_HEADS payload: `u8 active_slot, u8 n_entries`, then the records,
-/// then (1.3) one eight byte encoder id per record.
+/// LIST_HEADS payload: `u8 active_slot, u8 n_entries`, then the records.
+/// 1.3 defined a trailer of one eight byte encoder id per record, which no
+/// device sent and 1.4 withdraws. A host still reads one if it comes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ListHeads<'a> {
     pub active_slot: u8,
@@ -719,13 +858,12 @@ impl<'a> ListHeads<'a> {
     }
 }
 
-/// Encode a LIST_HEADS payload, with the 1.3 trailer of encoder ids.
+/// Encode a LIST_HEADS payload: the records and nothing after them.
 pub fn encode_list_heads(active_slot: u8, entries: &[HeadEntry], out: &mut [u8]) -> Result<usize, Error> {
     if entries.len() > u8::MAX as usize {
         return Err(Error::Invalid);
     }
-    let records_end = 2 + entries.len() * HeadEntry::LEN;
-    let n = records_end + entries.len() * 8;
+    let n = 2 + entries.len() * HeadEntry::LEN;
     if out.len() < n {
         return Err(Error::NoRoom);
     }
@@ -733,7 +871,74 @@ pub fn encode_list_heads(active_slot: u8, entries: &[HeadEntry], out: &mut [u8])
     out[1] = entries.len() as u8;
     for (i, e) in entries.iter().enumerate() {
         e.encode(&mut out[2 + i * HeadEntry::LEN..])?;
-        out[records_end + i * 8..records_end + i * 8 + 8].copy_from_slice(&e.encoder_id);
+    }
+    Ok(n)
+}
+
+/// One LIST_HEAD_ENCODERS record (1.4): a slot and the encoder id its head
+/// names, all zero for an empty slot or a head that does not say.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HeadEncoder {
+    pub slot: u8,
+    pub encoder_id: [u8; 8],
+}
+
+impl HeadEncoder {
+    pub const LEN: usize = 9;
+}
+
+/// LIST_HEAD_ENCODERS payload (1.4): `u8 n_entries`, then one record for
+/// each LIST_HEADS record, in the same order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HeadEncoders<'a> {
+    records: &'a [u8],
+}
+
+impl<'a> HeadEncoders<'a> {
+    pub fn parse(b: &'a [u8]) -> Result<Self, Error> {
+        let (&n, records) = b.split_first().ok_or(Error::Truncated)?;
+        if records.len() != n as usize * HeadEncoder::LEN {
+            return Err(Error::Invalid);
+        }
+        Ok(HeadEncoders { records })
+    }
+
+    pub fn len(&self) -> usize {
+        self.records.len() / HeadEncoder::LEN
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+
+    pub fn get(&self, i: usize) -> Option<HeadEncoder> {
+        let r = self.records.get(i.checked_mul(HeadEncoder::LEN)?..)?.get(..HeadEncoder::LEN)?;
+        let mut encoder_id = [0u8; 8];
+        encoder_id.copy_from_slice(&r[1..9]);
+        Some(HeadEncoder { slot: r[0], encoder_id })
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = HeadEncoder> + 'a {
+        let this = *self;
+        (0..self.len()).filter_map(move |i| this.get(i))
+    }
+}
+
+/// Encode a LIST_HEAD_ENCODERS payload from the same entries LIST_HEADS
+/// lists, in the same order.
+pub fn encode_head_encoders(entries: &[HeadEntry], out: &mut [u8]) -> Result<usize, Error> {
+    if entries.len() > u8::MAX as usize {
+        return Err(Error::Invalid);
+    }
+    let n = 1 + entries.len() * HeadEncoder::LEN;
+    if out.len() < n {
+        return Err(Error::NoRoom);
+    }
+    out[0] = entries.len() as u8;
+    for (i, e) in entries.iter().enumerate() {
+        let r = &mut out[1 + i * HeadEncoder::LEN..1 + (i + 1) * HeadEncoder::LEN];
+        r[0] = e.slot;
+        r[1..9].copy_from_slice(&e.encoder_id);
     }
     Ok(n)
 }
@@ -878,43 +1083,25 @@ mod tests {
 
     #[test]
     fn every_opcode_survives_the_byte_round_trip() {
-        for op in [
-            Opcode::StartStream,
-            Opcode::StopStream,
-            Opcode::SetRate,
-            Opcode::SetGain,
-            Opcode::SetMode,
-            Opcode::SetLeadoff,
-            Opcode::TimeSync,
-            Opcode::SetSamplesPerPacket,
-            Opcode::GetBattery,
-            Opcode::GetBootInfo,
-            Opcode::ResetEpoch,
-            Opcode::ClearBonds,
-            Opcode::SetPredictions,
-            Opcode::SelectHead,
-            Opcode::ListHeads,
-            Opcode::RemoveHead,
-            Opcode::GetModelInfo,
-            Opcode::SetPredictionInput,
-            Opcode::GetPredictionInput,
-            Opcode::SetBias,
-            Opcode::GetBiasDiagnostic,
-            Opcode::GetPipelineCatalog,
-            Opcode::GetPipeline,
-            Opcode::SetPipeline,
-            Opcode::ClearPipeline,
-            Opcode::RestorePipelineDefault,
-            Opcode::GetConverterRegisters,
-            Opcode::GetIndicator,
-            Opcode::SetIndicator,
-            Opcode::Identify,
-            Opcode::SetEmbeddings,
-            Opcode::SoftReset,
-        ] {
+        for op in Opcode::ALL {
             assert_eq!(Opcode::from_u8(op as u8), Some(op));
             assert!(!reserved(op as u8));
         }
+        // The list is every opcode, once.
+        let defined: Vec<u8> = (0..=255u8).filter(|&b| Opcode::from_u8(b).is_some()).collect();
+        let mut listed: Vec<u8> = Opcode::ALL.iter().map(|&o| o as u8).collect();
+        listed.sort_unstable();
+        assert_eq!(listed, defined);
+    }
+
+    #[test]
+    fn the_1_4_opcode_is_new_and_takes_nothing() {
+        assert!(Opcode::ListHeadEncoders.new_in_1_4());
+        assert!(!Opcode::ListHeadEncoders.new_in_1_3());
+        assert!(!Opcode::ListHeads.new_in_1_4());
+        assert!(!reserved(0x8A));
+        assert_eq!(Request::parse(&[0x8A]).unwrap(), Request { opcode: Opcode::ListHeadEncoders, arg: None });
+        assert_eq!(Request::parse(&[0x8A, 0]), Err(Error::Invalid));
     }
 
     #[test]
@@ -1028,38 +1215,121 @@ mod tests {
         let mut name = [0u8; 16];
         name[..5].copy_from_slice(b"focus");
         let entries = [
-            HeadEntry { slot: 0, state: head_state::VALID, out_dim: 2, head_id: [9; 8], name: [0; 16], encoder_id: [0; 8] },
+            HeadEntry { slot: 0, state: head_state::VALID, out_dim: 2, head_id: [9; 8], name: [0; 16], encoder_id: [0xE2; 8] },
             HeadEntry { slot: 1, state: head_state::EMPTY, out_dim: 0, head_id: [0; 8], name: [0; 16], encoder_id: [0; 8] },
-            HeadEntry { slot: 2, state: head_state::VALID, out_dim: 3, head_id: [7; 8], name, encoder_id: [0; 8] },
+            HeadEntry { slot: 2, state: head_state::VALID, out_dim: 3, head_id: [7; 8], name, encoder_id: [0xA7; 8] },
         ];
-        let mut buf = [0u8; 2 + 3 * (HeadEntry::LEN + 8)];
+        let mut buf = [0u8; PAYLOAD_MAX];
         let n = encode_list_heads(0, &entries, &mut buf).unwrap();
-        assert_eq!(n, 116, "three records and three encoder ids");
+        assert_eq!(n, 2 + 3 * HeadEntry::LEN, "the records and nothing after them");
         let l = ListHeads::parse(&buf[..n]).unwrap();
         assert_eq!(l.active_slot, 0);
         assert_eq!(l.len(), 3);
-        assert_eq!(l.get(2).unwrap(), entries[2]);
+        // The encoder ids travel in LIST_HEAD_ENCODERS, so the list reads none.
+        assert_eq!(l.get(2).unwrap(), HeadEntry { encoder_id: [0; 8], ..entries[2] });
         assert!(l.get(3).is_none());
         assert_eq!(l.iter().count(), 3);
         // A payload whose length disagrees with n_entries is malformed.
         assert_eq!(ListHeads::parse(&buf[..n - 1]), Err(Error::Invalid));
-        // Five entries, the IntoMind One's built-in plus four user slots, fit
-        // one notification with their encoder ids.
-        assert!(2 + 5 * (HeadEntry::LEN + 8) <= 244);
-        // A 1.2 device's payload, records and no trailer, still parses, and
-        // its heads say nothing about their encoder.
-        let old = ListHeads::parse(&buf[..2 + 3 * HeadEntry::LEN]).unwrap();
-        assert_eq!(old.len(), 3);
-        assert_eq!(old.get(2).unwrap().encoder_id, [0; 8]);
-        assert_eq!(old.get(2).unwrap().head_id, [7; 8]);
-        // The trailer carries each head's own encoder id.
-        let mut marked = entries;
-        marked[0].encoder_id = [0xE2; 8];
-        let n = encode_list_heads(2, &marked, &mut buf).unwrap();
-        let l = ListHeads::parse(&buf[..n]).unwrap();
+        assert_eq!(ListHeads::parse(&buf[..n + 1]), Err(Error::Invalid));
+        // A list too long for its buffer is refused, never cut short.
+        assert_eq!(encode_list_heads(0, &entries, &mut buf[..n - 1]), Err(Error::NoRoom));
+        // A 1.3 payload with the withdrawn trailer is still read, ids and all.
+        let mut old = [0u8; 2 + 3 * (HeadEntry::LEN + 8)];
+        old[..n].copy_from_slice(&buf[..n]);
+        old[n..n + 8].copy_from_slice(&[0xE2; 8]);
+        let l = ListHeads::parse(&old).unwrap();
         assert_eq!(l.get(0).unwrap().encoder_id, [0xE2; 8]);
         assert_eq!(l.get(1).unwrap().encoder_id, [0; 8]);
-        assert_eq!(l.iter().map(|e| e.encoder_id[0]).collect::<Vec<_>>(), [0xE2, 0, 0]);
+    }
+
+    #[test]
+    fn head_encoders_round_trip_and_length_rule() {
+        let entries = [
+            HeadEntry { slot: 0, state: head_state::EMPTY, out_dim: 0, head_id: [0; 8], name: [0; 16], encoder_id: [0; 8] },
+            HeadEntry { slot: 1, state: head_state::VALID, out_dim: 1, head_id: [3; 8], name: [0; 16], encoder_id: [0xE2, 0xF9, 0xB6, 0x0F, 0x41, 0x1F, 0x0E, 0x73] },
+            HeadEntry { slot: 2, state: head_state::VALID, out_dim: 1, head_id: [4; 8], name: [0; 16], encoder_id: [0; 8] },
+        ];
+        let mut buf = [0u8; PAYLOAD_MAX];
+        let n = encode_head_encoders(&entries, &mut buf).unwrap();
+        assert_eq!(n, 1 + 3 * HeadEncoder::LEN);
+        let h = HeadEncoders::parse(&buf[..n]).unwrap();
+        assert_eq!(h.len(), 3);
+        assert_eq!(h.get(1).unwrap(), HeadEncoder { slot: 1, encoder_id: entries[1].encoder_id });
+        assert_eq!(h.iter().map(|e| e.slot).collect::<Vec<_>>(), [0, 1, 2]);
+        assert!(h.get(3).is_none());
+        assert_eq!(HeadEncoders::parse(&buf[..n - 1]), Err(Error::Invalid));
+        assert_eq!(HeadEncoders::parse(&buf[..n + 1]), Err(Error::Invalid));
+        assert_eq!(HeadEncoders::parse(&[]), Err(Error::Truncated));
+        assert_eq!(encode_head_encoders(&entries, &mut buf[..n - 1]), Err(Error::NoRoom));
+    }
+
+    /// Every answer, built at its largest by its own encoder, is as long as
+    /// `answer_max` says, and on a device with the IntoMind One's four head
+    /// slots and a catalog of up to twelve kinds every one fits.
+    #[test]
+    fn every_answer_at_its_largest_fits_the_limit() {
+        use crate::pipeline::{self, CatalogEntry, Chain, PipelineState, PredictionInput, Stage};
+        const SLOTS: usize = 4;
+        const KINDS: usize = 12;
+        let mut buf = [0u8; 512];
+        let mut full = Chain::NATURAL;
+        while full.push(Stage { kind: 1, n_params: pipeline::MAX_PARAMS as u8, params: [1; pipeline::MAX_PARAMS] }).is_ok() {}
+        let regs = [0u8; ConverterRegisters::MAX_VALUES];
+        let long = [b'a'; name::MAX_COMPOSED];
+        let kinds = [CatalogEntry::new(1, 0, 1, 1, b"highpass"); KINDS];
+        let heads = [HeadEntry { slot: 1, state: head_state::VALID, out_dim: 32, head_id: [1; 8], name: [b'n'; 16], encoder_id: [2; 8] }; 1 + SLOTS];
+        let mi = ModelInfo {
+            model_state: model_state::READY,
+            active_head: 1,
+            predictions_on: 1,
+            encoder_id: [1; 8],
+            weights_version: (1, 0, 0),
+            input_classes: 1,
+            tokens_per_channel: 20,
+            pass_ms: 3525,
+            interval_s: 0,
+            generator: 1,
+        };
+        for op in Opcode::ALL {
+            let built = match op {
+                Opcode::TimeSync => 8,
+                Opcode::SetSamplesPerPacket | Opcode::GetIndicator => 1,
+                Opcode::GetBattery => BatteryInfo { battery_mv: 4200, battery_percent: 100, charger_state: 0 }.encode(&mut buf).unwrap(),
+                Opcode::GetBootInfo => BootInfo { active_slot: 1, boot_reason: 0, slot_state: 1, boot_count: 9 }.encode(&mut buf).unwrap(),
+                Opcode::GetModelInfo => mi.encode(&mut buf).unwrap(),
+                Opcode::GetModelInterval => interval::ModelInterval { interval_s: 60, minimum_s: 4 }.encode(&mut buf).unwrap(),
+                Opcode::GetBiasDiagnostic => pipeline::BiasDiagnostic { mean_mv: 1, sd_mv: 1, min_mv: 1, max_mv: 1 }.encode(&mut buf).unwrap(),
+                Opcode::GetConverterRegisters => ConverterRegisters { family: 1, first: 0, values: &regs }.encode(&mut buf).unwrap(),
+                Opcode::GetName => name::encode_parts(&long, &long, &mut buf).unwrap(),
+                Opcode::GetPipeline => PipelineState { origin: 1, chain: full }.encode(&mut buf).unwrap(),
+                Opcode::GetPredictionInput => PredictionInput { source: pipeline::input_source::OWN_CHAIN, chain: full }.encode(&mut buf).unwrap(),
+                Opcode::GetPipelineCatalog => pipeline::encode_catalog(&kinds, &mut buf).unwrap(),
+                Opcode::ListHeads => encode_list_heads(1, &heads, &mut buf).unwrap(),
+                Opcode::ListHeadEncoders => encode_head_encoders(&heads, &mut buf).unwrap(),
+                _ => 0,
+            };
+            assert_eq!(built, op.answer_max(SLOTS, KINDS), "{op:?}");
+            assert!(2 + op.answer_max(SLOTS, KINDS) <= RESPONSE_MAX, "{op:?}: {} bytes", 2 + built);
+        }
+        // The list with the withdrawn trailer was 194 bytes, and a fifth user
+        // slot would not fit even without it.
+        assert_eq!(2 + 2 + (1 + SLOTS) * (HeadEntry::LEN + 8), 194);
+        assert!(2 + Opcode::ListHeads.answer_max(SLOTS + 1, KINDS) > RESPONSE_MAX);
+        assert!(2 + Opcode::GetPipelineCatalog.answer_max(SLOTS, KINDS + 1) > RESPONSE_MAX);
+    }
+
+    #[test]
+    fn an_answer_that_cannot_be_composed_says_so() {
+        let mut out = [0u8; RESPONSE_MAX];
+        assert_eq!(composed(Ok(4)), (Status::Ok, 4));
+        assert_eq!(composed(Err(Error::NoRoom)), (Status::Hardware, 0));
+        let n = compose_response(0x82, Status::Ok, &[7; PAYLOAD_MAX], &mut out);
+        assert_eq!(n, RESPONSE_MAX);
+        assert_eq!(&out[..2], &[0x82, 0]);
+        // One byte too many is answered status 5, never cut short or 2.
+        let n = compose_response(0x82, Status::Ok, &[7; PAYLOAD_MAX + 1], &mut out);
+        assert_eq!(&out[..n], &[0x82, Status::Hardware as u8]);
     }
 
     #[test]

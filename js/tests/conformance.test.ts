@@ -279,6 +279,12 @@ const DECODERS: Record<string, Decoder> = {
     };
   },
 
+  list_head_encoders(bytes) {
+    return {
+      heads: [...P.decodeHeadEncoders(bytes)].map(([slot, encoderId]) => ({ slot, encoder_id: encoderId })),
+    };
+  },
+
   model_info(bytes) {
     const m = P.decodeModelInfo(bytes);
     return {
@@ -459,8 +465,8 @@ test("every message decodes to the fields the contract states", () => {
     seen.add(vector.kind);
     check(vector, decode(bytesOf(vector.bytes), vector), FLOAT_KINDS.has(vector.kind) ? 1e-6 : 1e-9);
   }
-  assert.equal(seen.size, 21, "every kind the contract carries has a decoder");
-  assert.equal(VECTORS.decode.length, 67, "the contract carries sixty seven messages, and all of them were read");
+  assert.equal(seen.size, 22, "every kind the contract carries has a decoder");
+  assert.equal(VECTORS.decode.length, 70, "the contract carries seventy messages, and all of them were read");
 });
 
 test("every message encodes back to the bytes it came from", () => {
@@ -508,10 +514,11 @@ test("every message encodes back to the bytes it came from", () => {
       const l = P.decodeHeads(b);
       return P.encodeHeads(
         l.activeSlot,
-        l.heads.map((h) => ({ slot: h.slot, state: h.state, outDim: h.outDim, headId: h.headId, name: h.name, encoderId: h.encoderId })),
-        { encoderIds: b.length > 2 + l.heads.length * P.HEAD_ENTRY_LEN },
+        l.heads.map((h) => ({ slot: h.slot, state: h.state, outDim: h.outDim, headId: h.headId, name: h.name })),
       );
     },
+    list_head_encoders: (b) =>
+      P.encodeHeadEncoders([...P.decodeHeadEncoders(b)].map(([slot, encoderId]) => ({ slot, encoderId }))),
     model_info: (b) => {
       const m = P.decodeModelInfo(b);
       return P.encodeModelInfo({
@@ -631,6 +638,7 @@ test("every malformed message is refused for its stated reason", () => {
     boot_info: (b) => P.decodeBootInfo(b),
     model_info: (b) => P.decodeModelInfo(b),
     list_heads: (b) => P.decodeHeads(b),
+    list_head_encoders: (b) => P.decodeHeadEncoders(b),
     prediction: (b) => P.decodePrediction(b),
     update_response: (b) => P.decodeUpdateResponse(b),
     head: (b) => P.decodeHead(b),
@@ -730,4 +738,17 @@ test("a region's mains bands, and only those a rate can represent", () => {
   assert.deepEqual(pairs(P.mainsBands(60)), [[580, 620], [1180, 1220], [1780, 1820]]);
   assert.deepEqual(pairs(P.mainsBands(50, 250)), [[480, 520], [980, 1020]]);
   assert.deepEqual(pairs(P.mainsBands(60, 250)), [[580, 620]]);
+});
+
+test("the IntoMind One's longest head list fits one answer, and the encoders come in their own", () => {
+  const full = VECTORS.decode.find((v: { kind: string; name: string }) => v.kind === "list_heads" && v.name.includes("IntoMind One"));
+  assert.ok(full !== undefined);
+  assert.ok(bytesOf(full.bytes).length + 2 <= 156, "an answer is at most 156 bytes");
+  const list = P.decodeHeads(bytesOf(full.bytes));
+  assert.equal(list.heads.length, 5);
+  assert.ok(list.heads.every((h) => h.encoderId === P.NO_ENCODER_ID), "the list carries no encoder ids");
+  const three = VECTORS.decode.find((v: { kind: string }) => v.kind === "list_heads")!;
+  const ids = VECTORS.decode.find((v: { kind: string }) => v.kind === "list_head_encoders")!;
+  const merged = P.withEncoders(P.decodeHeads(bytesOf(three.bytes)), P.decodeHeadEncoders(bytesOf(ids.bytes)));
+  assert.deepEqual(merged.heads.map((h) => h.encoderId), ["0000000000000000", "a7c61680d9a202db", "0000000000000000"]);
 });

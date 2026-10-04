@@ -352,6 +352,17 @@ export class Session {
     return this.#command("list_heads");
   }
 
+  /**
+   * Ask which encoder each head names (1.4): one record for each LIST_HEADS record, read with `decodeHeadEncoders`.
+   * A device before 1.4 is not asked, and its heads say nothing of their encoder.
+   */
+  listHeadEncoders(): Command {
+    this.#require("heads");
+    const [major, minor] = this.#info?.protocol ?? [0, 0];
+    if (major < 1 || (major === 1 && minor < 4)) throw new NotCapable("head_encoders");
+    return this.#command("list_head_encoders");
+  }
+
   removeHead(slot: number): Command {
     this.#require("heads");
     return this.#command("remove_head", slot);

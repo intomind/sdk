@@ -205,6 +205,8 @@ export const OPCODES = {
   get_model_interval: 0x89,
   get_name: 0x47,
   set_name: 0x48,
+  // New in 1.4.
+  list_head_encoders: 0x8a,
   soft_reset: 0xf0,
 } as const;
 
@@ -1141,7 +1143,10 @@ export interface HeadEntry {
   readonly headId: string;
   readonly name: string;
   readonly usable: boolean;
-  /** 1.3: the encoder the head was trained beside, as its file recorded it; `NO_ENCODER_ID` when it did not say or from a 1.2 device. */
+  /**
+   * 1.3: the encoder the head was trained beside, as its file recorded it; `NO_ENCODER_ID` when it did not say.
+   * From 1.4 the list carries none: `decodeHeadEncoders` reads them, and `withEncoders` puts them here.
+   */
   readonly encoderId: string;
 }
 
@@ -1157,7 +1162,9 @@ export function decodeHeads(payload: Uint8Array): HeadList {
   const active = payload[0]!;
   const n = payload[1]!;
   const recordsEnd = 2 + n * HEAD_ENTRY_LEN;
-  // 1.3 appends one eight byte encoder id per record after the records.
+  // 1.3 defined one eight byte encoder id per record after the records. No
+  // device sent it, because the IntoMind One's list was too long with it,
+  // and 1.4 withdraws it. One that comes is still read.
   const withIds = payload.length === recordsEnd + n * 8;
   if (payload.length !== recordsEnd && !withIds) {
     throw new Invalid(
@@ -1182,15 +1189,12 @@ export function decodeHeads(payload: Uint8Array): HeadList {
   return { activeSlot: active === NO_HEAD ? null : active, heads };
 }
 
+/** A LIST_HEADS payload as a device sends it: the records and nothing after them. */
 export function encodeHeads(
   activeSlot: number | null,
-  heads: ReadonlyArray<{ slot: number; state: number; outDim: number; headId: string; name: string; encoderId?: string }>,
-  options: { encoderIds?: boolean } = {},
+  heads: ReadonlyArray<{ slot: number; state: number; outDim: number; headId: string; name: string }>,
 ): Uint8Array {
-  // 1.3: with `encoderIds`, or when any head names one, the trailer of ids follows the records.
-  const trailer = options.encoderIds ?? heads.some((h) => h.encoderId !== undefined);
-  const recordsEnd = 2 + heads.length * HEAD_ENTRY_LEN;
-  const out = new Uint8Array(trailer ? recordsEnd + heads.length * 8 : recordsEnd);
+  const out = new Uint8Array(2 + heads.length * HEAD_ENTRY_LEN);
   out[0] = activeSlot ?? NO_HEAD;
   out[1] = heads.length;
   heads.forEach((h, i) => {
@@ -1200,9 +1204,49 @@ export function encodeHeads(
     view(out).setUint16(at + 2, h.outDim, true);
     out.set(fromHex(h.headId), at + 4);
     out.set(paddedName(h.name, 16), at + 12);
-    if (trailer) out.set(fromHex(h.encoderId ?? NO_ENCODER_ID), recordsEnd + i * 8);
   });
   return out;
+}
+
+/** One LIST_HEAD_ENCODERS record (1.4): a slot and the encoder id its head names. */
+export const HEAD_ENCODER_LEN = 9;
+
+/**
+ * 1.4: the encoder each head names, by slot, from LIST_HEAD_ENCODERS: `NO_ENCODER_ID` for an empty slot or a head
+ * that does not say.
+ */
+export function decodeHeadEncoders(payload: Uint8Array): ReadonlyMap<number, string> {
+  if (payload.length < 1) throw new Truncated("a list of head encoders is at least its count");
+  const n = payload[0]!;
+  if (payload.length !== 1 + n * HEAD_ENCODER_LEN) {
+    throw new Invalid(`a list of ${n} head encoders is ${1 + n * HEAD_ENCODER_LEN} bytes, and this one is ${payload.length}`);
+  }
+  const out = new Map<number, string>();
+  for (let i = 0; i < n; i++) {
+    const at = 1 + i * HEAD_ENCODER_LEN;
+    out.set(payload[at]!, hex(payload.subarray(at + 1, at + HEAD_ENCODER_LEN)));
+  }
+  return out;
+}
+
+/** A LIST_HEAD_ENCODERS payload: one record for each head, in the order given. */
+export function encodeHeadEncoders(heads: ReadonlyArray<{ slot: number; encoderId: string }>): Uint8Array {
+  const out = new Uint8Array(1 + heads.length * HEAD_ENCODER_LEN);
+  out[0] = heads.length;
+  heads.forEach((h, i) => {
+    const at = 1 + i * HEAD_ENCODER_LEN;
+    out[at] = h.slot;
+    out.set(fromHex(h.encoderId), at + 1);
+  });
+  return out;
+}
+
+/** The heads, each with the encoder `encoders` says it names. A slot it does not mention keeps what it had. */
+export function withEncoders(list: HeadList, encoders: ReadonlyMap<number, string>): HeadList {
+  return {
+    activeSlot: list.activeSlot,
+    heads: list.heads.map((h) => ({ ...h, encoderId: encoders.get(h.slot) ?? h.encoderId })),
+  };
 }
 
 export interface ModelInfo {

@@ -276,11 +276,32 @@ fn a_device_that_does_not_claim_the_capability_is_not_asked() {
     assert!(Transfer::app(&bare, 1, &image(100)).is_err());
     assert!(Transfer::head(&bare, 1, &image(100)).is_err());
     assert!(bare.list_heads().is_err());
+    assert!(bare.list_head_encoders().is_err());
     assert!(bare.remove_head(1).is_err());
     // And the capable one is.
     assert!(Transfer::app(&s, 1, &image(100)).is_ok());
     assert!(s.list_heads().is_ok());
     let _ = &mut s;
+}
+
+#[test]
+fn only_a_1_4_device_is_asked_which_encoder_its_heads_name() {
+    let s = session();
+    let mut buf = [0u8; device_info::LEN];
+    let mut info = *s.info().unwrap();
+    for (version, asked) in [((1, 3), false), ((1, 4), true), ((1, 5), true)] {
+        info.proto_version = version;
+        info.encode(&mut buf).unwrap();
+        let mut d = Session::new();
+        d.on_device_info(&buf).unwrap();
+        match d.list_head_encoders() {
+            Ok(c) => {
+                assert!(asked, "{version:?}");
+                assert_eq!(c.bytes, [0x8A]);
+            }
+            Err(_) => assert!(!asked, "{version:?}"),
+        }
+    }
 }
 
 #[test]

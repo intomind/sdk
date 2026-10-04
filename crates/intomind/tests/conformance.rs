@@ -428,6 +428,39 @@ fn intomind_image_sha256(data: &[u8]) -> [u8; 32] {
 }
 
 #[test]
+fn the_head_lists_and_their_encoders_decode_to_the_stated_fields() {
+    use protocol::control::{self, HeadEncoders, ListHeads};
+    let v = vectors();
+    for e in find(&v, "decode", "list_heads") {
+        let name = e["name"].as_str().unwrap();
+        let b = bytes_of(e["bytes"].as_str().unwrap());
+        assert!(2 + b.len() <= control::RESPONSE_MAX, "{name}: an answer is at most 156 bytes");
+        let l = ListHeads::parse(&b).unwrap();
+        assert_eq!(l.active_slot as u64, e["fields"]["active_slot"].as_u64().unwrap(), "{name}");
+        let want = e["fields"]["heads"].as_array().unwrap();
+        assert_eq!(l.len(), want.len(), "{name}");
+        for (got, want) in l.iter().zip(want) {
+            assert_eq!(got.slot as u64, want["slot"].as_u64().unwrap(), "{name}");
+            assert_eq!(got.state as u64, want["state"].as_u64().unwrap(), "{name}");
+            assert_eq!(got.out_dim as u64, want["out_dim"].as_u64().unwrap(), "{name}");
+            assert_eq!(got.encoder_id, [0; 8], "{name}: the list carries no encoder ids");
+            if let Some(id) = want.get("head_id") {
+                assert_eq!(bytes_of(id.as_str().unwrap()), got.head_id, "{name}");
+            }
+        }
+    }
+    let e = find(&v, "decode", "list_head_encoders")[0];
+    let b = bytes_of(e["bytes"].as_str().unwrap());
+    let h = HeadEncoders::parse(&b).unwrap();
+    let want = e["fields"]["heads"].as_array().unwrap();
+    assert_eq!(h.len(), want.len());
+    for (got, want) in h.iter().zip(want) {
+        assert_eq!(got.slot as u64, want["slot"].as_u64().unwrap());
+        assert_eq!(got.encoder_id.to_vec(), bytes_of(want["encoder_id"].as_str().unwrap()));
+    }
+}
+
+#[test]
 fn every_malformed_message_is_refused_for_its_stated_reason() {
     use protocol::{control, device_info, frame, pipeline, predictions, status, update};
     let v = vectors();
@@ -452,6 +485,7 @@ fn every_malformed_message_is_refused_for_its_stated_reason() {
             "boot_info" => control::BootInfo::parse(&b).map(|_| ()).map_err(reason_of),
             "model_info" => control::ModelInfo::parse(&b).map(|_| ()).map_err(reason_of),
             "list_heads" => control::ListHeads::parse(&b).map(|_| ()).map_err(reason_of),
+            "list_head_encoders" => control::HeadEncoders::parse(&b).map(|_| ()).map_err(reason_of),
             "prediction" => predictions::PredictionHeader::parse(&b).map(|_| ()).map_err(reason_of),
             "update_response" => update::Response::parse(&b).map(|_| ()).map_err(reason_of),
             "envelope" => update::Envelope::parse(&b).map(|_| ()).map_err(reason_of),
