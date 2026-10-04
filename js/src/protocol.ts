@@ -32,6 +32,7 @@ import { sha256 } from "./digest.ts";
 
 export { Crc32, crc32, sha256 } from "./digest.ts";
 
+/** The protocol version this module implements, major and minor. */
 export const VERSION: readonly [number, number] = [1, 4];
 
 /** The full identifier for one characteristic. */
@@ -60,15 +61,25 @@ export const FILL = {
   EMBEDDINGS: 0x000b,
 } as const;
 
+/** The service's full identifier, advertised by every device. */
 export const SERVICE = uuid(FILL.SERVICE);
+/** Device Info's full identifier. */
 export const DEVICE_INFO = uuid(FILL.DEVICE_INFO);
+/** Control Point's full identifier. */
 export const CONTROL = uuid(FILL.CONTROL);
+/** Control Response's full identifier. */
 export const CONTROL_RESPONSE = uuid(FILL.CONTROL_RESPONSE);
+/** EEG Data's full identifier. */
 export const EEG_DATA = uuid(FILL.EEG_DATA);
+/** Status's full identifier. */
 export const STATUS = uuid(FILL.STATUS);
+/** Update Control's full identifier. */
 export const UPDATE_CONTROL = uuid(FILL.UPDATE_CONTROL);
+/** Update Data's full identifier. */
 export const UPDATE_DATA = uuid(FILL.UPDATE_DATA);
+/** Predictions' full identifier. */
 export const PREDICTIONS = uuid(FILL.PREDICTIONS);
+/** Embeddings' full identifier. */
 export const EMBEDDINGS = uuid(FILL.EMBEDDINGS);
 
 /** The name a device advertises under, before its own identifier. */
@@ -87,8 +98,10 @@ export type Refusal = "truncated" | "invalid" | "reserved";
 
 /** Bytes that are not a message, with the reason they are not. */
 export class ProtocolError extends Error {
+  /** Which of the three reasons this is. */
   readonly reason: Refusal;
 
+  /** Build one with its reason and message. A decoder throws one of the three subclasses. */
   constructor(reason: Refusal, message: string) {
     super(message);
     this.name = "ProtocolError";
@@ -98,6 +111,7 @@ export class ProtocolError extends Error {
 
 /** The message ends before the fields it promises. */
 export class Truncated extends ProtocolError {
+  /** Build one with the message saying what is missing. */
   constructor(message: string) {
     super("truncated", message);
     this.name = "Truncated";
@@ -106,6 +120,7 @@ export class Truncated extends ProtocolError {
 
 /** A field holds a value the contract does not define. */
 export class Invalid extends ProtocolError {
+  /** Build one with the message saying what is wrong. */
   constructor(message: string) {
     super("invalid", message);
     this.name = "Invalid";
@@ -117,6 +132,7 @@ export class Invalid extends ProtocolError {
  * than treating them as malformed, and so does a host.
  */
 export class Reserved extends ProtocolError {
+  /** Build one with the message naming the reserved number. */
   constructor(message: string) {
     super("reserved", message);
     this.name = "Reserved";
@@ -166,6 +182,7 @@ function paddedName(name: string, width: number): Uint8Array {
 
 // --- the control point ------------------------------------------------------
 
+/** Every control point opcode this contract defines, by name. */
 export const OPCODES = {
   start_stream: 0x01,
   stop_stream: 0x02,
@@ -210,8 +227,10 @@ export const OPCODES = {
   soft_reset: 0xf0,
 } as const;
 
+/** The name of any opcode `OPCODES` defines. */
 export type OpcodeName = keyof typeof OPCODES;
 
+/** Opcode names by their number, the reverse of `OPCODES`. */
 export const NAME_BY_OPCODE: ReadonlyMap<number, OpcodeName> = new Map(
   (Object.entries(OPCODES) as [OpcodeName, number][]).map(([name, code]) => [code, name]),
 );
@@ -289,6 +308,7 @@ export const RESERVED_OPCODES: ReadonlySet<number> = new Set([
   ...Array.from({ length: 16 }, (_, i) => 0x60 + i),
 ]);
 
+/** A control response's status byte, in words. */
 export const STATUS_CODES: Readonly<Record<number, string>> = {
   0: "ok",
   1: "invalid argument",
@@ -301,9 +321,13 @@ export const STATUS_CODES: Readonly<Record<number, string>> = {
   7: "usb power",
 };
 
+/** The gain a `gain_code` of 0 to 6 selects. */
 export const GAIN_BY_CODE: readonly number[] = [1, 2, 4, 6, 8, 12, 24];
+/** The code for a gain, the reverse of `GAIN_BY_CODE`. */
 export const CODE_BY_GAIN: ReadonlyMap<number, number> = new Map(GAIN_BY_CODE.map((g, i) => [g, i]));
+/** The rate in samples per second a `rate_code` selects. */
 export const RATE_BY_CODE: Readonly<Record<number, number>> = { 4: 1000, 5: 500, 6: 250 };
+/** The code for a rate, the reverse of `RATE_BY_CODE`. */
 export const CODE_BY_RATE: ReadonlyMap<number, number> = new Map([
   [1000, 4],
   [500, 5],
@@ -314,9 +338,12 @@ export const RATE_BY_INFO_BIT: Readonly<Record<number, number>> = { 0: 250, 1: 5
 
 /** 1.3 adds synthetic: the converter is not driven and the device generates the signal, on a device that claims it. */
 export const MODES = { normal: 0, test: 1, short: 2, synthetic: 3 } as const;
+/** The name of any mode `MODES` defines. */
 export type ModeName = keyof typeof MODES;
+/** Mode names by their code, the reverse of `MODES`. */
 export const MODE_BY_CODE: Readonly<Record<number, ModeName>> = { 0: "normal", 1: "test", 2: "short", 3: "synthetic" };
 
+/** What a charger state code means. */
 export const CHARGER_STATES: Readonly<Record<number, string>> = {
   0: "no input",
   1: "charging",
@@ -325,6 +352,7 @@ export const CHARGER_STATES: Readonly<Record<number, string>> = {
   4: "standby",
 };
 
+/** Why the device last booted, by `boot_reason` code. */
 export const BOOT_REASONS: Readonly<Record<number, string>> = {
   0: "power on",
   1: "reset pin",
@@ -367,9 +395,13 @@ export function encodeRequest(
   return arg === null ? new Uint8Array([code]) : new Uint8Array([code, arg & 0xff]);
 }
 
+/** One control point write, as `decodeRequest` reads it. */
 export interface Request {
+  /** The raw opcode byte, even one this contract does not define. */
   readonly opcode: number;
+  /** The opcode's name. */
   readonly name: OpcodeName;
+  /** The one argument byte, for an opcode that takes one. */
   readonly arg: number | null;
   /** The bytes after the opcode, for an opcode that takes a payload. */
   readonly payload: Uint8Array | null;
@@ -402,16 +434,23 @@ export function decodeRequest(data: Uint8Array): Request {
   return { opcode: code, name, arg: null, payload: null };
 }
 
+/** One control response, as `decodeResponse` reads it. */
 export interface Response {
+  /** The opcode this answers, echoed back even when it is not one this contract defines. */
   readonly opcode: number;
   /** Null for a number this contract does not define, which is echoed back. */
   readonly name: OpcodeName | null;
+  /** The status byte, 0 for success. */
   readonly status: number;
+  /** `status` in words, from `STATUS_CODES`. */
   readonly statusName: string;
+  /** Whether `status` is 0. */
   readonly ok: boolean;
+  /** The bytes after the opcode and status, specific to what was asked. */
   readonly payload: Uint8Array;
 }
 
+/** One control response, as the device sends it. */
 export function decodeResponse(data: Uint8Array): Response {
   if (data.length < 2) throw new Truncated("a response is at least an opcode and a status");
   const status = data[1]!;
@@ -472,6 +511,7 @@ export const CAPABILITIES = {
   model_cadence: 1 << 15,
 } as const;
 
+/** The name of any capability bit `CAPABILITIES` defines. */
 export type CapabilityName = keyof typeof CAPABILITIES;
 
 /** 1.3: capability bits 16 and up, the second word of Device Info at offset 76. Bit 16 of the contract is bit 0 here. */
@@ -480,6 +520,7 @@ export const CAPABILITIES_HIGH = {
   device_name: 1 << 1,
 } as const;
 
+/** The name of any capability bit `CAPABILITIES_HIGH` defines. */
 export type CapabilityHighName = keyof typeof CAPABILITIES_HIGH;
 
 /** Length of the v0.1 prefix, which 1.0 left where it was. */
@@ -488,28 +529,50 @@ export const INFO_V01_LEN = 27;
 export const INFO_LEN_1_0 = 76;
 /** 1.3: the 1.0 layout with a second capability word appended. */
 export const INFO_LEN = 80;
+/** What a device with no battery telemetry reports instead of a percent. */
 export const BATTERY_UNKNOWN = 0xff;
 
+/** What `DeviceInfo`'s constructor takes. The optional fields default to zero or null. */
 export interface DeviceInfoFields {
+  /** Protocol major and minor. */
   protocol: readonly [number, number];
+  /** Firmware major, minor, and patch. */
   firmware: readonly [number, number, number];
+  /** Channel count. */
   channels: number;
+  /** Converter resolution, in bits. */
   adcBits: number;
+  /** Device time ticks per second. */
   tickHz: number;
+  /** Converter reference voltage, in microvolts. */
   vrefUv: number;
+  /** The sixteen bit capability mask. */
   capabilities: number;
+  /** Which rates the device supports, as a bit mask. */
   supportedRates: number;
+  /** The device's stable per-unit identifier, as hex. */
   deviceId: string;
+  /** Hardware major, minor, and patch, when the device reports the 1.0 extension. */
   hardware?: readonly [number, number, number] | null;
+  /** The exact firmware build, when reported. */
   buildId?: string | null;
+  /** The model's embedding width, zero for no model runtime. */
   modelEmbedDim?: number;
+  /** The model's native sample rate. */
   modelNativeSps?: number;
+  /** Samples per prediction window at the model's native rate. */
   modelWindowSamples?: number;
+  /** User head slots. */
   headSlots?: number;
+  /** The largest `out_dim` a head may have. */
   headMaxOutputs?: number;
+  /** Capacity of one head slot, in bytes. */
   headSlotBytes?: number;
+  /** The largest Update Data write the device accepts. */
   updateChunkMax?: number;
+  /** Capacity of one application slot, including its header. */
   appSlotBytes?: number;
+  /** Capacity of the weights image, including its header. */
   weightsImageBytes?: number;
   /** 1.3: capability bits 16 and up. Zero on a device whose info ends at 76 bytes. */
   capabilitiesHigh?: number;
@@ -517,29 +580,50 @@ export interface DeviceInfoFields {
 
 /** Everything a device says about itself, and nothing a host assumed. */
 export class DeviceInfo {
+  /** Protocol major and minor. */
   readonly protocol: readonly [number, number];
+  /** Firmware major, minor, and patch. */
   readonly firmware: readonly [number, number, number];
+  /** Channel count. */
   readonly channels: number;
+  /** Converter resolution, in bits. */
   readonly adcBits: number;
+  /** Device time ticks per second. */
   readonly tickHz: number;
+  /** Converter reference voltage, in microvolts. */
   readonly vrefUv: number;
+  /** The sixteen bit capability mask, bits 0 to 15. `can` is how to read it. */
   readonly capabilities: number;
+  /** Which rates the device supports, as a bit mask. `rates` is how to read it. */
   readonly supportedRates: number;
+  /** The device's stable per-unit identifier, as hex. */
   readonly deviceId: string;
   /** Present on a device that reports the 1.0 layout. */
   readonly hardware: readonly [number, number, number] | null;
+  /** The exact firmware build, or null when the device reports no extension. */
   readonly buildId: string | null;
+  /** The model's embedding width, zero for no model runtime. */
   readonly modelEmbedDim: number;
+  /** The model's native sample rate. */
   readonly modelNativeSps: number;
+  /** Samples per prediction window at the model's native rate. */
   readonly modelWindowSamples: number;
+  /** User head slots. */
   readonly headSlots: number;
+  /** The largest `out_dim` a head may have. */
   readonly headMaxOutputs: number;
+  /** Capacity of one head slot, in bytes. */
   readonly headSlotBytes: number;
+  /** The largest Update Data write the device accepts. */
   readonly updateChunkMax: number;
+  /** Capacity of one application slot, including its header. */
   readonly appSlotBytes: number;
+  /** Capacity of the weights image, including its header. */
   readonly weightsImageBytes: number;
+  /** The second capability word, bits 16 and up (1.3). Zero on a device whose info ends at 76 bytes. */
   readonly capabilitiesHigh: number;
 
+  /** Build from the fields `decodeDeviceInfo` read, or assembled by hand. */
   constructor(f: DeviceInfoFields) {
     this.protocol = [f.protocol[0], f.protocol[1]];
     this.firmware = [f.firmware[0], f.firmware[1], f.firmware[2]];
@@ -590,14 +674,17 @@ export class DeviceInfo {
       .sort((a, b) => a - b);
   }
 
+  /** `protocol` as `major.minor`. */
   get protocolString(): string {
     return `${this.protocol[0]}.${this.protocol[1]}`;
   }
 
+  /** `firmware` as `major.minor.patch`. */
   get firmwareString(): string {
     return `${this.firmware[0]}.${this.firmware[1]}.${this.firmware[2]}`;
   }
 
+  /** `hardware` as `major.minor.patch`, or null when the device reports no extension. */
   get hardwareString(): string | null {
     return this.hardware === null ? null : `${this.hardware[0]}.${this.hardware[1]}.${this.hardware[2]}`;
   }
@@ -608,6 +695,7 @@ export class DeviceInfo {
   }
 }
 
+/** Device Info, as the device sends it. */
 export function decodeDeviceInfo(data: Uint8Array): DeviceInfo {
   if (data.length < INFO_V01_LEN) throw new Truncated(`device info is at least ${INFO_V01_LEN} bytes`);
   const v = view(data);
@@ -694,31 +782,50 @@ export function encodeDeviceInfo(info: DeviceInfo): Uint8Array {
 
 // --- status -----------------------------------------------------------------
 
+/** The length of a Status message, in bytes. */
 export const STATUS_LEN = 12;
+/** The bits of Status's flags byte. */
 export const STATUS_FLAGS = { usb_present: 1 << 0, buffer_high_watermark: 1 << 1 } as const;
 
+/** Status, decoded, read or notified. */
 export interface Status {
+  /** 0 idle, 1 streaming. */
   readonly state: number;
+  /** Whether `state` is streaming. */
   readonly streaming: boolean;
+  /** The mode code in force. See `MODES`. */
   readonly mode: number;
+  /** `mode` in words. */
   readonly modeName: string;
+  /** The gain code in force. */
   readonly gainCode: number;
+  /** `gainCode` as a gain, or null for a code this contract does not define. */
   readonly gain: number | null;
+  /** The rate code in force. */
   readonly rateCode: number;
+  /** `rateCode` as samples per second, or null for a code this contract does not define. */
   readonly sps: number | null;
+  /** The charger state code. */
   readonly chargerState: number;
+  /** `chargerState` in words. */
   readonly chargerName: string;
   /** Null when the device has no battery telemetry, never 255 percent. */
   readonly batteryPercent: number | null;
+  /** The raw byte: 0xFF for unknown, rather than null. */
   readonly batteryPercentRaw: number;
+  /** Lead-off status latched with the most recently acquired sample. Bit n is channel n+1. */
   readonly loffStatp: number;
+  /** Whether USB power is present (1.4). */
   readonly usbPresent: boolean;
+  /** Whether the device's buffer is at or above three quarters full. */
   readonly bufferHighWatermark: boolean;
   /** Telemetry. The account of what a host missed is the sample index. */
   readonly droppedTotal: number;
+  /** Samples currently buffered on the device. */
   readonly bufferFill: number;
 }
 
+/** Status, as the device sends it. */
 export function decodeStatus(data: Uint8Array): Status {
   if (data.length < STATUS_LEN) throw new Truncated(`status is ${STATUS_LEN} bytes`);
   const v = view(data);
@@ -748,21 +855,33 @@ export function decodeStatus(data: Uint8Array): Status {
   };
 }
 
+/** What `encodeStatus` takes. */
 export interface StatusFields {
+  /** 0 idle, 1 streaming. */
   state: number;
+  /** The mode code in force. */
   mode: number;
+  /** The gain code in force. */
   gainCode: number;
+  /** The rate code in force. */
   rateCode: number;
+  /** The charger state code. */
   chargerState: number;
   /** Null for a device with no battery telemetry. */
   batteryPercent: number | null;
+  /** Lead-off status latched with the most recently acquired sample. */
   loffStatp: number;
+  /** Whether USB power is present. */
   usbPresent?: boolean;
+  /** Whether the device's buffer is at or above three quarters full. */
   bufferHighWatermark?: boolean;
+  /** Samples acquired but never delivered since power on. */
   droppedTotal: number;
+  /** Samples currently buffered on the device. */
   bufferFill: number;
 }
 
+/** Status, as the device sends it. */
 export function encodeStatus(s: StatusFields): Uint8Array {
   const out = new Uint8Array(STATUS_LEN);
   const v = view(out);
@@ -783,13 +902,19 @@ export function encodeStatus(s: StatusFields): Uint8Array {
 
 // --- the stream -------------------------------------------------------------
 
+/** The EEG data packet type. */
 export const PACKET_EEG = 0x01;
+/** The prediction packet type. */
 export const PACKET_PREDICTION = 0x02;
 /** 1.3: samples the device generated with its converter off, in exactly the layout of `PACKET_EEG`. */
 export const PACKET_SYNTHETIC = 0x04;
+/** The length of an EEG data packet's header, before the samples. */
 export const DATA_HEADER_LEN = 20;
+/** The single bit flags of an EEG data packet's flags byte. Mode occupies the other two, via `MODE_SHIFT` and `MODE_MASK`. */
 export const DATA_FLAGS = { discontinuity: 1 << 0, leadoff_active: 1 << 1, usb_present: 1 << 4 } as const;
+/** Where the mode bits sit in an EEG data packet's flags byte. */
 export const MODE_SHIFT = 2;
+/** The mode bits of an EEG data packet's flags byte, before shifting. */
 export const MODE_MASK = 0b11 << MODE_SHIFT;
 /** `samples_lost_before` saturates here. The sample index is authoritative. */
 export const LOST_SATURATED = 0xffff;
@@ -802,21 +927,37 @@ export const LOST_SATURATED = 0xffff;
  * because this module assumes nothing about either.
  */
 export interface Packet {
+  /** 0x01 for a measured sample, 0x04 for one the device generated (1.3). */
   readonly packetType: number;
+  /** Whether a break precedes this packet. */
   readonly discontinuity: boolean;
+  /** Whether lead-off was active when this packet was built. */
   readonly leadoffActive: boolean;
+  /** The mode code the samples were taken in. */
   readonly mode: number;
+  /** `mode` in words. */
   readonly modeName: string;
+  /** Whether USB power was present (1.4). */
   readonly usbPresent: boolean;
+  /** A convenience count of samples lost before this packet, saturating at `LOST_SATURATED`. `index` continuity is authoritative. */
   readonly samplesLostBefore: number;
+  /** The first sample's index, monotonic and wrapping at 2^32. */
   readonly index: number;
+  /** The first sample's device time, in the device's ticks. */
   readonly deviceTime: bigint;
+  /** Samples carried in this packet. */
   readonly nSamples: number;
+  /** Lead-off status latched with the packet's last sample. */
   readonly loffStatp: number;
+  /** The gain code the samples were taken at. */
   readonly gainCode: number;
+  /** `gainCode` as a gain. */
   readonly gain: number;
+  /** The rate code the samples were taken at. */
   readonly rateCode: number;
+  /** `rateCode` as samples per second, or null for a code this contract does not define. */
   readonly sps: number | null;
+  /** One row per sample, each row one converter count per channel. */
   readonly counts: number[][];
   /** 1.3: the samples were generated by the device, not measured (packet type 0x04). Never store one as a measurement. */
   readonly synthetic: boolean;
@@ -872,18 +1013,29 @@ export function decodePacket(data: Uint8Array, channels: number): Packet {
   };
 }
 
+/** What `encodePacket` takes. */
 export interface PacketFields {
+  /** The first sample's index. */
   index: number;
+  /** The first sample's device time, in the device's ticks. */
   deviceTime: bigint;
+  /** The gain code the samples were taken at. */
   gainCode: number;
+  /** The rate code the samples were taken at. */
   rateCode: number;
   /** One row per sample, each row one value per channel, in counts. */
   counts: ReadonlyArray<ArrayLike<number>>;
+  /** Whether a break precedes this packet. */
   discontinuity?: boolean;
+  /** Whether lead-off was active. */
   leadoffActive?: boolean;
+  /** The mode code the samples were taken in. */
   mode?: number;
+  /** Whether USB power was present. */
   usbPresent?: boolean;
+  /** A convenience count of samples lost before this packet. */
   samplesLostBefore?: number;
+  /** Lead-off status latched with the packet's last sample. */
   loffStatp?: number;
   /** 1.3: write the packet as synthetic samples, type 0x04. */
   synthetic?: boolean;
@@ -947,6 +1099,7 @@ export interface Continuity {
   readonly verdict: "continuous" | "gap" | "break";
   /** Samples missing. Null for a break, whose extent is not a number. */
   readonly lost: number | null;
+  /** Whether this is a gap or a break rather than continuous. */
   readonly broken: boolean;
 }
 
@@ -974,23 +1127,36 @@ export function continuity(
 
 // --- predictions ------------------------------------------------------------
 
+/** The length of a prediction packet's header, before the outputs. */
 export const PREDICTION_HEADER_LEN = 28;
+/** The bits of a prediction packet's flags byte. */
 export const PREDICTION_FLAGS = {
   gap_in_window: 1 << 0,
   duty_reduced: 1 << 1,
   leadoff_in_window: 1 << 2,
 } as const;
 
+/** One prediction notification, decoded. */
 export interface Prediction {
+  /** 0x02 for a prediction. */
   readonly packetType: number;
+  /** The slot of the head that produced this. */
   readonly headSlot: number;
+  /** The identity of the head that produced this. */
   readonly headId: string;
+  /** The window's first sample's index. */
   readonly index: number;
+  /** The window's first sample's device time. */
   readonly deviceTime: bigint;
+  /** The window's length, in raw samples at the current rate. */
   readonly windowSamples: number;
+  /** Whether a gap fell inside the window. */
   readonly gapInWindow: boolean;
+  /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
+  /** Whether lead-off was active at any point in the window. */
   readonly leadoffInWindow: boolean;
+  /** The head's outputs for this window. */
   readonly outputs: number[];
   /**
    * 1.1: what the window was taken from, an `INPUT_SOURCES` value: the
@@ -1000,6 +1166,7 @@ export interface Prediction {
   readonly inputSource: number;
 }
 
+/** One prediction notification, as the device sends it. */
 export function decodePrediction(data: Uint8Array): Prediction {
   if (data.length < PREDICTION_HEADER_LEN) throw new Truncated("a prediction is at least its header");
   const v = view(data);
@@ -1028,19 +1195,31 @@ export function decodePrediction(data: Uint8Array): Prediction {
   };
 }
 
+/** What `encodePrediction` takes. */
 export interface PredictionFields {
+  /** The slot of the head that produced this. */
   headSlot: number;
+  /** The identity of the head that produced this. */
   headId: string;
+  /** The window's first sample's index. */
   index: number;
+  /** The window's first sample's device time. */
   deviceTime: bigint;
+  /** The window's length, in raw samples. */
   windowSamples: number;
+  /** The head's outputs for this window. */
   outputs: ArrayLike<number>;
+  /** Whether a gap fell inside the window. */
   gapInWindow?: boolean;
+  /** Whether the device skipped windows to stay within its compute budget. */
   dutyReduced?: boolean;
+  /** Whether lead-off was active at any point in the window. */
   leadoffInWindow?: boolean;
+  /** What the window was taken from, an `INPUT_SOURCES` value. */
   inputSource?: number;
 }
 
+/** One prediction notification, as the device sends it. */
 export function encodePrediction(p: PredictionFields): Uint8Array {
   const n = p.outputs.length;
   if (n > 0xff) throw new Invalid("a head has at most 255 outputs");
@@ -1064,13 +1243,19 @@ export function encodePrediction(p: PredictionFields): Uint8Array {
 
 // --- what the device reports about itself beyond status ---------------------
 
+/** GET_BATTERY's answer. */
 export interface Battery {
+  /** The measured pack voltage, in millivolts. */
   readonly millivolts: number;
+  /** A state of charge estimate, or null when the device has no battery telemetry. */
   readonly percent: number | null;
+  /** The charger state code. */
   readonly chargerState: number;
+  /** `chargerState` in words. */
   readonly chargerName: string;
 }
 
+/** GET_BATTERY's answer, as the device sends it. */
 export function decodeBattery(payload: Uint8Array): Battery {
   if (payload.length < 4) throw new Truncated("a battery reading is four bytes");
   const v = view(payload);
@@ -1083,6 +1268,7 @@ export function decodeBattery(payload: Uint8Array): Battery {
   };
 }
 
+/** GET_BATTERY's answer, as the device sends it. */
 export function encodeBattery(b: { millivolts: number; percent: number | null; chargerState: number }): Uint8Array {
   const out = new Uint8Array(4);
   view(out).setUint16(0, b.millivolts, true);
@@ -1091,16 +1277,23 @@ export function encodeBattery(b: { millivolts: number; percent: number | null; c
   return out;
 }
 
+/** GET_BOOT_INFO's answer. */
 export interface BootInfo {
+  /** Which application slot is running: 0 A, 1 B. */
   readonly activeSlot: number;
+  /** The boot reason code. */
   readonly bootReason: number;
+  /** `bootReason` in words. */
   readonly bootReasonName: string;
+  /** 0 trial, the running image has not yet confirmed itself. 1 confirmed. */
   readonly slotState: number;
   /** A slot on trial has not yet been confirmed by the firmware in it. */
   readonly confirmed: boolean;
+  /** Boots of this unit since manufacture. */
   readonly bootCount: number;
 }
 
+/** GET_BOOT_INFO's answer, as the device sends it. */
 export function decodeBootInfo(payload: Uint8Array): BootInfo {
   if (payload.length < 8) throw new Truncated("boot information is eight bytes");
   const reason = payload[1]!;
@@ -1114,6 +1307,7 @@ export function decodeBootInfo(payload: Uint8Array): BootInfo {
   };
 }
 
+/** GET_BOOT_INFO's answer, as the device sends it. */
 export function encodeBootInfo(b: {
   activeSlot: number;
   bootReason: number;
@@ -1128,20 +1322,32 @@ export function encodeBootInfo(b: {
   return out;
 }
 
+/** A head slot's state, in words, by its `state` code. */
 export const HEAD_STATES: Readonly<Record<number, string>> = { 0: "empty", 1: "valid", 2: "invalid", 3: "width mismatch" };
+/** The model runtime's state, in words, by its `model_state` code. */
 export const MODEL_STATES: Readonly<Record<number, string>> = { 0: "no runtime", 1: "no weights", 2: "ready", 3: "updating" };
 /** An encoder id a head that does not name its encoder carries. */
 export const NO_ENCODER_ID = "0000000000000000";
+/** The slot byte meaning no head is selected. */
 export const NO_HEAD = 0xff;
+/** The length of one LIST_HEADS record, in bytes. */
 export const HEAD_ENTRY_LEN = 30;
 
+/** One LIST_HEADS record: one head slot. */
 export interface HeadEntry {
+  /** 0 for the built-in head, 1 and up for user slots. */
   readonly slot: number;
+  /** The slot's state code. See `HEAD_STATES`. */
   readonly state: number;
+  /** `state` in words. */
   readonly stateName: string;
+  /** The head's output count. */
   readonly outDim: number;
+  /** The head's identity, the first eight bytes of its SHA-256. Zero when empty. */
   readonly headId: string;
+  /** The head's name. */
   readonly name: string;
+  /** Whether `state` is valid. */
   readonly usable: boolean;
   /**
    * 1.3: the encoder the head was trained beside, as its file recorded it; `NO_ENCODER_ID` when it did not say.
@@ -1150,9 +1356,11 @@ export interface HeadEntry {
   readonly encoderId: string;
 }
 
+/** LIST_HEADS's answer: the head slots, and which one is selected. */
 export interface HeadList {
   /** Null means no head is selected. */
   readonly activeSlot: number | null;
+  /** The slots, in the order the device reports them. */
   readonly heads: HeadEntry[];
 }
 
@@ -1249,14 +1457,21 @@ export function withEncoders(list: HeadList, encoders: ReadonlyMap<number, strin
   };
 }
 
+/** GET_MODEL_INFO's answer. */
 export interface ModelInfo {
+  /** The model runtime's state code. See `MODEL_STATES`. */
   readonly modelState: number;
+  /** `modelState` in words. */
   readonly modelStateName: string;
+  /** Whether `modelState` is ready, so predictions can be enabled. */
   readonly ready: boolean;
   /** Null means no head is selected. */
   readonly activeHead: number | null;
+  /** Whether predictions are enabled. */
   readonly predictionsOn: boolean;
+  /** The loaded weights' identity. Zero unless ready. */
   readonly encoderId: string;
+  /** The loaded weights' major, minor, and patch. */
   readonly weightsVersion: readonly [number, number, number];
   /**
    * 1.1: the signal classes the loaded model declares it takes, as
@@ -1278,6 +1493,7 @@ export interface ModelInfo {
   readonly generator: boolean;
 }
 
+/** GET_MODEL_INFO's answer, as the device sends it. */
 export function decodeModelInfo(payload: Uint8Array): ModelInfo {
   if (payload.length < 16) throw new Truncated("model information is at least sixteen bytes");
   const state = payload[0]!;
@@ -1298,6 +1514,7 @@ export function decodeModelInfo(payload: Uint8Array): ModelInfo {
   };
 }
 
+/** GET_MODEL_INFO's answer, as the device sends it. */
 export function encodeModelInfo(m: {
   modelState: number;
   activeHead: number | null;
@@ -1335,10 +1552,13 @@ export function encodeModelInfo(m: {
 
 /** GET_MODEL_INTERVAL's answer: the interval in force and the least the device keeps, seconds. */
 export interface ModelInterval {
+  /** The interval in force, seconds. 0 is every window the device can. */
   readonly intervalS: number;
+  /** The least interval the device keeps, seconds. */
   readonly minimumS: number;
 }
 
+/** GET_MODEL_INTERVAL's answer, as the device sends it. */
 export function decodeModelInterval(payload: Uint8Array): ModelInterval {
   if (payload.length < 4) throw new Truncated("a model interval is four bytes");
   const v = view(payload);
@@ -1396,6 +1616,7 @@ export function encodeNameParts(name: string, adjective: string): Uint8Array {
   return out;
 }
 
+/** GET_NAME's answer or SET_NAME's request, as the device reads or sends it: the name and the adjective. */
 export function decodeNameParts(payload: Uint8Array): { name: string; adjective: string } {
   if (payload.length === 0) throw new Truncated("a name carries at least its lengths");
   const nl = payload[0]!;
@@ -1435,24 +1656,41 @@ export function displayNames(names: ReadonlyArray<string | null | undefined>): s
 // raw-or-filtered flag anywhere, because a flag says nothing about what a
 // signal is.
 
+/** The processing stage kinds this version defines, by name. */
 export const STAGE_KINDS = { highpass: 1, lowpass: 2, notch: 3 } as const;
+/** The name of any stage kind `STAGE_KINDS` defines. */
 export type StageKindName = keyof typeof STAGE_KINDS;
+/** Stage kind names by their number, the reverse of `STAGE_KINDS`. */
 export const KIND_NAMES: Readonly<Record<number, StageKindName>> = { 1: "highpass", 2: "lowpass", 3: "notch" };
+/** The classes a stage kind belongs to: map, representation, or detector. */
 export const STAGE_CLASSES = { map: 0, representation: 1, detector: 2 } as const;
+/** Stage class names by their number, the reverse of `STAGE_CLASSES`. */
 export const CLASS_NAMES: Readonly<Record<number, string>> = { 0: "map", 1: "representation", 2: "detector" };
 /** 1.3 adds synthetic: reported by a device generating its signal, never requested. */
 export const INPUT_SOURCES = { stream: 0, natural: 1, own_chain: 2, synthetic: 3 } as const;
+/** The name of any source `INPUT_SOURCES` defines. */
 export type InputSourceName = keyof typeof INPUT_SOURCES;
+/** Input source names by their number, the reverse of `INPUT_SOURCES`. */
 export const INPUT_SOURCE_NAMES: Readonly<Record<number, InputSourceName>> = { 0: "stream", 1: "natural", 2: "own_chain", 3: "synthetic" };
+/** The signal classes a model declares it takes, as bits of `inputClasses`. */
 export const INPUT_CLASSES = { time_domain: 1 << 0, representation: 1 << 1 } as const;
+/** Whether the chain in force is the device's default or one a host set. */
 export const PIPELINE_ORIGINS = { default: 0, host: 1 } as const;
+/** The name of any origin `PIPELINE_ORIGINS` defines. */
 export type OriginName = keyof typeof PIPELINE_ORIGINS;
+/** Origin names by their number, the reverse of `PIPELINE_ORIGINS`. */
 export const ORIGIN_NAMES: Readonly<Record<number, OriginName>> = { 0: "default", 1: "host" };
+/** The bias drive's modes: off, on, or loop open. */
 export const BIAS_MODES = { off: 0, on: 1, loop_open: 2 } as const;
+/** The name of any mode `BIAS_MODES` defines. */
 export type BiasModeName = keyof typeof BIAS_MODES;
+/** The most stages one chain may hold. */
 export const MAX_STAGES = 12;
+/** The most parameters one stage may hold. */
 export const MAX_PARAMS = 4;
+/** The most notch stages one chain may hold. */
 export const MAX_NOTCHES = 8;
+/** The device's default high-pass corner, in tenths of a hertz. */
 export const DEFAULT_HIGH_PASS_DHZ = 5;
 /** Both mains fundamentals, second and third harmonics, four hertz wide: the device's default until a region is chosen. */
 export const DEFAULT_MAINS_BANDS_DHZ: ReadonlyArray<readonly [number, number]> = [
@@ -1466,10 +1704,13 @@ export const DEFAULT_MAINS_BANDS_DHZ: ReadonlyArray<readonly [number, number]> =
 
 /** One stage of a chain: a kind and its parameters, in tenths of a hertz for every kind this version defines. */
 export interface Stage {
+  /** A `STAGE_KINDS` value. */
   readonly kind: number;
+  /** The stage's parameters, in tenths of a hertz for every kind this version defines. */
   readonly params: readonly number[];
 }
 
+/** `kind` in words, from `KIND_NAMES`. */
 export function stageName(s: Stage): string {
   return KIND_NAMES[s.kind] ?? `kind ${s.kind}`;
 }
@@ -1539,11 +1780,17 @@ export function decodeChain(data: Uint8Array): Stage[] {
 
 /** One kind a device runs: its number, class, parameter count, how many instances a chain may hold, and its name. */
 export interface CatalogEntry {
+  /** The stage kind's number. */
   readonly kind: number;
+  /** The stage class's number. See `STAGE_CLASSES`. */
   readonly cls: number;
+  /** `cls` in words. */
   readonly className: string;
+  /** Parameters this kind takes. */
   readonly nParams: number;
+  /** The most instances of this kind a chain may hold. */
   readonly maxInstances: number;
+  /** The kind's name, as the device's catalog states it. */
   readonly name: string;
 }
 
@@ -1558,6 +1805,7 @@ export const CONTRACT_CATALOG: readonly CatalogEntry[] = [
   { kind: 3, cls: 0, className: "map", nParams: 2, maxInstances: MAX_NOTCHES, name: "notch" },
 ];
 
+/** The length of one catalog record, in bytes. */
 export const CATALOG_ENTRY_LEN = 12;
 
 /** GET_PIPELINE_CATALOG: `u8 n_kinds`, then records of twelve bytes. */
@@ -1583,6 +1831,7 @@ export function decodeCatalog(payload: Uint8Array): CatalogEntry[] {
   return entries;
 }
 
+/** GET_PIPELINE_CATALOG's answer, as the device sends it. */
 export function encodeCatalog(entries: readonly CatalogEntry[]): Uint8Array {
   const out = new Uint8Array(1 + CATALOG_ENTRY_LEN * entries.length);
   out[0] = entries.length;
@@ -1599,11 +1848,15 @@ export function encodeCatalog(entries: readonly CatalogEntry[]): Uint8Array {
 
 /** The chain in force, and whether it is the device's own default for its current rate or one a host set. */
 export interface PipelineState {
+  /** A `PIPELINE_ORIGINS` value. */
   readonly origin: number;
+  /** `origin` in words. */
   readonly originName: OriginName;
+  /** The chain in force. */
   readonly stages: Stage[];
 }
 
+/** GET_PIPELINE's answer, as the device sends it. */
 export function decodePipelineState(payload: Uint8Array): PipelineState {
   if (payload.length === 0) throw new Truncated("a pipeline state is at least its origin");
   const origin = payload[0]!;
@@ -1612,6 +1865,7 @@ export function decodePipelineState(payload: Uint8Array): PipelineState {
   return { origin, originName, stages: decodeChain(payload.subarray(1)) };
 }
 
+/** GET_PIPELINE's answer, as the device sends it. */
 export function encodePipelineState(origin: number, stages: readonly Stage[]): Uint8Array {
   const chain = encodeChain(stages);
   const out = new Uint8Array(1 + chain.length);
@@ -1626,11 +1880,15 @@ export function encodePipelineState(origin: number, stages: readonly Stage[]): U
  * chain in effect for the model.
  */
 export interface PredictionInput {
+  /** An `INPUT_SOURCES` value. */
   readonly source: number;
+  /** `source` in words. */
   readonly sourceName: InputSourceName;
+  /** The chain in effect for the model, when `source` is the model's own. */
   readonly stages: Stage[];
 }
 
+/** SET_PREDICTION_INPUT's request, as the device reads it. */
 export function encodePredictionInput(source: number | InputSourceName, stages: readonly Stage[] = []): Uint8Array {
   const code = typeof source === "string" ? INPUT_SOURCES[source] : source;
   // Synthetic is reported by a device generating its signal, never requested.
@@ -1644,6 +1902,7 @@ export function encodePredictionInput(source: number | InputSourceName, stages: 
   return out;
 }
 
+/** GET_PREDICTION_INPUT's answer, as the device sends it. */
 export function decodePredictionInput(payload: Uint8Array): PredictionInput {
   if (payload.length === 0) throw new Truncated("a prediction input is at least its source");
   const source = payload[0]!;
@@ -1656,18 +1915,24 @@ export function decodePredictionInput(payload: Uint8Array): PredictionInput {
 
 /** The bias output over the device's own window, in millivolts. */
 export interface BiasDiagnostic {
+  /** Mean bias output, in millivolts. */
   readonly meanMv: number;
+  /** Standard deviation of the bias output, in millivolts. */
   readonly sdMv: number;
+  /** Minimum bias output, in millivolts. */
   readonly minMv: number;
+  /** Maximum bias output, in millivolts. */
   readonly maxMv: number;
 }
 
+/** GET_BIAS_DIAGNOSTIC's answer, as the device sends it. */
 export function decodeBiasDiagnostic(payload: Uint8Array): BiasDiagnostic {
   if (payload.length < 8) throw new Truncated("a bias diagnostic is eight bytes");
   const v = view(payload);
   return { meanMv: v.getInt16(0, true), sdMv: v.getInt16(2, true), minMv: v.getInt16(4, true), maxMv: v.getInt16(6, true) };
 }
 
+/** GET_BIAS_DIAGNOSTIC's answer, as the device sends it. */
 export function encodeBiasDiagnostic(d: BiasDiagnostic): Uint8Array {
   const out = new Uint8Array(8);
   const v = view(out);
@@ -1685,8 +1950,11 @@ export function encodeBiasDiagnostic(d: BiasDiagnostic): Uint8Array {
 // blink shapes are the device's and documented on its page; a host explains
 // the lamp in words from these tables and never decodes a light.
 
+/** The status lamp's verbosity levels: silent, reserved, or verbose. */
 export const INDICATOR_LEVELS = { silent: 0, reserved: 1, verbose: 2 } as const;
+/** The name of any level `INDICATOR_LEVELS` defines. */
 export type IndicatorLevelName = keyof typeof INDICATOR_LEVELS;
+/** Indicator level names by their number, the reverse of `INDICATOR_LEVELS`. */
 export const INDICATOR_LEVEL_NAMES: Readonly<Record<number, IndicatorLevelName>> = { 0: "silent", 1: "reserved", 2: "verbose" };
 /** What each level shows, most important first. */
 export const INDICATOR_SHOWS: Readonly<Record<IndicatorLevelName, readonly string[]>> = {
@@ -1696,7 +1964,9 @@ export const INDICATOR_SHOWS: Readonly<Record<IndicatorLevelName, readonly strin
 };
 /** Low battery begins below this percent of the device's own estimate and ends above the clear percent, or on external power. */
 export const LOW_BATTERY_PERCENT = 20;
+/** Low battery clears once the device's own estimate rises back above this percent. */
 export const LOW_BATTERY_CLEAR_PERCENT = 25;
+/** The most seconds one identify request may run. */
 export const IDENTIFY_MAX_SECONDS = 30;
 
 // --- the converter's registers, read only (1.2) ------------------------------
@@ -1706,16 +1976,22 @@ export const IDENTIFY_MAX_SECONDS = 30;
 // Instruments ADS1299 family; the IntoMind One carries the ADS1299-4, as its
 // datasheet says. There is no write.
 
+/** Which chip family a converter register file belongs to, by its `family` code. */
 export const CONVERTER_FAMILIES: Readonly<Record<number, string>> = { 1: "ads1299" };
 
+/** GET_CONVERTER_REGISTERS's answer. */
 export interface ConverterRegisters {
+  /** Which chip family the registers belong to. See `CONVERTER_FAMILIES`. */
   readonly family: number;
+  /** `family` in words. */
   readonly familyName: string;
   /** Address of the first register carried. */
   readonly first: number;
+  /** The registers themselves, consecutive addresses starting at `first`. */
   readonly values: Uint8Array;
 }
 
+/** GET_CONVERTER_REGISTERS's answer, as the device sends it. */
 export function decodeConverterRegisters(payload: Uint8Array): ConverterRegisters {
   if (payload.length < 3) throw new Truncated("registers are at least a family, a first address, and a count");
   const family = payload[0]!;
@@ -1726,6 +2002,7 @@ export function decodeConverterRegisters(payload: Uint8Array): ConverterRegister
   return { family, familyName: CONVERTER_FAMILIES[family] ?? `family ${family}`, first: payload[1]!, values: payload.slice(3) };
 }
 
+/** GET_CONVERTER_REGISTERS's answer, as the device sends it. */
 export function encodeConverterRegisters(r: { family: number; first: number; values: Uint8Array }): Uint8Array {
   if (r.values.length === 0 || r.values.length > 64) throw new Invalid("registers carry one to sixty four values");
   const out = new Uint8Array(3 + r.values.length);
@@ -1855,11 +2132,17 @@ export function describeAds1299Registers(values: Uint8Array): Record<string, unk
 // turns back into signal. Both are quantized the way a head receives an
 // embedding (times 4096). The weights never leave the device.
 
+/** The embedding packet type. */
 export const PACKET_EMBEDDING = 0x03;
+/** The length of an embedding notification's header, before its values. */
 export const EMBEDDING_HEADER_LEN = 28;
+/** The `token` byte meaning this is the window embedding, not one token. */
 export const WINDOW_TOKEN = 0xff;
+/** Which embeddings a device streams: off, window, tokens, or both. */
 export const EMBEDDING_FORMS = { off: 0, window: 1, tokens: 2, both: 3 } as const;
+/** The name of any form `EMBEDDING_FORMS` defines. */
 export type EmbeddingFormName = keyof typeof EMBEDDING_FORMS;
+/** The bits of an embedding notification's flags byte. */
 export const EMBEDDING_FLAGS = {
   gap_in_window: 1 << 0,
   duty_reduced: 1 << 1,
@@ -1867,11 +2150,17 @@ export const EMBEDDING_FLAGS = {
   more_parts: 1 << 3,
 } as const;
 
+/** One embedding notification, decoded: the whole vector, or the part carried here. */
 export interface Embedding {
+  /** 0x03 for an embedding. */
   readonly packetType: number;
+  /** The window's first sample's index. */
   readonly index: number;
+  /** The window's first sample's device time. */
   readonly deviceTime: bigint;
+  /** The window's length, in raw samples at the current rate. */
   readonly windowSamples: number;
+  /** The encoder that produced this, as `GET_MODEL_INFO` reports it. */
   readonly encoderId: string;
   /** An `INPUT_SOURCES` value. */
   readonly inputSource: number;
@@ -1881,14 +2170,19 @@ export interface Embedding {
   readonly first: number;
   /** Null for the window embedding; otherwise the token's index, channel-major over all channels. */
   readonly token: number | null;
+  /** Whether another notification carries the rest of this vector. */
   readonly moreParts: boolean;
+  /** Whether a gap fell inside the window. */
   readonly gapInWindow: boolean;
+  /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
+  /** Whether lead-off was active at any point in the window. */
   readonly leadoffInWindow: boolean;
   /** Quantized values: the encoder's output times 4096. */
   readonly values: number[];
 }
 
+/** One embedding notification, as the device sends it. */
 export function decodeEmbedding(data: Uint8Array): Embedding {
   if (data.length < EMBEDDING_HEADER_LEN) throw new Truncated("an embedding is at least its header");
   const v = view(data);
@@ -1922,22 +2216,37 @@ export function decodeEmbedding(data: Uint8Array): Embedding {
   };
 }
 
+/** What `encodeEmbedding` takes. */
 export interface EmbeddingFields {
+  /** The window's first sample's index. */
   index: number;
+  /** The window's first sample's device time. */
   deviceTime: bigint;
+  /** The window's length, in raw samples. */
   windowSamples: number;
+  /** The encoder that produced this. */
   encoderId: string;
+  /** An `INPUT_SOURCES` value. */
   inputSource?: number;
+  /** Values in the whole embedding. */
   embedDim: number;
+  /** Index of the first value carried here. */
   first?: number;
+  /** Null for the window embedding, otherwise the token's index. */
   token?: number | null;
+  /** Whether another notification carries the rest of this vector. */
   moreParts?: boolean;
+  /** Whether a gap fell inside the window. */
   gapInWindow?: boolean;
+  /** Whether the device skipped windows to stay within its compute budget. */
   dutyReduced?: boolean;
+  /** Whether lead-off was active at any point in the window. */
   leadoffInWindow?: boolean;
+  /** The values carried in this notification. */
   values: ArrayLike<number>;
 }
 
+/** One embedding notification, as the device sends it. */
 export function encodeEmbedding(e: EmbeddingFields): Uint8Array {
   const n = e.values.length;
   const first = e.first ?? 0;
@@ -1964,14 +2273,23 @@ export function encodeEmbedding(e: EmbeddingFields): Uint8Array {
 
 /** One window's embeddings, whole. */
 export interface EmbeddingWindow {
+  /** The window's first sample's index. */
   readonly index: number;
+  /** The window's first sample's device time. */
   readonly deviceTime: bigint;
+  /** The window's length, in raw samples. */
   readonly windowSamples: number;
+  /** The encoder that produced this. */
   readonly encoderId: string;
+  /** An `INPUT_SOURCES` value. */
   readonly inputSource: number;
+  /** Values in the whole embedding. */
   readonly embedDim: number;
+  /** Whether a gap fell inside the window. */
   readonly gapInWindow: boolean;
+  /** Whether the device skipped windows to stay within its compute budget. */
   readonly dutyReduced: boolean;
+  /** Whether lead-off was active at any point in the window. */
   readonly leadoffInWindow: boolean;
   /** The window embedding, quantized, when asked for. */
   readonly embedding: number[] | null;
@@ -1987,12 +2305,17 @@ export interface EmbeddingWindow {
  * completed are dropped and counted in `incomplete`.
  */
 export class EmbeddingAssembler {
+  /** The device's channel count, as built. */
   readonly channels: number;
+  /** Tokens per channel per window, as built. */
   readonly tokensPerChannel: number;
+  /** Which form this was built for. */
   readonly form: EmbeddingFormName;
+  /** Windows dropped before their last piece arrived. */
   incomplete = 0;
   readonly #windows = new Map<number, { meta: Embedding; embedding: Array<number | null>; tokens: Array<Array<number | null>> }>();
 
+  /** Build one for a device's channel count, the model's tokens per channel, and the form asked for. */
   constructor(channels: number, tokensPerChannel: number, form: EmbeddingFormName = "both") {
     if (form === "off") throw new Invalid("the form is window, tokens, or both");
     this.channels = channels;
@@ -2000,10 +2323,12 @@ export class EmbeddingAssembler {
     this.form = form;
   }
 
+  /** Tokens expected per window: `channels` times `tokensPerChannel`. */
   get nTokens(): number {
     return this.channels * this.tokensPerChannel;
   }
 
+  /** Feed one decoded notification in. Returns the window once its last piece has arrived, else null. */
   feed(e: Embedding): EmbeddingWindow | null {
     const nTokens = this.nTokens;
     let w = this.#windows.get(e.index);
@@ -2137,8 +2462,11 @@ export function describeChain(stages: readonly Stage[], rateSps?: number): strin
 
 // --- the update service -----------------------------------------------------
 
+/** The update service's operations, by name. */
 export const UPDATE_OPS = { start: 0x01, query: 0x02, finish: 0x03, activate: 0x04, abort: 0x05 } as const;
+/** The name of any operation `UPDATE_OPS` defines. */
 export type UpdateOpName = keyof typeof UPDATE_OPS;
+/** Operation names by their number, the reverse of `UPDATE_OPS`. */
 export const UPDATE_OP_BY_CODE: Readonly<Record<number, UpdateOpName>> = {
   1: "start",
   2: "query",
@@ -2147,14 +2475,18 @@ export const UPDATE_OP_BY_CODE: Readonly<Record<number, UpdateOpName>> = {
   5: "abort",
 };
 
+/** What a transfer carries: an application, weights, or a head. */
 export const UPDATE_TARGETS = { app: 1, weights: 2, head: 3 } as const;
+/** The name of any target `UPDATE_TARGETS` defines. */
 export type UpdateTargetName = keyof typeof UPDATE_TARGETS;
+/** Target names by their number, the reverse of `UPDATE_TARGETS`. */
 export const UPDATE_TARGET_BY_CODE: Readonly<Record<number, UpdateTargetName>> = {
   1: "app",
   2: "weights",
   3: "head",
 };
 
+/** What an update control response's status byte means. */
 export const UPDATE_STATUS: Readonly<Record<number, string>> = {
   0: "ok",
   1: "invalid argument",
@@ -2165,6 +2497,7 @@ export const UPDATE_STATUS: Readonly<Record<number, string>> = {
   6: "verification failed",
 };
 
+/** A transfer's state, in words, by its QUERY `state` code. */
 export const UPDATE_STATES: Readonly<Record<number, string>> = {
   0: "idle",
   1: "receiving",
@@ -2172,6 +2505,7 @@ export const UPDATE_STATES: Readonly<Record<number, string>> = {
   3: "failed",
 };
 
+/** Why FINISH accepted or refused an image, in words, by its `verify_result` code. */
 export const VERIFY_RESULTS: Readonly<Record<number, string>> = {
   0: "verified",
   1: "length",
@@ -2186,12 +2520,18 @@ export const VERIFY_RESULTS: Readonly<Record<number, string>> = {
   10: "key id",
 };
 
+/** The length of a START request, in bytes. */
 export const UPDATE_START_LEN = 15;
+/** The length of an image envelope's plain header, in bytes. */
 export const ENVELOPE_LEN = 32;
+/** An image envelope's magic bytes, as hex. */
 export const ENVELOPE_MAGIC = "494d5550";
+/** The only envelope version this contract defines. */
 export const ENVELOPE_VERSION = 1;
+/** The `slot_link` byte for an image that is not linked to an application slot. */
 export const SLOT_LINK_NONE = 0xff;
 
+/** A START request, as the device reads it. */
 export function encodeUpdateStart(
   target: UpdateTargetName | number,
   slot: number,
@@ -2213,17 +2553,26 @@ export function encodeUpdateStart(
   return out;
 }
 
+/** A request with no body: QUERY, FINISH, ACTIVATE, or ABORT, as the device reads it. */
 export function encodeUpdateOp(op: UpdateOpName): Uint8Array {
   return new Uint8Array([UPDATE_OPS[op]]);
 }
 
+/** An update control request, as `decodeUpdateRequest` reads it. */
 export interface UpdateRequest {
+  /** The raw operation byte. */
   readonly op: number;
+  /** `op` in words. */
   readonly opName: UpdateOpName;
+  /** What is being transferred, for a START request. Null otherwise. */
   readonly target: number | null;
+  /** `target` in words. */
   readonly targetName: UpdateTargetName | null;
+  /** The slot, for a START request. Null otherwise. */
   readonly slot: number | null;
+  /** The exact byte count the host will send, for a START request. Null otherwise. */
   readonly totalLen: number | null;
+  /** The transfer's identifier, for a START request. Null otherwise. */
   readonly transferId: string | null;
 }
 
@@ -2258,18 +2607,27 @@ export function decodeUpdateRequest(data: Uint8Array): UpdateRequest {
   };
 }
 
+/** An update control response, as `decodeUpdateResponse` reads it. */
 export interface UpdateResponse {
+  /** The operation byte this answers. */
   readonly op: number;
+  /** `op` in words, or null for a number this contract does not define. */
   readonly opName: UpdateOpName | null;
+  /** The status byte, 0 for success. */
   readonly status: number;
+  /** `status` in words. */
   readonly statusName: string;
+  /** Whether `status` is 0. */
   readonly ok: boolean;
   /** FINISH says why it refused an image. No other operation carries one. */
   readonly verifyResult: number | null;
+  /** `verifyResult` in words, or null when there is none. */
   readonly verifyResultName: string | null;
+  /** The bytes after the operation and status. */
   readonly payload: Uint8Array;
 }
 
+/** An update control response, as the device sends it. */
 export function decodeUpdateResponse(data: Uint8Array): UpdateResponse {
   if (data.length < 2) throw new Truncated("an update answer is at least an operation and a status");
   const op = data[0]!;
@@ -2297,6 +2655,7 @@ export function decodeUpdateResponse(data: Uint8Array): UpdateResponse {
   };
 }
 
+/** An update control response, as the device sends it. */
 export function encodeUpdateResponse(op: number, status: number, payload: Uint8Array = EMPTY): Uint8Array {
   const out = new Uint8Array(2 + payload.length);
   out[0] = op;
@@ -2305,6 +2664,7 @@ export function encodeUpdateResponse(op: number, status: number, payload: Uint8A
   return out;
 }
 
+/** START's answer: the slot, the chunk limit, and how much the device already has. */
 export interface UpdateStart {
   /** Which slot the device wants the image in. */
   readonly targetSlot: number;
@@ -2314,20 +2674,26 @@ export interface UpdateStart {
   readonly resumeOffset: number;
 }
 
+/** START's answer, as the device sends it. */
 export function decodeUpdateStart(payload: Uint8Array): UpdateStart {
   if (payload.length < 7) throw new Truncated("a start answer is seven bytes");
   const v = view(payload);
   return { targetSlot: payload[0]!, chunkMax: v.getUint16(1, true), resumeOffset: v.getUint32(3, true) };
 }
 
+/** QUERY's answer: the transfer's state, how much the device holds, and its checksum over that. */
 export interface UpdateQuery {
+  /** The transfer's state code. See `UPDATE_STATES`. */
   readonly state: number;
+  /** `state` in words. */
   readonly stateName: string;
+  /** Bytes the device has accepted so far. */
   readonly offset: number;
   /** The device's own checksum over every byte it has accepted. */
   readonly crc32: number;
 }
 
+/** QUERY's answer, as the device sends it. */
 export function decodeUpdateQuery(payload: Uint8Array): UpdateQuery {
   if (payload.length < 9) throw new Truncated("a query answer is nine bytes");
   const v = view(payload);
@@ -2346,15 +2712,23 @@ export function decodeUpdateQuery(payload: Uint8Array): UpdateQuery {
  * without being able to read or forge one.
  */
 export interface Envelope {
+  /** What is being transferred: application or weights. */
   readonly target: number;
+  /** `target` in words. */
   readonly targetName: UpdateTargetName;
+  /** Which application slot this image is built for. `SLOT_LINK_NONE` for weights. */
   readonly slotLink: number;
+  /** The key identifier the envelope names. */
   readonly keyId: number;
+  /** The encryption nonce. */
   readonly nonce: Uint8Array;
+  /** Length of the encrypted payload, in bytes. */
   readonly plainLen: number;
+  /** The envelope's length plus the payload's. */
   readonly totalLen: number;
 }
 
+/** An image envelope's plain header, as the device reads it. */
 export function decodeEnvelope(data: Uint8Array): Envelope {
   if (data.length < ENVELOPE_LEN) throw new Truncated("an envelope is thirty two bytes");
   if (hex(data.subarray(0, 4)) !== ENVELOPE_MAGIC || data[4] !== ENVELOPE_VERSION) {
@@ -2382,6 +2756,7 @@ export function decodeEnvelope(data: Uint8Array): Envelope {
   };
 }
 
+/** An image envelope's plain header, as the device reads it. */
 export function encodeEnvelope(e: {
   target: UpdateTargetName | number;
   slotLink: number;
@@ -2404,12 +2779,17 @@ export function encodeEnvelope(e: {
 
 // --- heads ------------------------------------------------------------------
 
+/** A head blob's magic bytes, as hex. */
 export const HEAD_MAGIC = "494d4844";
+/** The length of a format 1 head header, in bytes. */
 export const HEAD_HEADER_LEN = 32;
 /** 1.3: format 2 appends the eight byte id of the encoder the head was trained beside. */
 export const HEAD_HEADER_LEN_2 = 40;
+/** The length of a head blob's trailing hash, in bytes. */
 export const HEAD_HASH_LEN = 32;
+/** The only head kind this contract defines. */
 export const HEAD_KIND_LINEAR = 1;
+/** The length of a head's name field, in bytes. */
 export const HEAD_NAME_LEN = 16;
 
 /**
@@ -2418,6 +2798,7 @@ export const HEAD_NAME_LEN = 16;
  */
 export const EMBED_SCALE = 4096.0;
 
+/** The exact length of a head blob for a shape and format version. */
 export function headBlobLen(inDim: number, outDim: number, version = 2): number {
   return (version === 2 ? HEAD_HEADER_LEN_2 : HEAD_HEADER_LEN) + outDim * inDim + 8 * outDim + HEAD_HASH_LEN;
 }
@@ -2437,14 +2818,23 @@ export function quantizeEmbedding(embedding: ArrayLike<number>): number[] {
   return out;
 }
 
+/** A head, decoded: the weights, and everything needed to run them. */
 export interface HeadBlob {
+  /** `HEAD_KIND_LINEAR`, the only kind this contract defines. */
   readonly kind: number;
+  /** The embedding width this head takes. Must equal the loaded encoder's. */
   readonly inDim: number;
+  /** Outputs this head produces. */
   readonly outDim: number;
+  /** The head's name. */
   readonly name: string;
+  /** The head's identity, the first eight bytes of its SHA-256. */
   readonly headId: string;
+  /** One row per output, each row `inDim` signed byte values. */
   readonly weights: number[][];
+  /** One integer per output. */
   readonly bias: number[];
+  /** One float per output. */
   readonly scale: number[];
   /** The format the file was written in: 1, or 2 with an encoder id. */
   readonly version: number;

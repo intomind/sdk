@@ -26,6 +26,7 @@ export class Exchange {
   /** The device's own time, in its ticks, captured when it read the request. */
   readonly deviceTicks: bigint;
 
+  /** One exchange: the host clock either side of the request, and the device's own answer in its ticks. */
   constructor(before: number, after: number, deviceTicks: bigint) {
     this.before = before;
     this.after = after;
@@ -50,7 +51,9 @@ export class Exchange {
 export interface Fit {
   /** host = deviceSeconds * (1 + skew) + offset. */
   readonly offsetS: number;
+  /** The measured clock skew, in parts per million. 0 when `skewUsed` is false. */
   readonly skewPpm: number;
+  /** Exchanges this fit was computed from. */
   readonly exchanges: number;
   /** How far the exchanges sit from the line, in microseconds. */
   readonly residualUs: number;
@@ -60,6 +63,7 @@ export interface Fit {
 
 /** Device time onto host time, and the exchanges it was learned from. */
 export class Timebase {
+  /** The device's own tick rate, from device info. */
   readonly tickHz: number;
   #exchanges: Exchange[] = [];
   #fit: Fit | null = null;
@@ -76,10 +80,12 @@ export class Timebase {
     return this.#fit;
   }
 
+  /** Every exchange taken so far. */
   get exchanges(): readonly Exchange[] {
     return this.#exchanges;
   }
 
+  /** The current fit, or null before the first exchange. */
   get fit(): Fit | null {
     return this.#fit;
   }

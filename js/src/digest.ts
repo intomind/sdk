@@ -26,6 +26,7 @@ const CRC_TABLE = (() => {
 export class Crc32 {
   private state = 0xffffffff;
 
+  /** Fold more bytes into the running checksum, and return this so calls chain. */
   update(data: Uint8Array): this {
     let c = this.state;
     for (let i = 0; i < data.length; i++) {
@@ -37,6 +38,7 @@ export class Crc32 {
     return this;
   }
 
+  /** The checksum over every slice folded in so far. */
   finish(): number {
     return (this.state ^ 0xffffffff) >>> 0;
   }

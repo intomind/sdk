@@ -54,14 +54,19 @@ export type Step =
 
 /** Why a transfer stopped. */
 export class TransferError extends Error {
+  /** Always "TransferError". */
   override readonly name: string = "TransferError";
 }
 
 /** The device refused a request. */
 export class Refused extends TransferError {
+  /** Always "Refused". */
   override readonly name = "Refused";
+  /** Which operation the device refused. */
   readonly op: string;
+  /** The device's status for that operation, in words. */
   readonly status: string;
+  /** Build one naming the refused operation and the device's status. */
   constructor(op: string, status: string) {
     super(`the device refused ${op}: ${status}`);
     this.op = op;
@@ -71,9 +76,13 @@ export class Refused extends TransferError {
 
 /** The device holds a different number of bytes than were sent. */
 export class OffsetMismatch extends TransferError {
+  /** Always "OffsetMismatch". */
   override readonly name = "OffsetMismatch";
+  /** Bytes this side has sent. */
   readonly sent: number;
+  /** Bytes the device says it holds. */
   readonly device: number;
+  /** Build one with what was sent and what the device reports holding. */
   constructor(sent: number, device: number) {
     super(`the device accepted ${device} bytes where ${sent} were sent`);
     this.sent = sent;
@@ -83,10 +92,15 @@ export class OffsetMismatch extends TransferError {
 
 /** The bytes arrived changed. */
 export class ChecksumMismatch extends TransferError {
+  /** Always "ChecksumMismatch". */
   override readonly name = "ChecksumMismatch";
+  /** Bytes checked. */
   readonly sent: number;
+  /** This side's checksum over those bytes. */
   readonly ours: number;
+  /** The device's checksum over the same bytes. */
   readonly device: number;
+  /** Build one with the bytes checked and the two checksums. */
   constructor(sent: number, ours: number, device: number) {
     super(
       `over ${sent} bytes our checksum is ${hex32(ours)} and the device's is ${hex32(device)}`,
@@ -99,8 +113,11 @@ export class ChecksumMismatch extends TransferError {
 
 /** The device refused the finished image, and said why. */
 export class Rejected extends TransferError {
+  /** Always "Rejected". */
   override readonly name = "Rejected";
+  /** Why the device refused the image, or null when it gave no reason. */
   readonly result: string | null;
+  /** Build one with the device's reason, or null when it gave none. */
   constructor(result: string | null) {
     super(`the device refused the image: ${result ?? "no reason given"}`);
     this.result = result;
@@ -109,7 +126,9 @@ export class Rejected extends TransferError {
 
 /** An answer arrived that this transfer did not ask for. */
 export class Unexpected extends TransferError {
+  /** Always "Unexpected". */
   override readonly name = "Unexpected";
+  /** Build one, with a default message or one of your own. */
   constructor(message = "an answer arrived that this transfer did not ask for") {
     super(message);
   }

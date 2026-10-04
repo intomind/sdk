@@ -28,39 +28,61 @@ import type { Transfer } from "./transfer.ts";
 // rather than depending on a types package keeps the dependency count at
 // zero and states exactly what the transport touches.
 
+/** The part of a GATT characteristic this transport uses. */
 export interface BluetoothRemoteGATTCharacteristicLike extends EventTarget {
+  /** The characteristic's full identifier. */
   readonly uuid: string;
+  /** The last value read or notified. */
   readonly value?: DataView;
+  /** Read the current value. */
   readValue(): Promise<DataView>;
+  /** Write a value and wait for the device's acknowledgement. */
   writeValueWithResponse(value: BufferSource): Promise<void>;
+  /** Write a value without waiting for an acknowledgement. */
   writeValueWithoutResponse(value: BufferSource): Promise<void>;
+  /** Subscribe to value-changed notifications. */
   startNotifications(): Promise<BluetoothRemoteGATTCharacteristicLike>;
+  /** Unsubscribe from value-changed notifications. */
   stopNotifications(): Promise<BluetoothRemoteGATTCharacteristicLike>;
 }
 
+/** The part of a GATT service this transport uses. */
 export interface BluetoothRemoteGATTServiceLike {
+  /** Resolve one of the service's characteristics by its full identifier. */
   getCharacteristic(uuid: string): Promise<BluetoothRemoteGATTCharacteristicLike>;
 }
 
+/** The part of a GATT server this transport uses. */
 export interface BluetoothRemoteGATTServerLike {
+  /** Whether the link is currently connected. */
   readonly connected: boolean;
+  /** Open the link. */
   connect(): Promise<BluetoothRemoteGATTServerLike>;
+  /** Drop the link. */
   disconnect(): void;
+  /** Resolve the device's primary service by its full identifier. */
   getPrimaryService(uuid: string): Promise<BluetoothRemoteGATTServiceLike>;
 }
 
+/** The part of a chosen Bluetooth device this transport uses. */
 export interface BluetoothDeviceLike extends EventTarget {
+  /** The browser's identifier for this device. */
   readonly id: string;
+  /** The device's advertised name, when known. */
   readonly name?: string;
+  /** The device's GATT server, when it has one. */
   readonly gatt?: BluetoothRemoteGATTServerLike;
 }
 
+/** The part of `navigator.bluetooth` this transport uses. */
 export interface BluetoothLike {
+  /** Put the browser's device chooser up. */
   requestDevice(options: {
     filters?: Array<{ services?: string[]; namePrefix?: string }>;
     optionalServices?: string[];
     acceptAllDevices?: boolean;
   }): Promise<BluetoothDeviceLike>;
+  /** Whether this browser has Bluetooth available at all, when the browser reports it. */
   getAvailability?(): Promise<boolean>;
 }
 
@@ -91,6 +113,7 @@ export function hostClock(): number {
   return Date.now() / 1000;
 }
 
+/** Options for `requestDevice`. */
 export interface RequestOptions {
   /** Narrow the chooser further, for instance to one unit on a bench. */
   namePrefix?: string;
@@ -106,6 +129,7 @@ export function requestDevice(options: RequestOptions = {}): Promise<BluetoothDe
   return bluetooth().requestDevice({ filters: [filter], optionalServices: [SERVICE] });
 }
 
+/** Options for `connect`. */
 export interface ConnectOptions {
   /** Drive an existing session rather than a new one. */
   session?: Session;
@@ -119,7 +143,9 @@ export interface ConnectOptions {
 
 /** A live link to one device. */
 export class Connection {
+  /** The device this link is to. */
   readonly device: BluetoothDeviceLike;
+  /** The session reading this device's notifications. */
   readonly session: Session;
   /** What the device said it is, read before anything else was asked of it. */
   readonly info: DeviceInfo;
@@ -138,6 +164,7 @@ export class Connection {
    */
   readonly #updateTimeoutMs = 30_000;
 
+  /** Build one from an open server and the characteristics `connect` resolved. */
   constructor(f: {
     device: BluetoothDeviceLike;
     server: BluetoothRemoteGATTServerLike;
@@ -154,6 +181,7 @@ export class Connection {
     this.#timeoutMs = f.timeoutMs;
   }
 
+  /** Whether the link is currently connected. */
   get connected(): boolean {
     return this.#server.connected;
   }
