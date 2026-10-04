@@ -34,10 +34,12 @@ impl Default for Crc32 {
 }
 
 impl Crc32 {
+    /// A fresh running checksum, with no bytes folded in yet.
     pub const fn new() -> Self {
         Crc32(0xFFFF_FFFF)
     }
 
+    /// Fold more bytes into the running checksum.
     pub fn update(&mut self, data: &[u8]) {
         let mut c = self.0;
         for &b in data {
@@ -48,6 +50,7 @@ impl Crc32 {
         self.0 = c;
     }
 
+    /// The checksum of every byte folded in so far.
     pub const fn finish(self) -> u32 {
         self.0 ^ 0xFFFF_FFFF
     }

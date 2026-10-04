@@ -64,6 +64,7 @@ impl<const CH: usize, const N: usize, const CAP: usize> Default for Feeder<CH, N
 impl<const CH: usize, const N: usize, const CAP: usize> Feeder<CH, N, CAP> {
     const RING_HOLDS_A_WINDOW: () = assert!(CAP >= N && N > 0);
 
+    /// An empty feeder at this device-to-model rate ratio.
     pub const fn new(ratio: Ratio) -> Self {
         let () = Self::RING_HOLDS_A_WINDOW;
         Feeder { buf: [[0.0; CAP]; CH], count: 0, ratio, held: [0.0; CH], have_held: false }
@@ -79,6 +80,7 @@ impl<const CH: usize, const N: usize, const CAP: usize> Feeder<CH, N, CAP> {
         }
     }
 
+    /// Discard everything gathered and start counting from zero again.
     pub fn reset(&mut self) {
         self.count = 0;
         self.have_held = false;
@@ -94,10 +96,12 @@ impl<const CH: usize, const N: usize, const CAP: usize> Feeder<CH, N, CAP> {
         self.count >= N as u64
     }
 
+    /// Samples held, up to a whole window.
     pub fn len(&self) -> usize {
         self.count.min(N as u64) as usize
     }
 
+    /// Whether no samples have been taken since the reset.
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }

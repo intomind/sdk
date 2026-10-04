@@ -9,7 +9,9 @@
 
 use crate::Error;
 
+/// Packet type for an embedding notification.
 pub const PACKET_TYPE_EMBEDDING: u8 = 0x03;
+/// Bytes in the fixed header, ahead of the values.
 pub const HEADER_LEN: usize = 28;
 /// The `token` byte of a window embedding. A token's own index otherwise,
 /// channel-major over all channels: `channel * tokens_per_channel + slice`.
@@ -22,9 +24,13 @@ pub const WINDOW_TOKEN: u8 = 0xFF;
 /// below an MTU of 247 received cut short.
 pub const MAX_VALUES_PER_PACKET: usize = (crate::NOTIFICATION_MAX - HEADER_LEN) / 2;
 
+/// Bits of the header's `flags` byte.
 pub mod flags {
+    /// The window spans a loss in the stream.
     pub const GAP_IN_WINDOW: u8 = 1 << 0;
+    /// The device skipped windows to stay within its compute budget.
     pub const DUTY_REDUCED: u8 = 1 << 1;
+    /// An electrode was off during the window.
     pub const LEADOFF_IN_WINDOW: u8 = 1 << 2;
     /// Another notification carries the rest of this vector's values.
     pub const MORE_PARTS: u8 = 1 << 3;
@@ -32,14 +38,20 @@ pub mod flags {
 
 /// SET_EMBEDDINGS argument: which form the device sends.
 pub mod form {
+    /// Send nothing.
     pub const OFF: u8 = 0;
+    /// The window embedding a head consumes.
     pub const WINDOW: u8 = 1;
+    /// The per-slice tokens reconstruction consumes.
     pub const TOKENS: u8 = 2;
+    /// Both forms, for the same windows.
     pub const BOTH: u8 = 3;
 }
 
+/// The decoded fixed header of one embedding notification, ahead of its values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EmbeddingHeader {
+    /// See the [`flags`] module.
     pub flags: u8,
     /// Values in the whole vector.
     pub embed_dim: u8,
@@ -51,6 +63,7 @@ pub struct EmbeddingHeader {
     pub device_time: u64,
     /// Window length in raw samples at the current rate.
     pub window_samples: u16,
+    /// The encoder that produced the embedding, as `control::ModelInfo` reports it.
     pub encoder_id: [u8; 8],
     /// What the window was taken from, a `pipeline::input_source` value.
     pub input_source: u8,
@@ -63,19 +76,23 @@ pub struct EmbeddingHeader {
 pub struct Values<'a>(&'a [u8]);
 
 impl<'a> Values<'a> {
+    /// Values carried in this notification.
     pub fn len(&self) -> usize {
         self.0.len() / 2
     }
 
+    /// Whether this notification carries no values.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// The value at `i`, or `None` past the end.
     pub fn get(&self, i: usize) -> Option<i16> {
         let b = self.0.get(i * 2..i * 2 + 2)?;
         Some(i16::from_le_bytes([b[0], b[1]]))
     }
 
+    /// The values in order.
     pub fn iter(&self) -> impl Iterator<Item = i16> + 'a {
         let bytes = self.0;
         (0..bytes.len() / 2).map(move |i| i16::from_le_bytes([bytes[i * 2], bytes[i * 2 + 1]]))

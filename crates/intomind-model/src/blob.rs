@@ -11,6 +11,7 @@ use crate::prep::normalize_window;
 /// normalizes it in its own scratch, so nothing has to hold the whole
 /// window contiguously and the feeder's buffer is the only copy.
 pub trait Window {
+    /// Channels in this window.
     fn channels(&self) -> usize;
     /// Write this channel's samples, oldest first, in microvolts.
     fn read_channel(&self, channel: usize, out: &mut [f32]);
@@ -18,8 +19,11 @@ pub trait Window {
 
 /// A window that is already laid out channel major. For hosts and tests.
 pub struct Slice<'a> {
+    /// Samples, channel major.
     pub data: &'a [f32],
+    /// Channels in `data`.
     pub channels: usize,
+    /// Samples per channel.
     pub window_samples: usize,
 }
 
@@ -33,17 +37,21 @@ impl Window for Slice<'_> {
     }
 }
 
+/// The magic bytes at the start of a weights blob.
 pub const MAGIC: [u8; 4] = *b"IMW1";
 /// The protocol's `pipeline::input_class::TIME_DOMAIN`, restated here so
 /// this crate stays free of the protocol crate.
 pub const INPUT_CLASS_TIME_DOMAIN: u8 = 1 << 0;
+/// The format version this codec reads.
 pub const FORMAT_VERSION: u8 = 1;
+/// Bytes in the fixed header.
 pub const HEADER_LEN: usize = 32;
 /// Tokens whose feed forward hidden values are held at once. Larger is
 /// faster and needs more memory: each weight row is dequantized once per
 /// tile rather than once per token.
 pub const FF_TILE: usize = 8;
 
+/// What went wrong reading or running a weights blob.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     /// Not a weights blob, or a format this firmware does not know.
@@ -54,14 +62,22 @@ pub enum Error {
     BadShape,
 }
 
+/// The weights blob's fixed header: the encoder's shape and identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Header {
+    /// Transformer layers.
     pub n_layers: usize,
+    /// Width of the residual stream.
     pub d_model: usize,
+    /// Width of the feed forward hidden layer.
     pub d_ff: usize,
+    /// Attention heads.
     pub n_heads: usize,
+    /// Raw samples per patch, the model's time step before embedding.
     pub patch: usize,
+    /// Patches per channel in one window.
     pub n_time: usize,
+    /// The model's native rate, in samples per second.
     pub native_sps: u32,
     /// Names the trained weights, and travels with every prediction.
     pub encoder_id: [u8; 8],
@@ -75,10 +91,12 @@ pub struct Header {
 }
 
 impl Header {
+    /// Raw samples per channel in one window: `patch * n_time`.
     pub fn window_samples(&self) -> usize {
         self.patch * self.n_time
     }
 
+    /// Width of one attention head: `d_model / n_heads`.
     pub fn d_head(&self) -> usize {
         self.d_model / self.n_heads
     }
@@ -150,6 +168,7 @@ struct Layer<'a> {
 
 /// The encoder, read in place from flash.
 pub struct Model<'a> {
+    /// The decoded fixed header.
     pub header: Header,
     blob: &'a [u8],
     descriptor: &'a [u8],
@@ -162,6 +181,7 @@ pub struct Model<'a> {
 }
 
 impl<'a> Model<'a> {
+    /// Parse a weights blob.
     pub fn parse(blob: &'a [u8]) -> Result<Model<'a>, Error> {
         if blob.len() < HEADER_LEN || blob[0..4] != MAGIC || blob[4] != FORMAT_VERSION {
             return Err(Error::Malformed);

@@ -25,6 +25,7 @@
 
 #![cfg_attr(not(test), no_std)]
 #![deny(unsafe_code)]
+#![deny(missing_docs)]
 
 pub mod blob;
 mod math;

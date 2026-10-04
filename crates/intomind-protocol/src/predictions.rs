@@ -2,7 +2,9 @@
 
 use crate::Error;
 
+/// Packet type for a prediction notification.
 pub const PACKET_TYPE_PREDICTION: u8 = 0x02;
+/// Bytes in the fixed header, ahead of the outputs.
 pub const HEADER_LEN: usize = 28;
 /// The most outputs one prediction carries: as many four byte values as fit
 /// [`NOTIFICATION_MAX`](crate::NOTIFICATION_MAX) after the header, so a
@@ -10,16 +12,24 @@ pub const HEADER_LEN: usize = 28;
 /// this, and the device reports it as `head_max_outputs`.
 pub const MAX_OUTPUTS: usize = (crate::NOTIFICATION_MAX - HEADER_LEN) / 4;
 
+/// Bits of the header's `flags` byte.
 pub mod flags {
+    /// The window spans a loss in the stream.
     pub const GAP_IN_WINDOW: u8 = 1 << 0;
+    /// The device skipped windows to stay within its compute budget.
     pub const DUTY_REDUCED: u8 = 1 << 1;
+    /// An electrode was off during the window.
     pub const LEADOFF_IN_WINDOW: u8 = 1 << 2;
 }
 
+/// The decoded fixed header of one prediction notification, ahead of its outputs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PredictionHeader {
+    /// See the [`flags`] module.
     pub flags: u8,
+    /// The head slot that produced the outputs.
     pub head_slot: u8,
+    /// Outputs carried.
     pub n_outputs: u8,
     /// Raw stream index of the window's first sample.
     pub sample_index: u32,
@@ -27,6 +37,7 @@ pub struct PredictionHeader {
     pub device_time: u64,
     /// Window length in raw samples at the current rate.
     pub window_samples: u16,
+    /// The head that produced the outputs.
     pub head_id: [u8; 8],
     /// 1.1: what the window was taken from, a `pipeline::input_source`
     /// value. A 1.0 device sends 0, the stream.
@@ -38,19 +49,23 @@ pub struct PredictionHeader {
 pub struct Outputs<'a>(&'a [u8]);
 
 impl<'a> Outputs<'a> {
+    /// Outputs carried in this prediction.
     pub fn len(&self) -> usize {
         self.0.len() / 4
     }
 
+    /// Whether this prediction carries no outputs.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// The output at `i`, or `None` past the end.
     pub fn get(&self, i: usize) -> Option<f32> {
         let b = self.0.get(i * 4..i * 4 + 4)?;
         Some(f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
     }
 
+    /// The outputs in order.
     pub fn iter(&self) -> impl Iterator<Item = f32> + 'a {
         self.0.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
     }

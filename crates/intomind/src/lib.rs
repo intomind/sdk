@@ -33,7 +33,7 @@
 //! reports rather than a version number this crate compares against.
 
 #![deny(unsafe_code)]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 pub mod embeddings;
 mod names;
@@ -44,7 +44,7 @@ mod transfer;
 pub use intomind_pipeline as pipeline;
 pub use intomind_protocol as protocol;
 pub use names::display_names;
-pub use session::{Batch, Command, Event, Gap, Session};
+pub use session::{Batch, Command, Event, Gap, Prediction, Session};
 pub use timebase::{Exchange, Fit, Timebase, MAX_SKEW_PPM, MAX_SKEW_STDERR_PPM};
 
 pub use transfer::{activate, Step, Transfer, TransferError};

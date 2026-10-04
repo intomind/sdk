@@ -21,6 +21,7 @@
 
 #![cfg_attr(not(test), no_std)]
 #![deny(unsafe_code)]
+#![deny(missing_docs)]
 
 pub mod control;
 pub mod crc32;
@@ -47,16 +48,25 @@ pub const NOTIFICATION_MAX: usize = 156;
 /// 128-bit UUID base: `f3a1xxxx-2c4b-4d1e-9a6f-1b2c3d4e5f60`.
 /// The sixteen-bit fill for each characteristic.
 pub mod uuid_fill {
+    /// The service itself: IntoMind Neural Stream.
     pub const SERVICE: u16 = 0x0001;
+    /// Identity, capabilities, and capacities (read).
     pub const DEVICE_INFO: u16 = 0x0002;
+    /// Commands (write, write without response).
     pub const CONTROL: u16 = 0x0003;
+    /// Command results (indicate).
     pub const CONTROL_RSP: u16 = 0x0004;
+    /// Sample packets (notify).
     pub const EEG_DATA: u16 = 0x0005;
+    /// Live device status (read, notify).
     pub const STATUS: u16 = 0x0006;
     /// Held by an earlier development firmware. Never reused.
     pub const RESERVED_0007: u16 = 0x0007;
+    /// Update and head transfer commands (write, indicate).
     pub const UPDATE_CONTROL: u16 = 0x0008;
+    /// Transfer payload bytes (write without response).
     pub const UPDATE_DATA: u16 = 0x0009;
+    /// Model outputs (notify).
     pub const PREDICTIONS: u16 = 0x000A;
     /// 1.2: the encoder's output for each window.
     pub const EMBEDDINGS: u16 = 0x000B;

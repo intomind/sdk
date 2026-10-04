@@ -24,6 +24,7 @@
 
 use crate::Error;
 
+/// Packet type for a batch of measured samples.
 pub const PACKET_TYPE_EEG: u8 = 0x01;
 /// 1.3: samples the device generated with its converter off. Exactly the
 /// layout of type 0x01, so a host decodes it with the same code and knows
@@ -35,17 +36,26 @@ pub const PACKET_TYPE_SYNTHETIC: u8 = 0x04;
 pub fn is_data_packet(packet_type: u8) -> bool {
     packet_type == PACKET_TYPE_EEG || packet_type == PACKET_TYPE_SYNTHETIC
 }
+/// Bytes in the fixed header, ahead of the sample payload.
 pub const HEADER_LEN: usize = 20;
 /// The IntoMind One's channel count. The header does not carry it; it is a
 /// device capability from Device Info, and this constant exists for the
 /// device build and the tests, not as a protocol assumption.
 pub const CHANNELS_IM1: usize = 4;
 
+/// Bits of the header's `flags` byte.
 pub mod flags {
+    /// The timeline broke before this packet: a loss or a re-base. See
+    /// [`continuity`](super::continuity).
     pub const DISCONTINUITY: u8 = 1 << 0;
+    /// Lead-off detection was enabled for this packet's epoch.
     pub const LEADOFF_ACTIVE: u8 = 1 << 1;
+    /// Shift to read the two mode bits out of `flags`.
     pub const MODE_SHIFT: u8 = 2;
+    /// Mask for the two mode bits of `flags`, the same values as
+    /// `control::mode`.
     pub const MODE_MASK: u8 = 0b11 << 2;
+    /// 1.4: USB power was present when this packet was sent.
     pub const USB_PRESENT: u8 = 1 << 4;
 }
 
@@ -65,15 +75,26 @@ pub fn sps_of_rate_code(code: u8) -> Option<u16> {
     }
 }
 
+/// The decoded fixed header of an EEG Data or synthetic data packet, ahead
+/// of its sample payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DataHeader {
+    /// See the [`flags`] module.
     pub flags: u8,
+    /// Convenience count of samples lost before this packet, saturating.
+    /// `sample_index` continuity is the authoritative account.
     pub samples_lost_before: u16,
+    /// Index of the first sample in this packet. Monotonic, wraps at 2^32.
     pub sample_index: u32,
+    /// Device time of the first sample's data-ready edge, in `time_tick_hz` ticks.
     pub device_time: u64,
+    /// Samples carried in this packet.
     pub n_samples: u8,
+    /// Lead-off status latched with this packet's last sample, bit n for channel n+1.
     pub loff_statp: u8,
+    /// The gain in force, a `GAIN_BY_CODE` index.
     pub gain_code: u8,
+    /// The sample rate code in force. `sps_of_rate_code` converts it to samples per second.
     pub rate_code: u8,
 }
 
@@ -158,7 +179,10 @@ pub enum Continuity {
     /// The expected next index arrived.
     Continuous,
     /// Samples were lost. The count is exact from the index arithmetic.
-    Gap { lost: u32 },
+    Gap {
+        /// Samples lost.
+        lost: u32,
+    },
     /// The timeline re-based (epoch reset or stream start). A break, not a
     /// loss. Per the spec a non-positive step is never read as a count.
     Break,

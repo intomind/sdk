@@ -5,17 +5,24 @@
 
 use crate::Error;
 
+/// Update Control operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Op {
+    /// Begin a transfer.
     Start = 0x01,
+    /// Ask how much the device holds and its checksum.
     Query = 0x02,
+    /// Verify the whole transfer.
     Finish = 0x03,
+    /// Put a verified transfer in force.
     Activate = 0x04,
+    /// End the transfer in progress. The device drops what it has.
     Abort = 0x05,
 }
 
 impl Op {
+    /// Decode an op byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0x01 => Self::Start,
@@ -28,19 +35,28 @@ impl Op {
     }
 }
 
+/// Update Control response status codes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Status {
+    /// The request succeeded.
     Ok = 0,
+    /// Invalid argument or a malformed request.
     InvalidArg = 1,
+    /// Unsupported: no such target on this device.
     Unsupported = 2,
+    /// Busy: streaming, or a transfer is already active.
     Busy = 3,
+    /// No transfer in progress.
     NoTransfer = 4,
+    /// Flash error.
     Flash = 5,
+    /// Verification failed. `VerifyResult` says why.
     Verify = 6,
 }
 
 impl Status {
+    /// Decode a status byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0 => Self::Ok,
@@ -55,15 +71,20 @@ impl Status {
     }
 }
 
+/// What a transfer carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Target {
+    /// An application image.
     App = 1,
+    /// The model weights.
     Weights = 2,
+    /// A user head.
     Head = 3,
 }
 
 impl Target {
+    /// Decode a target byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             1 => Self::App,
@@ -74,16 +95,22 @@ impl Target {
     }
 }
 
+/// QUERY's `state`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum State {
+    /// No transfer in progress.
     Idle = 0,
+    /// A transfer is in progress.
     Receiving = 1,
+    /// FINISH has verified the transfer.
     Complete = 2,
+    /// The transfer failed.
     Failed = 3,
 }
 
 impl State {
+    /// Decode a state byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0 => Self::Idle,
@@ -99,20 +126,32 @@ impl State {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum VerifyResult {
+    /// The transfer verified.
     Verified = 0,
+    /// Length differs from `total_len`.
     Length = 1,
+    /// Malformed envelope or image header.
     Malformed = 2,
+    /// Target mismatch between START and the image.
     Target = 3,
+    /// Slot mismatch: the image is linked for the other slot.
     Slot = 4,
+    /// Content hash mismatch.
     Hash = 5,
+    /// Signature invalid.
     Signature = 6,
+    /// Image security counter is lower than the installed image's.
     SecurityCounter = 7,
+    /// Head dimensions do not match this device.
     HeadShape = 8,
+    /// Flash write failure.
     Flash = 9,
+    /// Unknown key id.
     KeyId = 10,
 }
 
 impl VerifyResult {
+    /// Decode a verify result byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0 => Self::Verified,
@@ -134,20 +173,29 @@ impl VerifyResult {
 /// A parsed Update Control write, device side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Request {
+    /// Begin a transfer.
     Start(Start),
+    /// Ask how much the device holds.
     Query,
+    /// Verify the transfer.
     Finish,
+    /// Put a verified transfer in force.
     Activate,
+    /// End the transfer in progress.
     Abort,
 }
 
 /// START request body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Start {
+    /// What this transfer carries.
     pub target: Target,
     /// Head slot 1..head_slots for a head, 0 otherwise.
     pub slot: u8,
+    /// Exact bytes the host will send.
     pub total_len: u32,
+    /// First 8 bytes of the SHA-256 of the full transfer, used only to
+    /// recognize a resume.
     pub transfer_id: [u8; 8],
 }
 
@@ -172,6 +220,7 @@ impl Start {
         })
     }
 
+    /// Encode a START request into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -200,6 +249,7 @@ impl Request {
         }
     }
 
+    /// The operation this request names.
     pub fn op(&self) -> Op {
         match self {
             Request::Start(_) => Op::Start,
@@ -210,6 +260,7 @@ impl Request {
         }
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         match self {
             Request::Start(s) => s.encode(out),
@@ -229,13 +280,18 @@ impl Request {
 pub struct StartResponse {
     /// For an application: 0 = slot A, 1 = slot B will receive the image.
     pub target_slot: u8,
+    /// The largest Update Data write the device accepts.
     pub chunk_max: u16,
+    /// Bytes already accepted from an identical earlier START. The host
+    /// continues from this offset.
     pub resume_offset: u32,
 }
 
 impl StartResponse {
+    /// Bytes in the payload.
     pub const LEN: usize = 7;
 
+    /// Decode a START answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -247,6 +303,7 @@ impl StartResponse {
         })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -261,14 +318,19 @@ impl StartResponse {
 /// QUERY response payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct QueryResponse {
+    /// The transfer's state.
     pub state: State,
+    /// Bytes accepted so far.
     pub offset: u32,
+    /// The IEEE 802.3 CRC-32 over the bytes accepted so far, as sent.
     pub crc32: u32,
 }
 
 impl QueryResponse {
+    /// Bytes in the payload.
     pub const LEN: usize = 9;
 
+    /// Decode a QUERY answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -280,6 +342,7 @@ impl QueryResponse {
         })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -306,12 +369,16 @@ pub fn encode_response(op: Op, status: Status, payload: &[u8], out: &mut [u8]) -
 /// A parsed response, host side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Response<'a> {
+    /// The operation this answers.
     pub op: Op,
+    /// The result.
     pub status: Status,
+    /// The answer's payload, if any.
     pub payload: &'a [u8],
 }
 
 impl<'a> Response<'a> {
+    /// Decode an Update Control indication.
     pub fn parse(buf: &'a [u8]) -> Result<Self, Error> {
         if buf.len() < 2 {
             return Err(Error::Truncated);
@@ -328,21 +395,30 @@ impl<'a> Response<'a> {
 /// encrypted payload, opaque to the host.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Envelope {
+    /// Application or weights.
     pub target: Target,
     /// Application: 0 = built for slot A, 1 = built for slot B. Weights:
     /// `SLOT_LINK_NONE`.
     pub slot_link: u8,
+    /// The key identifier the envelope names. An unknown one fails verification with `VerifyResult::KeyId`.
     pub key_id: u8,
+    /// The encryption nonce.
     pub nonce: [u8; 16],
+    /// Length of the encrypted payload, in bytes.
     pub plain_len: u32,
 }
 
+/// The magic bytes at the start of an envelope.
 pub const ENVELOPE_MAGIC: [u8; 4] = *b"IMUP";
+/// The envelope format version this codec writes and reads.
 pub const ENVELOPE_VERSION: u8 = 1;
+/// Bytes in the plain envelope header.
 pub const ENVELOPE_LEN: usize = 32;
+/// `slot_link` for a target that is not linked to a slot.
 pub const SLOT_LINK_NONE: u8 = 0xFF;
 
 impl Envelope {
+    /// Decode the plain envelope header.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < ENVELOPE_LEN {
             return Err(Error::Truncated);
@@ -372,6 +448,7 @@ impl Envelope {
         })
     }
 
+    /// Encode the plain envelope header into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < ENVELOPE_LEN {
             return Err(Error::NoRoom);

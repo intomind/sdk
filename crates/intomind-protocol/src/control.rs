@@ -7,59 +7,93 @@
 
 use crate::Error;
 
+/// Control Point opcodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Opcode {
+    /// Begin continuous conversion and streaming.
     StartStream = 0x01,
+    /// End the stream.
     StopStream = 0x02,
+    /// Set the sample rate. Refused while streaming.
     SetRate = 0x10,
+    /// Set the gain. Refused while streaming.
     SetGain = 0x11,
+    /// Set the acquisition mode: normal, test signal, input short, or
+    /// (1.3) synthetic. Refused while streaming.
     SetMode = 0x20,
+    /// Turn lead-off detection on or off. Refused while streaming.
     SetLeadoff = 0x30,
+    /// Ask the device's own time, captured at receipt.
     TimeSync = 0x40,
+    /// Set samples per EEG Data packet, clamped to what the MTU allows.
     SetSamplesPerPacket = 0x41,
+    /// Ask the measured battery voltage, percent, and charger state.
     GetBattery = 0x42,
+    /// Ask how and how many times the device has booted.
     GetBootInfo = 0x43,
+    /// Zero `sample_index` and start a fresh epoch.
     ResetEpoch = 0x50,
+    /// Forget every bond but the requesting host's, at the next disconnect.
     ClearBonds = 0x53,
+    /// Turn model predictions on or off.
     SetPredictions = 0x80,
+    /// Select the head slot predictions run from.
     SelectHead = 0x81,
+    /// Ask what is in every head slot.
     ListHeads = 0x82,
+    /// Erase a head slot. Refused while streaming.
     RemoveHead = 0x83,
+    /// Ask the model's state, active head, and weights identity.
     GetModelInfo = 0x84,
     /// 1.1: where the model's input comes from, with a chain of its own.
     SetPredictionInput = 0x85,
+    /// Ask the chain in effect for the model's input.
     GetPredictionInput = 0x86,
     /// 1.1: the bias drive, on devices that claim it.
     SetBias = 0x32,
+    /// Ask the bias output measured over the device's own window.
     GetBiasDiagnostic = 0x33,
     /// 1.2: the converter's registers, read only, on devices that claim it.
     GetConverterRegisters = 0x34,
     /// 1.2: the status lamp's level, and identify.
     GetIndicator = 0x44,
+    /// Set the status lamp's level.
     SetIndicator = 0x45,
+    /// Blink the lamp so this device can be told from others.
     Identify = 0x46,
     /// 1.2: which form of the encoder's output the device sends.
     SetEmbeddings = 0x87,
     /// 1.3: the interval between the windows the model describes.
     SetModelInterval = 0x88,
+    /// Ask the interval in force, and the device's minimum.
     GetModelInterval = 0x89,
     /// 1.4: the encoder id each head names, one record for each LIST_HEADS
     /// record.
     ListHeadEncoders = 0x8A,
     /// 1.3: the name and the adjective the device composes its name from.
     GetName = 0x47,
+    /// Set the name and the adjective the device composes its name from.
     SetName = 0x48,
     /// 1.1: the processing chain.
     GetPipelineCatalog = 0x90,
+    /// Ask the chain in force and whether it is the device's default or a host's.
     GetPipeline = 0x91,
+    /// Put a chain on the device's signal path. Refused while streaming.
     SetPipeline = 0x92,
+    /// Clear the chain to the natural signal. Refused while streaming.
     ClearPipeline = 0x93,
+    /// Restore the device's own default chain for its current rate.
+    /// Refused while streaming.
     RestorePipelineDefault = 0x94,
+    /// Re-initialize the device. The link drops.
     SoftReset = 0xF0,
 }
 
 impl Opcode {
+    /// Decode an opcode byte, or `None` for a number this codec does not
+    /// define as an opcode (which includes every reserved number, see
+    /// `reserved`).
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0x01 => Self::StartStream,
@@ -282,13 +316,17 @@ pub mod interval {
     /// smallest interval the device can keep.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct ModelInterval {
+        /// The interval in force, in seconds.
         pub interval_s: u16,
+        /// The smallest interval the device can keep, in seconds.
         pub minimum_s: u16,
     }
 
     impl ModelInterval {
+        /// Bytes in the payload.
         pub const LEN: usize = 4;
 
+        /// Decode a GET_MODEL_INTERVAL answer.
         pub fn parse(b: &[u8]) -> Result<Self, Error> {
             if b.len() < Self::LEN {
                 return Err(Error::Truncated);
@@ -296,6 +334,7 @@ pub mod interval {
             Ok(ModelInterval { interval_s: u16::from_le_bytes([b[0], b[1]]), minimum_s: u16::from_le_bytes([b[2], b[3]]) })
         }
 
+        /// Encode into `out`.
         pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
             if out.len() < Self::LEN {
                 return Err(Error::NoRoom);
@@ -393,6 +432,7 @@ pub mod name {
         Ok((name, adjective))
     }
 
+    /// Encode the two parts as SET_NAME carries them and GET_NAME answers.
     pub fn encode_parts(name: &[u8], adjective: &[u8], out: &mut [u8]) -> Result<usize, Error> {
         if name.len() > MAX_COMPOSED || adjective.len() > MAX_COMPOSED {
             return Err(Error::Invalid);
@@ -425,18 +465,25 @@ pub mod indicator {
 /// GET_CONVERTER_REGISTERS payload: which family of chip the bytes belong
 /// to, and the bytes as the chip returned them.
 pub mod converter_family {
+    /// The ADS1299 family: ADS1299, ADS1299-4, ADS1299-6.
+    /// The IntoMind One carries the ADS1299-4.
     pub const ADS129X: u8 = 1;
 }
 
+/// A GET_CONVERTER_REGISTERS answer: raw configuration bytes from the
+/// analog converter, read only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ConverterRegisters<'a> {
+    /// Which family of chip the values belong to, a `converter_family` value.
     pub family: u8,
     /// Address of the first register carried.
     pub first: u8,
+    /// The register bytes, as the chip returned them.
     pub values: &'a [u8],
 }
 
 impl<'a> ConverterRegisters<'a> {
+    /// The most register values one answer carries.
     pub const MAX_VALUES: usize = 64;
 
     /// `family, first, count, values[count]`.
@@ -451,6 +498,7 @@ impl<'a> ConverterRegisters<'a> {
         Ok(ConverterRegisters { family: b[0], first: b[1], values: &b[3..] })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if self.values.is_empty() || self.values.len() > Self::MAX_VALUES {
             return Err(Error::Invalid);
@@ -478,11 +526,17 @@ pub fn reserved(op: u8) -> bool {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Status {
+    /// The request succeeded.
     Ok = 0,
+    /// Invalid argument, or a malformed request.
     InvalidArg = 1,
+    /// Unsupported by this device or build.
     Unsupported = 2,
+    /// Busy: refused while streaming or while a transfer is active.
     Busy = 3,
+    /// Not streaming.
     NotStreaming = 4,
+    /// Hardware error.
     Hardware = 5,
     /// 1.4: refused while USB power is present. A device that does not
     /// run on the wearer while plugged in refuses to start a stream of the
@@ -493,6 +547,7 @@ pub enum Status {
 }
 
 impl Status {
+    /// Decode a status byte, or `None` for a number the contract does not define.
     pub fn from_u8(b: u8) -> Option<Self> {
         Some(match b {
             0 => Self::Ok,
@@ -512,7 +567,9 @@ impl Status {
 /// in the write, which the device parses with the `pipeline` module.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Request {
+    /// The command.
     pub opcode: Opcode,
+    /// The argument byte, for an opcode that takes one.
     pub arg: Option<u8>,
 }
 
@@ -546,6 +603,7 @@ impl Request {
         buf.get(1..).unwrap_or(&[])
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         let n = 1 + self.arg.is_some() as usize;
         if out.len() < n {
@@ -625,6 +683,7 @@ pub fn encode_response_raw(
     Ok(n)
 }
 
+/// Encode a response `[opcode, status, payload...]`.
 pub fn encode_response(
     opcode: Opcode,
     status: Status,
@@ -637,12 +696,16 @@ pub fn encode_response(
 /// A parsed response, host side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Response<'a> {
+    /// The command this answers.
     pub opcode: Opcode,
+    /// The result.
     pub status: Status,
+    /// The answer's payload, if any.
     pub payload: &'a [u8],
 }
 
 impl<'a> Response<'a> {
+    /// Decode a Control Response indication.
     pub fn parse(buf: &'a [u8]) -> Result<Self, Error> {
         if buf.len() < 2 {
             return Err(Error::Truncated);
@@ -660,14 +723,19 @@ impl<'a> Response<'a> {
 /// GET_BATTERY payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BatteryInfo {
+    /// Measured battery voltage, in millivolts.
     pub battery_mv: u16,
+    /// State of charge, 0 to 100, following `Status::battery_percent`.
     pub battery_percent: u8,
+    /// 0 no input, 1 charging, 2 complete, 3 fault, 4 standby.
     pub charger_state: u8,
 }
 
 impl BatteryInfo {
+    /// Bytes in the payload.
     pub const LEN: usize = 4;
 
+    /// Decode a GET_BATTERY answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -679,6 +747,7 @@ impl BatteryInfo {
         })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -692,34 +761,50 @@ impl BatteryInfo {
 
 /// GET_BOOT_INFO `boot_reason` values.
 pub mod boot_reason {
+    /// Power on.
     pub const POWER_ON: u8 = 0;
+    /// The reset pin.
     pub const RESET_PIN: u8 = 1;
+    /// A software reset.
     pub const SOFTWARE: u8 = 2;
+    /// A watchdog reset.
     pub const WATCHDOG: u8 = 3;
+    /// CPU lockup or a system fault.
     pub const LOCKUP: u8 = 4;
+    /// An update activation.
     pub const UPDATE: u8 = 5;
+    /// The bootloader reverted to the previous image.
     pub const ROLLBACK: u8 = 6;
+    /// Unknown.
     pub const UNKNOWN: u8 = 0xFF;
 }
 
 /// GET_BOOT_INFO `slot_state` values.
 pub mod slot_state {
+    /// The running image has not yet confirmed itself.
     pub const TRIAL: u8 = 0;
+    /// The running image has confirmed itself.
     pub const CONFIRMED: u8 = 1;
 }
 
 /// GET_BOOT_INFO payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BootInfo {
+    /// 0 = A, 1 = B.
     pub active_slot: u8,
+    /// A `boot_reason` value.
     pub boot_reason: u8,
+    /// A `slot_state` value.
     pub slot_state: u8,
+    /// Boots of this unit since manufacture.
     pub boot_count: u32,
 }
 
 impl BootInfo {
+    /// Bytes in the payload.
     pub const LEN: usize = 8;
 
+    /// Decode a GET_BOOT_INFO answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -732,6 +817,7 @@ impl BootInfo {
         })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -747,8 +833,11 @@ impl BootInfo {
 
 /// LIST_HEADS entry `state` values.
 pub mod head_state {
+    /// No head is stored in this slot.
     pub const EMPTY: u8 = 0;
+    /// A head is stored and runs.
     pub const VALID: u8 = 1;
+    /// The stored head failed its hash at load.
     pub const INVALID: u8 = 2;
     /// 1.3: a sound head whose input width is not the loaded encoder's. It
     /// is kept and never run; it runs again if weights of its width return.
@@ -760,17 +849,26 @@ pub mod head_state {
 /// the encoder in LIST_HEAD_ENCODERS (1.4), never in LIST_HEADS.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeadEntry {
+    /// 0 = the built-in head, 1..head_slots for a user slot.
     pub slot: u8,
+    /// A `head_state` value.
     pub state: u8,
+    /// Outputs this head produces.
     pub out_dim: u16,
+    /// First 8 bytes of the head's SHA-256, zero when empty.
     pub head_id: [u8; 8],
+    /// UTF-8, zero padded.
     pub name: [u8; 16],
+    /// The encoder this head says it was trained beside, zero when it does
+    /// not say. Read from LIST_HEAD_ENCODERS, never from LIST_HEADS itself.
     pub encoder_id: [u8; 8],
 }
 
 impl HeadEntry {
+    /// Bytes in one record.
     pub const LEN: usize = 30;
 
+    /// Decode one record.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -789,6 +887,7 @@ impl HeadEntry {
         })
     }
 
+    /// Encode one record into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -809,6 +908,7 @@ impl HeadEntry {
 /// device sent and 1.4 withdraws. A host still reads one if it comes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ListHeads<'a> {
+    /// The selected head slot.
     pub active_slot: u8,
     records: &'a [u8],
     /// Empty on a 1.2 device.
@@ -833,14 +933,17 @@ impl<'a> ListHeads<'a> {
         Ok(ListHeads { active_slot: b[0], records: &b[2..records_end], encoders: &b[records_end..] })
     }
 
+    /// Records in the list.
     pub fn len(&self) -> usize {
         self.records.len() / HeadEntry::LEN
     }
 
+    /// Whether the list holds no records.
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
 
+    /// The record at `i`, if the list holds it.
     pub fn get(&self, i: usize) -> Option<HeadEntry> {
         let start = i.checked_mul(HeadEntry::LEN)?;
         let mut e = HeadEntry::parse(self.records.get(start..)?).ok()?;
@@ -850,6 +953,7 @@ impl<'a> ListHeads<'a> {
         Some(e)
     }
 
+    /// The records in order.
     pub fn iter(&self) -> impl Iterator<Item = HeadEntry> + 'a {
         let this = *self;
         (0..self.len()).map(move |i| {
@@ -879,11 +983,14 @@ pub fn encode_list_heads(active_slot: u8, entries: &[HeadEntry], out: &mut [u8])
 /// names, all zero for an empty slot or a head that does not say.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeadEncoder {
+    /// 0 = the built-in head, 1..head_slots for a user slot.
     pub slot: u8,
+    /// The encoder id the head names.
     pub encoder_id: [u8; 8],
 }
 
 impl HeadEncoder {
+    /// Bytes in one record.
     pub const LEN: usize = 9;
 }
 
@@ -895,6 +1002,7 @@ pub struct HeadEncoders<'a> {
 }
 
 impl<'a> HeadEncoders<'a> {
+    /// Decode a LIST_HEAD_ENCODERS answer.
     pub fn parse(b: &'a [u8]) -> Result<Self, Error> {
         let (&n, records) = b.split_first().ok_or(Error::Truncated)?;
         if records.len() != n as usize * HeadEncoder::LEN {
@@ -903,14 +1011,17 @@ impl<'a> HeadEncoders<'a> {
         Ok(HeadEncoders { records })
     }
 
+    /// Records in the list.
     pub fn len(&self) -> usize {
         self.records.len() / HeadEncoder::LEN
     }
 
+    /// Whether the list holds no records.
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
 
+    /// The record at `i`, if the list holds it.
     pub fn get(&self, i: usize) -> Option<HeadEncoder> {
         let r = self.records.get(i.checked_mul(HeadEncoder::LEN)?..)?.get(..HeadEncoder::LEN)?;
         let mut encoder_id = [0u8; 8];
@@ -918,6 +1029,7 @@ impl<'a> HeadEncoders<'a> {
         Some(HeadEncoder { slot: r[0], encoder_id })
     }
 
+    /// The records in order.
     pub fn iter(&self) -> impl Iterator<Item = HeadEncoder> + 'a {
         let this = *self;
         (0..self.len()).filter_map(move |i| this.get(i))
@@ -943,11 +1055,13 @@ pub fn encode_head_encoders(entries: &[HeadEntry], out: &mut [u8]) -> Result<usi
     Ok(n)
 }
 
-/// GET_MODEL_INFO `model_state` values.
 /// SET_MODE values, and the mode field of Status and of the stream header.
 pub mod mode {
+    /// The electrodes.
     pub const NORMAL: u8 = 0;
+    /// The converter's own internal test signal.
     pub const TEST: u8 = 1;
+    /// The converter's inputs shorted.
     pub const SHORT: u8 = 2;
     /// 1.3: the converter is not driven; the device generates the signal.
     /// Refused with Unsupported on a device without the synthetic
@@ -956,9 +1070,13 @@ pub mod mode {
     pub const SYNTHETIC: u8 = 3;
 }
 
+/// GET_MODEL_INFO `model_state` values.
 pub mod model_state {
+    /// No model runtime.
     pub const NONE: u8 = 0;
+    /// A model runtime is present, but without valid weights.
     pub const NO_WEIGHTS: u8 = 1;
+    /// Valid weights are loaded, so predictions can be enabled.
     pub const READY: u8 = 2;
     /// 1.3: the weights are being replaced; the model is stopped.
     pub const UPDATING: u8 = 3;
@@ -967,11 +1085,15 @@ pub mod model_state {
 /// GET_MODEL_INFO payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ModelInfo {
+    /// A `model_state` value.
     pub model_state: u8,
     /// Slot, or 0xFF when none is selected.
     pub active_head: u8,
+    /// Whether predictions are on.
     pub predictions_on: u8,
+    /// Identity of the loaded weights, zero unless ready.
     pub encoder_id: [u8; 8],
+    /// The loaded weights' version.
     pub weights_version: (u8, u8, u8),
     /// 1.1: the signal classes the loaded model declares it can take, as
     /// `pipeline::input_class` bits. A 1.0 device sends 0, which a host
@@ -989,14 +1111,20 @@ pub struct ModelInfo {
     pub generator: u8,
 }
 
+/// `active_head` when no head is selected.
 pub const NO_HEAD: u8 = 0xFF;
 
 impl ModelInfo {
     /// The 1.1 length. A 1.2 device appends one byte, a 1.3 device five more.
     pub const LEN_1_1: usize = 16;
+    /// The 1.2 length.
     pub const LEN_1_2: usize = 17;
+    /// The 1.3 length.
     pub const LEN: usize = 22;
 
+    /// Decode a GET_MODEL_INFO answer. Accepts the 1.1 and 1.2 lengths too,
+    /// filling the fields a shorter message does not carry with their
+    /// documented defaults.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN_1_1 {
             return Err(Error::Truncated);
@@ -1017,6 +1145,7 @@ impl ModelInfo {
         })
     }
 
+    /// Encode the full 1.3 layout into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);

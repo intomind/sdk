@@ -14,8 +14,11 @@ use crate::Error;
 /// representation change replaces the signal with something else, at its
 /// own rate. A detector adds annotations and passes the signal on.
 pub mod class {
+    /// Keeps the rate and the kind of signal.
     pub const MAP: u8 = 0;
+    /// Replaces the signal with something else, at its own rate.
     pub const REPRESENTATION: u8 = 1;
+    /// Adds annotations and passes the signal on.
     pub const DETECTOR: u8 = 2;
 }
 
@@ -48,7 +51,9 @@ pub mod input_source {
 
 /// Signal classes a model declares it can take, as bits.
 pub mod input_class {
+    /// The signal as samples over time.
     pub const TIME_DOMAIN: u8 = 1 << 0;
+    /// The signal after a representation change.
     pub const REPRESENTATION: u8 = 1 << 1;
 }
 
@@ -62,33 +67,45 @@ pub mod origin {
 
 /// SET_BIAS modes.
 pub mod bias_mode {
+    /// The bias amplifier off.
     pub const OFF: u8 = 0;
+    /// The bias amplifier on, driving its electrode.
     pub const ON: u8 = 1;
     /// The amplifier on with no electrode routed into it, a diagnostic.
     pub const LOOP_OPEN: u8 = 2;
 }
 
+/// Stages a chain may hold.
 pub const MAX_STAGES: usize = 12;
+/// Parameters a stage may hold.
 pub const MAX_PARAMS: usize = 4;
 /// The longest encoding of a chain.
 pub const MAX_ENCODED_LEN: usize = 1 + MAX_STAGES * (2 + 2 * MAX_PARAMS);
 
+/// One stage in a chain: a kind and its parameters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Stage {
+    /// The stage's kind, from the device's catalog.
     pub kind: u8,
+    /// Parameters this stage carries.
     pub n_params: u8,
+    /// The stage's parameters, in the units its kind defines. Only the
+    /// first `n_params` are meaningful.
     pub params: [u16; MAX_PARAMS],
 }
 
 impl Stage {
+    /// A stage with one parameter.
     pub const fn one(kind: u8, p0: u16) -> Stage {
         Stage { kind, n_params: 1, params: [p0, 0, 0, 0] }
     }
 
+    /// A stage with two parameters.
     pub const fn two(kind: u8, p0: u16, p1: u16) -> Stage {
         Stage { kind, n_params: 2, params: [p0, p1, 0, 0] }
     }
 
+    /// This stage's parameters, `n_params` of them.
     pub fn params(&self) -> &[u16] {
         &self.params[..(self.n_params as usize).min(MAX_PARAMS)]
     }
@@ -97,7 +114,9 @@ impl Stage {
 /// An ordered chain of stages. Empty is the natural signal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Chain {
+    /// The chain's stages. Only the first `len` are meaningful.
     pub stages: [Stage; MAX_STAGES],
+    /// Stages in the chain. Zero is the natural signal.
     pub len: u8,
 }
 
@@ -108,12 +127,15 @@ impl Default for Chain {
 }
 
 impl Chain {
+    /// The empty chain: the natural signal.
     pub const NATURAL: Chain = Chain { stages: [Stage { kind: 0, n_params: 0, params: [0; MAX_PARAMS] }; MAX_STAGES], len: 0 };
 
+    /// Whether this chain is empty, the natural signal.
     pub fn is_natural(&self) -> bool {
         self.len == 0
     }
 
+    /// This chain's stages, in order.
     pub fn stages(&self) -> &[Stage] {
         &self.stages[..(self.len as usize).min(MAX_STAGES)]
     }
@@ -132,6 +154,7 @@ impl Chain {
         Ok(())
     }
 
+    /// This chain's encoded length, in bytes.
     pub fn encoded_len(&self) -> usize {
         1 + self.stages().iter().map(|s| 2 + 2 * s.n_params as usize).sum::<usize>()
     }
@@ -198,11 +221,15 @@ impl Chain {
 /// GET_PIPELINE payload: `u8 origin`, then the chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PipelineState {
+    /// Whether the chain in force is the device's default or a host's, an
+    /// `origin` value.
     pub origin: u8,
+    /// The chain in force.
     pub chain: Chain,
 }
 
 impl PipelineState {
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.is_empty() {
             return Err(Error::NoRoom);
@@ -211,6 +238,7 @@ impl PipelineState {
         Ok(1 + self.chain.encode(&mut out[1..])?)
     }
 
+    /// Decode a GET_PIPELINE answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         let (&origin, rest) = b.split_first().ok_or(Error::Truncated)?;
         if origin > origin::HOST {
@@ -226,13 +254,17 @@ impl PipelineState {
 /// effect: the stream's, none, or the model's own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PredictionInput {
+    /// Where the model's input comes from, an `input_source` value.
     pub source: u8,
+    /// The chain that goes with `source`.
     pub chain: Chain,
 }
 
 impl PredictionInput {
+    /// The model following the stream, the power-on default.
     pub const STREAM: PredictionInput = PredictionInput { source: input_source::STREAM, chain: Chain::NATURAL };
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.is_empty() {
             return Err(Error::NoRoom);
@@ -263,21 +295,28 @@ impl PredictionInput {
 /// One GET_PIPELINE_CATALOG record, 12 bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CatalogEntry {
+    /// The stage kind.
     pub kind: u8,
+    /// The stage's class, a `class` value.
     pub class: u8,
+    /// Parameters this kind takes.
     pub n_params: u8,
+    /// Instances of this kind a chain may hold at once.
     pub max_instances: u8,
     /// ASCII, zero padded.
     pub name: [u8; 8],
 }
 
 impl CatalogEntry {
+    /// Bytes in one record.
     pub const LEN: usize = 12;
 
+    /// Build an entry for `kind`.
     pub const fn new(kind: u8, class: u8, n_params: u8, max_instances: u8, name: &[u8; 8]) -> CatalogEntry {
         CatalogEntry { kind, class, n_params, max_instances, name: *name }
     }
 
+    /// Decode one record.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -287,6 +326,7 @@ impl CatalogEntry {
         Ok(CatalogEntry { kind: b[0], class: b[1], n_params: b[2], max_instances: b[3], name })
     }
 
+    /// Encode one record into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);
@@ -322,19 +362,23 @@ impl<'a> Catalog<'a> {
         Ok(Catalog { records: rest })
     }
 
+    /// Records in the catalog.
     pub fn len(&self) -> usize {
         self.records.len() / CatalogEntry::LEN
     }
 
+    /// Whether the catalog holds no records.
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
 
+    /// The record at `i`, if the catalog holds it.
     pub fn get(&self, i: usize) -> Option<CatalogEntry> {
         let start = i.checked_mul(CatalogEntry::LEN)?;
         CatalogEntry::parse(self.records.get(start..)?).ok()
     }
 
+    /// The records in order.
     pub fn iter(&self) -> impl Iterator<Item = CatalogEntry> + 'a {
         self.records.chunks_exact(CatalogEntry::LEN).map(|c| {
             CatalogEntry::parse(c).unwrap_or(CatalogEntry { kind: 0, class: 0, n_params: 0, max_instances: 0, name: [0; 8] })
@@ -347,6 +391,7 @@ impl<'a> Catalog<'a> {
     }
 }
 
+/// Encode a GET_PIPELINE_CATALOG payload from `entries`.
 pub fn encode_catalog(entries: &[CatalogEntry], out: &mut [u8]) -> Result<usize, Error> {
     if entries.len() > u8::MAX as usize {
         return Err(Error::Invalid);
@@ -366,15 +411,21 @@ pub fn encode_catalog(entries: &[CatalogEntry], out: &mut [u8]) -> Result<usize,
 /// and maximum in millivolts over the device's own window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BiasDiagnostic {
+    /// Mean of the bias output, in millivolts.
     pub mean_mv: i16,
+    /// Spread of the bias output, in millivolts.
     pub sd_mv: i16,
+    /// Minimum of the bias output, in millivolts.
     pub min_mv: i16,
+    /// Maximum of the bias output, in millivolts.
     pub max_mv: i16,
 }
 
 impl BiasDiagnostic {
+    /// Bytes in the payload.
     pub const LEN: usize = 8;
 
+    /// Decode a GET_BIAS_DIAGNOSTIC answer.
     pub fn parse(b: &[u8]) -> Result<Self, Error> {
         if b.len() < Self::LEN {
             return Err(Error::Truncated);
@@ -383,6 +434,7 @@ impl BiasDiagnostic {
         Ok(BiasDiagnostic { mean_mv: at(0), sd_mv: at(2), min_mv: at(4), max_mv: at(6) })
     }
 
+    /// Encode into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < Self::LEN {
             return Err(Error::NoRoom);

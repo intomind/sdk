@@ -44,7 +44,9 @@ impl Exchange {
 pub struct Fit {
     /// host = device_seconds * (1 + skew) + offset.
     pub offset_s: f64,
+    /// Clock skew, in parts per million. Zero when `skew_used` is false.
     pub skew_ppm: f64,
+    /// Exchanges this fit was computed from.
     pub exchanges: usize,
     /// How far the exchanges sit from the line, in microseconds.
     pub residual_us: f64,
@@ -73,10 +75,12 @@ impl Timebase {
         self.fit
     }
 
+    /// Every exchange taken so far.
     pub fn exchanges(&self) -> &[Exchange] {
         &self.exchanges
     }
 
+    /// The current fit, once an exchange has been taken.
     pub fn fit(&self) -> Option<Fit> {
         self.fit
     }

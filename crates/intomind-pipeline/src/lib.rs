@@ -17,6 +17,7 @@
 
 #![cfg_attr(not(test), no_std)]
 #![deny(unsafe_code)]
+#![deny(missing_docs)]
 
 pub use intomind_protocol::pipeline::{class, input_class, kind, CatalogEntry, Chain, Stage, MAX_STAGES};
 
@@ -247,6 +248,7 @@ impl Biquad64 {
         }
     }
 
+    /// One sample of one channel through this section, in double precision.
     #[inline]
     pub fn step(&mut self, ch: usize, x: f32) -> f32 {
         let x = f64::from(x);
@@ -256,6 +258,7 @@ impl Biquad64 {
         y as f32
     }
 
+    /// Forget this section's state.
     pub fn reset(&mut self) {
         self.z1 = [0.0; CHANNELS];
         self.z2 = [0.0; CHANNELS];
@@ -300,6 +303,7 @@ impl Biquad {
         Biquad::from_rbj(1.0, -2.0 * t.cos_w, 1.0, 1.0 + t.alpha, -2.0 * t.cos_w, 1.0 - t.alpha)
     }
 
+    /// One sample of one channel through this section.
     #[inline]
     pub fn step(&mut self, ch: usize, x: f32) -> f32 {
         let y = self.b0 * x + self.z1[ch];
@@ -308,6 +312,7 @@ impl Biquad {
         y
     }
 
+    /// Forget this section's state.
     pub fn reset(&mut self) {
         self.z1 = [0.0; CHANNELS];
         self.z2 = [0.0; CHANNELS];
@@ -317,7 +322,9 @@ impl Biquad {
 /// One designed stage.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Section {
+    /// One biquad section.
     Single(Biquad),
+    /// One double-precision section, for the high-pass.
     Double(Biquad64),
     /// Two identical sections in series, for a notch. One narrow section
     /// loses depth as fast as the mains frequency drifts off its null; two
@@ -383,14 +390,17 @@ impl Runtime {
         Ok(rt)
     }
 
+    /// Whether this runtime is the natural signal: nothing runs.
     pub fn is_natural(&self) -> bool {
         self.len == 0
     }
 
+    /// Stages in this runtime.
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Whether this runtime holds no stages.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }

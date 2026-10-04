@@ -14,16 +14,27 @@ pub const LEN_1_0: usize = 76;
 /// appended at offset 76, holding bits 16 and up.
 pub const LEN: usize = 80;
 
+/// Bits of the `capabilities` field.
 pub mod capability {
+    /// `Status::battery_percent` and GET_BATTERY carry measured values.
     pub const BATTERY_VOLTAGE: u16 = 1 << 0;
+    /// The hardware has a low battery indicator.
     pub const BATTERY_LOW_FLAG: u16 = 1 << 1;
+    /// Lead-off detection is available.
     pub const LEADOFF: u16 = 1 << 2;
+    /// The internal test signal mode is available.
     pub const TEST_SIGNAL: u16 = 1 << 3;
+    /// Reserved for converter power mode selection.
     pub const DCDC_MODE: u16 = 1 << 4;
+    /// Input short mode is available.
     pub const INPUT_SHORT: u16 = 1 << 5;
+    /// The Update service is present and accepts application and weights images.
     pub const UPDATE: u16 = 1 << 6;
+    /// A model runtime is present in this firmware.
     pub const MODEL: u16 = 1 << 7;
+    /// Valid weights were loaded at the time of this read, so predictions can be enabled.
     pub const MODEL_READY: u16 = 1 << 8;
+    /// User head slots are present, and head operations are accepted.
     pub const HEADS: u16 = 1 << 9;
     /// 1.1: the device runs a processing chain on its signal and offers
     /// the pipeline operations.
@@ -53,39 +64,63 @@ pub mod capability_high {
     pub const DEVICE_NAME: u32 = 1 << 1;
 }
 
+/// Bits of `supported_rates`.
 pub mod rate_bit {
+    /// 250 samples a second.
     pub const SPS_250: u8 = 1 << 0;
+    /// 500 samples a second.
     pub const SPS_500: u8 = 1 << 1;
+    /// 1000 samples a second.
     pub const SPS_1000: u8 = 1 << 2;
 }
 
 /// The 1.0 extension, bytes 28 to 75.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Extension {
+    /// Hardware revision.
     pub hw_version: (u8, u8, u8),
+    /// Identifies the exact firmware image.
     pub fw_build_id: [u8; 8],
     /// 0 when this firmware has no model runtime.
     pub model_embed_dim: u16,
+    /// The model's native rate, in samples per second.
     pub model_native_sps: u16,
+    /// Samples per prediction window at the native rate.
     pub model_window_samples: u16,
+    /// User head slots.
     pub head_slots: u8,
+    /// Largest `out_dim` a head may have.
     pub head_max_outputs: u8,
+    /// Capacity of one head slot, in bytes.
     pub head_slot_bytes: u16,
+    /// Largest Update Data write the device accepts.
     pub update_chunk_max: u16,
+    /// Application image capacity, including its header.
     pub app_slot_bytes: u32,
+    /// Weights image capacity, including its header.
     pub weights_image_bytes: u32,
 }
 
+/// A parsed Device Info read: identity, capabilities, and capacities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DeviceInfo {
+    /// Protocol major and minor version the device speaks.
     pub proto_version: (u8, u8),
+    /// Firmware major, minor, and patch version.
     pub fw_version: (u8, u8, u8),
+    /// Channels. 4 on the IntoMind One.
     pub channel_count: u8,
+    /// Converter resolution in bits. 24 on the IntoMind One.
     pub adc_bits: u8,
+    /// Device time ticks per second.
     pub time_tick_hz: u32,
+    /// The converter's reference voltage, in microvolts.
     pub vref_uv: u32,
+    /// Capability bitmask, with its bits in the `capability` module.
     pub capabilities: u16,
+    /// Rates this device offers, bits of `rate_bit`.
     pub supported_rates: u8,
+    /// Stable per-unit id from the SoC's factory id.
     pub device_id: [u8; 8],
     /// `None` when the device reports only the v0.1 layout.
     pub ext: Option<Extension>,

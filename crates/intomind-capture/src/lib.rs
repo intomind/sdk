@@ -18,77 +18,107 @@
 //! 3. Nothing is inferred. A field whose value was not measured is absent,
 //!    never guessed and never defaulted to something plausible.
 
+#![deny(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 
+/// The manifest's file name.
 pub const MANIFEST: &str = "capture.json";
+/// The sample file's name.
 pub const SAMPLES: &str = "samples.i32";
+/// The event file's name.
 pub const EVENTS: &str = "events.json";
+/// The format version this crate writes and reads.
 pub const FORMAT: u32 = 1;
 
 /// What a capture says about itself.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Manifest {
+    /// The format version this manifest was written in.
     pub format: u32,
     /// When the recording started, as the host saw it. RFC 3339.
     pub started: String,
+    /// The device that recorded it.
     pub device: Device,
+    /// The signal's configuration.
     pub signal: Signal,
+    /// The sample file's shape.
     pub samples: Samples,
     /// Breaks in the timeline, in order. Empty means the recording is
     /// continuous, which is a claim this format lets a reader check.
     pub gaps: Vec<Gap>,
+    /// How device time maps onto host time.
     pub clock: Clock,
     /// Who recorded it and with what. Absent fields were not declared,
     /// which is not the same as being unknown to the person who was there.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
+    /// Who ran the recording, when declared.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub operator: Option<String>,
+    /// A free-text note about the recording, when one was given.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// What recorded it.
     pub software: Software,
+    /// Checksums over the files, taken last.
     pub checksums: Checksums,
 }
 
+/// Identity of the device that recorded this.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Device {
     /// As the device reported it, never as the host assumed it.
     pub device_id: String,
+    /// The device's advertised name at the time of recording.
     pub name: String,
+    /// The protocol version it spoke.
     pub protocol: String,
+    /// Its firmware version.
     pub firmware: String,
+    /// Its hardware revision, when known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hardware: Option<String>,
+    /// Identifies the exact firmware image, when known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build_id: Option<String>,
 }
 
+/// The signal's configuration during the recording.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Signal {
+    /// Channels recorded.
     pub channels: usize,
+    /// Samples per second.
     pub sample_rate_hz: u32,
+    /// The gain in force.
     pub gain: u8,
     /// Microvolts per count, so a reader never has to know the gain rule.
     pub microvolts_per_count: f64,
     /// 0 normal, 1 the internal test signal, 2 inputs shorted.
     pub mode: u8,
+    /// Whether lead-off detection was on.
     pub leadoff: bool,
     /// Where the electrodes were, when that was declared.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub electrodes: Vec<String>,
 }
 
+/// The sample file's shape.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Samples {
     /// Rows in the sample file. One row is `channels` little-endian
     /// signed 32 bit integers, in converter counts.
     pub count: u64,
+    /// The element type, `int32`.
     pub dtype: String,
+    /// Byte order of the elements, `little`.
     pub byte_order: String,
     /// The device's own sample index for the first row.
     pub first_index: u32,
     /// The device time of the first row, in the device's ticks.
     pub first_device_time: u64,
+    /// Device time ticks per second.
     pub device_tick_hz: u32,
 }
 
@@ -99,13 +129,16 @@ pub struct Gap {
     pub at_row: u64,
     /// Device sample index either side of it.
     pub last_index_before: u32,
+    /// Device sample index after it.
     pub first_index_after: u32,
     /// Samples missing, when the contract could say. A re-base has no
     /// count, and the field is absent rather than zero, because zero
     /// missing samples is a different statement from an unknown extent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub samples_lost: Option<u32>,
+    /// Device time before the gap.
     pub device_time_before: u64,
+    /// Device time after the gap.
     pub device_time_after: u64,
     /// "loss" or "rebase".
     pub kind: String,
@@ -116,16 +149,22 @@ pub struct Gap {
 pub struct Clock {
     /// host_time = device_time * (1 + skew) + offset, in seconds.
     pub offset_s: f64,
+    /// Clock skew, in parts per million.
     pub skew_ppm: f64,
     /// How many exchanges the fit came from, and how well they agreed.
     pub syncs: usize,
+    /// How far the exchanges sit from the fitted line, in microseconds.
     pub residual_us: f64,
 }
 
+/// What recorded this.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Software {
+    /// The software's name.
     pub name: String,
+    /// The software's version.
     pub version: String,
+    /// A build or source revision, when known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
 }
@@ -133,8 +172,11 @@ pub struct Software {
 /// Written last, over the files as they finally are.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Checksums {
+    /// The hash algorithm, `sha256`.
     pub algorithm: String,
+    /// Hash of the sample file.
     pub samples: String,
+    /// Hash of the event file, when there is one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub events: Option<String>,
 }

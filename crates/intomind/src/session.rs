@@ -21,6 +21,7 @@ pub struct Command {
     /// The sixteen bit fill of the characteristic. `protocol::uuid128`
     /// turns it into the full identifier your stack wants.
     pub characteristic: u16,
+    /// The bytes to write.
     pub bytes: Vec<u8>,
     /// Whether the write must be acknowledged.
     pub with_response: bool,
@@ -33,12 +34,15 @@ pub struct Batch {
     pub index: u32,
     /// The device time of the first sample, in the device's ticks.
     pub device_time: u64,
+    /// Channels in each sample.
     pub channels: usize,
     /// Converter counts, one row per sample.
     pub counts: Vec<i32>,
     /// Lead-off status latched with the last sample.
     pub leadoff: u8,
+    /// The gain these samples were taken at.
     pub gain: u8,
+    /// The sample rate these samples were taken at.
     pub sample_rate_hz: u16,
     /// The mode the samples were taken in: 0 normal, 1 test signal, 2 inputs
     /// shorted, 3 synthetic (1.3).
@@ -49,6 +53,7 @@ pub struct Batch {
 }
 
 impl Batch {
+    /// Samples in this batch.
     pub fn rows(&self) -> usize {
         self.counts.len() / self.channels
     }
@@ -64,15 +69,20 @@ impl Batch {
 /// A break in the timeline, written down rather than smoothed over.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Gap {
+    /// Device sample index before the gap.
     pub last_index_before: u32,
+    /// Device sample index after the gap.
     pub first_index_after: u32,
     /// Samples missing. None for a re-base, whose extent is not a number.
     pub samples_lost: Option<u32>,
+    /// Device time before the gap.
     pub device_time_before: u64,
+    /// Device time after the gap.
     pub device_time_after: u64,
 }
 
 impl Gap {
+    /// Whether this gap is a re-base rather than a loss.
     pub fn is_rebase(&self) -> bool {
         self.samples_lost.is_none()
     }
@@ -81,12 +91,22 @@ impl Gap {
 /// What arrived.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
+    /// A run of samples.
     Samples(Batch),
     /// Announced before the batch that follows it.
     Gap(Gap),
+    /// A Status read or notification.
     Status(StatusMsg),
     /// A control answer. A caller that issued a command matches on this.
-    Answer { opcode: u8, status: Status, payload: Vec<u8> },
+    Answer {
+        /// The opcode this answers.
+        opcode: u8,
+        /// The result.
+        status: Status,
+        /// The answer's payload, if any.
+        payload: Vec<u8>,
+    },
+    /// One window's model output.
     Prediction(Prediction),
     /// 1.2: one notification of the encoder's output, a whole vector or a
     /// part of one. `embeddings::Assembler` puts them into whole windows.
@@ -108,14 +128,23 @@ pub enum Event {
 /// One window's model output.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Prediction {
+    /// The slot of the head that produced this.
     pub head_slot: u8,
+    /// The identity of the head that produced this.
     pub head_id: [u8; 8],
+    /// The window's first sample's index.
     pub index: u32,
+    /// The window's first sample's device time, in the device's ticks.
     pub device_time: u64,
+    /// The window's length, in raw samples at the current rate.
     pub window_samples: u16,
+    /// Whether a gap fell inside the window.
     pub gap_in_window: bool,
+    /// Whether the device skipped windows to stay within its compute budget.
     pub duty_reduced: bool,
+    /// Whether an electrode was off at some point in the window.
     pub leadoff_in_window: bool,
+    /// The head's outputs for this window.
     pub outputs: Vec<f32>,
 }
 
@@ -127,7 +156,9 @@ pub struct Session {
     previous: Option<(u32, u8, u64)>,
     /// Samples the device says never arrived, over this session.
     pub samples_lost: u32,
+    /// Timeline re-bases seen, over this session.
     pub rebases: u32,
+    /// Notifications that were not a message, over this session.
     pub undecodable: u32,
     /// Data packets delivered twice by the host and dropped: see
     /// `Event::Duplicate`.
@@ -139,6 +170,7 @@ pub struct Session {
 }
 
 impl Session {
+    /// A device with nothing read from it yet.
     pub fn new() -> Session {
         Session::default()
     }
@@ -151,6 +183,7 @@ impl Session {
         Ok(info)
     }
 
+    /// The device info read so far, or `NoDeviceInfo` before any has been.
     pub fn info(&self) -> Result<&DeviceInfo, Error> {
         self.info.as_ref().ok_or(Error::NoDeviceInfo)
     }
@@ -160,6 +193,7 @@ impl Session {
         self.info.map(|i| i.capabilities & capability != 0).unwrap_or(false)
     }
 
+    /// The device's clock fit, once `on_device_info` has run.
     pub fn timebase(&self) -> Option<&Timebase> {
         self.timebase.as_ref()
     }
@@ -180,6 +214,7 @@ impl Session {
         self.command(Opcode::StartStream, None)
     }
 
+    /// Ask the device to stop streaming.
     pub fn stop_stream(&self) -> Command {
         self.command(Opcode::StopStream, None)
     }
@@ -197,6 +232,7 @@ impl Session {
         Ok(self.command(Opcode::SetRate, Some(code)))
     }
 
+    /// Set the gain. The device refuses a change while it is streaming.
     pub fn set_gain(&self, gain: u8) -> Result<Command, Error> {
         let code = frame::GAIN_BY_CODE.iter().position(|&g| g == gain).ok_or(Error::Wire(WireError::Invalid))?;
         Ok(self.command(Opcode::SetGain, Some(code as u8)))
@@ -217,6 +253,8 @@ impl Session {
         Ok(self.command(Opcode::SetMode, Some(mode)))
     }
 
+    /// Turn lead-off detection on or off. Refused unless the device claims
+    /// the capability.
     pub fn set_leadoff(&self, on: bool) -> Result<Command, Error> {
         if !self.can(p::device_info::capability::LEADOFF) {
             return Err(Error::NotCapable("leadoff"));
@@ -241,11 +279,13 @@ impl Session {
         Ok(())
     }
 
+    /// Zero `sample_index` and start a fresh epoch.
     pub fn reset_epoch(&mut self) -> Command {
         self.previous = None;
         self.command(Opcode::ResetEpoch, None)
     }
 
+    /// Turn model predictions on or off.
     pub fn set_predictions(&self, on: bool) -> Result<Command, Error> {
         if !self.can(p::device_info::capability::MODEL) {
             return Err(Error::NotCapable("model"));
@@ -253,6 +293,7 @@ impl Session {
         Ok(self.command(Opcode::SetPredictions, Some(on as u8)))
     }
 
+    /// Select the head slot predictions run from.
     pub fn select_head(&self, slot: u8) -> Result<Command, Error> {
         if !self.can(p::device_info::capability::HEADS) {
             return Err(Error::NotCapable("heads"));

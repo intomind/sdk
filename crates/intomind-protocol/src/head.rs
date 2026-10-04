@@ -41,6 +41,7 @@ pub fn quantize_embedding(embedding: &[f32], out: &mut [i16]) -> Result<(), Erro
     Ok(())
 }
 
+/// The magic bytes at the start of a head blob.
 pub const MAGIC: [u8; 4] = *b"IMHD";
 /// The 1.0 format: a 32 byte header.
 pub const FORMAT_VERSION: u8 = 1;
@@ -49,10 +50,15 @@ pub const FORMAT_VERSION: u8 = 1;
 /// trainer did not say. The device stores and reports it and never judges
 /// it; a host may warn on a mismatch, and nothing blocks.
 pub const FORMAT_VERSION_2: u8 = 2;
+/// The only head kind this codec defines: a linear layer.
 pub const KIND_LINEAR: u8 = 1;
+/// Header length of format 1.
 pub const HEADER_LEN: usize = 32;
+/// Header length of format 2.
 pub const HEADER_LEN_2: usize = 40;
+/// Bytes in the trailing hash.
 pub const HASH_LEN: usize = 32;
+/// Bytes in the head's name field.
 pub const NAME_LEN: usize = 16;
 
 /// The header length of a format version, or 0 for a version this codec
@@ -71,18 +77,26 @@ pub const fn blob_len(version: u8, in_dim: u16, out_dim: u16) -> usize {
     header_len(version) + o * in_dim as usize + 4 * o + 4 * o + HASH_LEN
 }
 
+/// The decoded fixed header of a head blob.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeadHeader {
+    /// The format version: `FORMAT_VERSION` or `FORMAT_VERSION_2`.
     pub version: u8,
+    /// The head kind. `KIND_LINEAR` is the only one this codec defines.
     pub kind: u8,
+    /// The embedding width this head expects. Must equal the loaded
+    /// encoder's `model_embed_dim`.
     pub in_dim: u16,
+    /// Outputs this head produces, 1 to `head_max_outputs`.
     pub out_dim: u16,
+    /// UTF-8, zero padded.
     pub name: [u8; NAME_LEN],
     /// Format 2 only; all zero in format 1 and when the trainer did not say.
     pub encoder_id: [u8; 8],
 }
 
 impl HeadHeader {
+    /// Encode the header into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         let n = header_len(self.version);
         if n == 0 {
@@ -139,21 +153,27 @@ impl HeadHeader {
 /// be computed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HeadError {
+    /// Wrong magic, or an unknown format or kind.
     Malformed,
+    /// `out_dim` is zero or over this device's limit.
     Shape,
+    /// `in_dim` is not this device's embedding width.
     Width,
+    /// The blob's length does not match its header's shape.
     Length,
 }
 
 /// A validated view of a head blob.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeadLayout<'a> {
+    /// The decoded fixed header.
     pub header: HeadHeader,
     weights: &'a [u8],
     bias: &'a [u8],
     scale: &'a [u8],
     /// Every byte before the hash, which is what the hash covers.
     pub hashed: &'a [u8],
+    /// The trailing hash.
     pub hash: &'a [u8],
 }
 
@@ -217,21 +237,25 @@ fn layout_of(blob: &[u8], header: HeadHeader) -> Result<HeadLayout<'_>, HeadErro
 }
 
 impl HeadLayout<'_> {
+    /// The first eight bytes of the hash, the head's id.
     pub fn head_id(&self) -> [u8; 8] {
         let mut id = [0u8; 8];
         id.copy_from_slice(&self.hash[..8]);
         id
     }
 
+    /// The weight at `output, input`.
     pub fn weight(&self, output: usize, input: usize) -> i8 {
         self.weights[output * self.header.in_dim as usize + input] as i8
     }
 
+    /// The bias for `output`.
     pub fn bias(&self, output: usize) -> i32 {
         let b = &self.bias[output * 4..output * 4 + 4];
         i32::from_le_bytes([b[0], b[1], b[2], b[3]])
     }
 
+    /// The scale for `output`.
     pub fn scale(&self, output: usize) -> f32 {
         let b = &self.scale[output * 4..output * 4 + 4];
         f32::from_le_bytes([b[0], b[1], b[2], b[3]])

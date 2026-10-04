@@ -18,29 +18,46 @@
 
 use crate::Error;
 
+/// Bytes in the message.
 pub const LEN: usize = 12;
+/// `battery_percent` when the device has no battery sense circuit.
 pub const BATTERY_UNKNOWN: u8 = 0xFF;
 
+/// Bits of the `flags` field.
 pub mod flags {
+    /// USB power is present.
     pub const USB_PRESENT: u8 = 1 << 0;
+    /// `buffer_fill` is at or above three quarters of the device's buffer.
     pub const BUFFER_HIGH_WATERMARK: u8 = 1 << 1;
 }
 
+/// A parsed Status read or notification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StatusMsg {
+    /// 0 idle, 1 streaming.
     pub state: u8,
+    /// The mode in force, a `control::mode` value.
     pub mode: u8,
+    /// The gain in force, a `frame::GAIN_BY_CODE` index.
     pub gain_code: u8,
+    /// The sample rate code in force. `frame::sps_of_rate_code` converts it to samples per second.
     pub rate_code: u8,
+    /// 0 no input, 1 charging, 2 complete, 3 fault, 4 standby.
     pub charger_state: u8,
+    /// 0 to 100, or `BATTERY_UNKNOWN`.
     pub battery_percent: u8,
+    /// Lead-off status latched with the most recent sample acquired.
     pub loff_statp: u8,
+    /// See the [`flags`] module.
     pub flags: u8,
+    /// Samples acquired but never delivered this power-on, saturating.
     pub dropped_total: u16,
+    /// Samples currently buffered on the device.
     pub buffer_fill: u16,
 }
 
 impl StatusMsg {
+    /// Decode a Status read or notification.
     pub fn parse(buf: &[u8]) -> Result<Self, Error> {
         if buf.len() < LEN {
             return Err(Error::Truncated);
@@ -59,6 +76,7 @@ impl StatusMsg {
         })
     }
 
+    /// Encode a Status message into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
         if out.len() < LEN {
             return Err(Error::NoRoom);
