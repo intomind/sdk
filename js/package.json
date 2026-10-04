@@ -1,0 +1,76 @@
+{
+  "name": "@intomind/sdk",
+  "version": "1.4.0",
+  "description": "The IntoMind instrument client for JavaScript: the protocol, the session, the timebase, and a Web Bluetooth transport.",
+  "license": "AGPL-3.0-only",
+  "author": "IntoMind <support@intomind.com>",
+  "homepage": "https://intomind.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/intomind/sdk.git",
+    "directory": "js"
+  },
+  "bugs": {
+    "url": "https://github.com/intomind/sdk/issues"
+  },
+  "keywords": [
+    "eeg",
+    "bci",
+    "ble",
+    "web-bluetooth",
+    "instrument",
+    "neuroscience"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "LICENSING.md",
+    "CONTRIBUTING.md",
+    "CLA.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "default": "./dist/session.js"
+    },
+    "./timebase": {
+      "types": "./dist/timebase.d.ts",
+      "default": "./dist/timebase.js"
+    },
+    "./web-bluetooth": {
+      "types": "./dist/web-bluetooth.d.ts",
+      "default": "./dist/web-bluetooth.js"
+    },
+    "./package.json": "./package.json",
+    "./transfer": {
+      "types": "./dist/transfer.d.ts",
+      "default": "./dist/transfer.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.6",
+    "typescript": "^5.9.0"
+  }
+}

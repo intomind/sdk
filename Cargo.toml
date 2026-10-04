@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/intomind-protocol",
+    "crates/intomind-model",
+    "crates/intomind-pipeline",
+    "crates/intomind-capture",
+    "crates/intomind",
+]
+
+[workspace.package]
+edition = "2021"
+version = "1.4.0"
+authors = ["IntoMind <support@intomind.com>"]
+license = "AGPL-3.0-only"
+
+[workspace.dependencies]
+intomind-protocol = { version = "1.4.0", path = "crates/intomind-protocol" }
+intomind-model = { version = "1.4.0", path = "crates/intomind-model" }
+intomind-pipeline = { version = "1.4.0", path = "crates/intomind-pipeline" }
+intomind-capture = { version = "1.4.0", path = "crates/intomind-capture" }

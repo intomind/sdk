@@ -1,0 +1,16 @@
+[package]
+name = "intomind-protocol"
+description = "The IntoMind BLE protocol: the wire format as code. no_std, no dependencies."
+documentation = "https://docs.intomind.com/protocol.html"
+repository = "https://github.com/intomind/sdk"
+homepage = "https://intomind.com"
+keywords = ["eeg", "bci", "ble", "no-std", "protocol"]
+categories = ["embedded", "no-std", "science"]
+readme = "README.md"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# None, deliberately. The codec is the contract and depends on nothing.

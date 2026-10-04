@@ -1,0 +1,17 @@
+[package]
+name = "intomind-pipeline"
+description = "The IntoMind device's processing chain, as a library: the stage catalog, the rules a chain must meet at a rate, the filter design, and the per-sample run, from the same code the device runs."
+documentation = "https://docs.intomind.com/protocol.html"
+repository = "https://github.com/intomind/sdk"
+homepage = "https://intomind.com"
+keywords = ["eeg", "bci", "filter", "no-std", "dsp"]
+categories = ["science", "no-std", "embedded"]
+readme = "README.md"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+intomind-protocol = { workspace = true }
+libm = "0.2"

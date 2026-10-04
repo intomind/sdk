@@ -1,0 +1,16 @@
+[package]
+name = "intomind-model"
+description = "The IntoMind on-device encoder, as a library: the device's arithmetic, exactly. The encoder's weights are not published."
+documentation = "https://docs.intomind.com/model.html"
+repository = "https://github.com/intomind/sdk"
+homepage = "https://intomind.com"
+keywords = ["eeg", "bci", "inference", "no-std", "transformer"]
+categories = ["science", "no-std"]
+readme = "README.md"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+libm = "0.2"
