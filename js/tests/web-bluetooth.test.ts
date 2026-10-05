@@ -133,8 +133,14 @@ test("connecting reads what the device is and subscribes to what it notifies", a
   characteristics.get(P.STATUS)!.notify(vectorBytes("status"));
   assert.deepEqual(events.map((e) => e.type), ["samples", "status"]);
 
-  link.disconnect();
+  await link.disconnect();
   assert.ok(!link.connected);
+  // Every subscription ends before the link drops: on some platforms the
+  // browser keeps a subscribed link open, and a later program on the same
+  // computer would then hear every packet twice.
+  for (const [fill, c] of characteristics) {
+    assert.ok(!c.notifying, `still notifying: ${fill}`);
+  }
 });
 
 test("a time exchange is bracketed by the host clock", async () => {

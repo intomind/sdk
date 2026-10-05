@@ -272,8 +272,22 @@ export class Connection {
     }
   }
 
-  /** Drop the link. */
-  disconnect(): void {
+  /**
+   * End every subscription this link started, then drop the link. The
+   * order matters: on some platforms the browser keeps a subscribed link
+   * open after a disconnect, and the next program on the same computer
+   * then hears every packet twice.
+   */
+  async disconnect(): Promise<void> {
+    for (const fill of NOTIFYING) {
+      const c = this.#characteristics.get(fill);
+      if (c === undefined) continue;
+      try {
+        await c.stopNotifications();
+      } catch {
+        // A link that is already gone has nothing left to stop.
+      }
+    }
     if (this.#server.connected) this.#server.disconnect();
   }
 
