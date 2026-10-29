@@ -60,6 +60,14 @@
     "./transfer": {
       "types": "./dist/transfer.d.ts",
       "default": "./dist/transfer.js"
+    },
+    "./capture": {
+      "types": "./dist/capture/index.d.ts",
+      "default": "./dist/capture/index.js"
+    },
+    "./capture/node": {
+      "types": "./dist/capture/node.d.ts",
+      "default": "./dist/capture/node.js"
     }
   },
   "main": "./dist/index.js",

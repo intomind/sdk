@@ -5,7 +5,9 @@
  * They are handed bytes that arrived and they hand back bytes to send,
  * which means they work over whatever Bluetooth stack you already have and
  * can be tested without one. `web-bluetooth.ts` is the browser transport,
- * and it is the only file in this package that touches a radio.
+ * and it is the only file in this package that touches a radio. `capture`
+ * reads recordings and writes their exports as bytes in the same way, and
+ * `capture/node` is the one part of it that touches a disk.
  *
  * ```ts
  * import { requestAndConnect } from "@intomind/sdk";
@@ -26,6 +28,7 @@
  */
 
 export * as protocol from "./protocol.ts";
+export * as capture from "./capture/index.ts";
 
 export {
   CAPABILITIES,

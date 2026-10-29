@@ -1,5 +1,5 @@
 /**
- * Every exported item in `src` carries a doc comment.
+ * Every exported item in `src`, and in its folders, carries a doc comment.
  *
  * This package ships its source as well as its build (`package.json`
  * `files`), and a reader of either sees the comment, never only the
@@ -57,11 +57,19 @@ function isPrivateLike(member: ts.ClassElement): boolean {
   return name !== undefined && name.getText().startsWith("#");
 }
 
+/** Every `.ts` file under `src`, its folders included, as a path from `src`. */
+function sources(): string[] {
+  return (readdirSync(SRC, { recursive: true }) as string[])
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => f.split("\\").join("/"))
+    .sort();
+}
+
 /** Every exported item, and every public member of an exported class, interface, enum, or object type alias, that lacks a doc comment. */
 function findUndocumented(): Missing[] {
   const missing: Missing[] = [];
 
-  for (const file of readdirSync(SRC).filter((f) => f.endsWith(".ts")).sort()) {
+  for (const file of sources()) {
     const text = readFileSync(new URL(file, SRC), "utf8");
     const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 
@@ -150,6 +158,7 @@ function findUndocumented(): Missing[] {
 }
 
 test("every exported item in src carries a doc comment", () => {
+  assert.ok(sources().some((f) => f.includes("/")), "the folders under src are read too");
   const missing = findUndocumented();
   const report = missing.map((m) => `${m.file}:${m.line}\t${m.name}`).join("\n");
   assert.equal(missing.length, 0, `${missing.length} item(s) without a doc comment:\n${report}`);
