@@ -69,6 +69,25 @@ fn a_device_says_what_it_is_and_nothing_is_assumed() {
 }
 
 #[test]
+fn a_batch_says_whether_lead_off_detection_was_running() {
+    // The flag is bit 1 of the flags byte, the second byte of the header. A
+    // fresh session for each, because a packet seen twice is passed on once.
+    let v = vectors();
+    let packet = find(&v, "decode", "eeg_data")[0];
+    let mut seen = Vec::new();
+    for on in [false, true] {
+        let mut bytes = bytes_of(packet["bytes"].as_str().unwrap());
+        if on { bytes[1] |= 1 << 1 } else { bytes[1] &= !(1 << 1) }
+        let mut s = session_with_info(&v);
+        let events = s.on_notification(uuid_fill::EEG_DATA, &bytes);
+        let Event::Samples(batch) = &events[0] else { panic!("{events:?}") };
+        assert_eq!(batch.leadoff_active, on);
+        seen.push(batch.leadoff_active);
+    }
+    assert_eq!(seen, vec![false, true]);
+}
+
+#[test]
 fn a_batch_carries_the_samples_the_vector_states() {
     let v = vectors();
     let mut s = session_with_info(&v);

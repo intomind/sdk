@@ -58,7 +58,7 @@ dependencies = [
 
 [[package]]
 name = "intomind"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "intomind-capture",
  "intomind-model",
@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "intomind-capture"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "intomind-protocol",
  "serde",
@@ -80,14 +80,14 @@ dependencies = [
 
 [[package]]
 name = "intomind-model"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "libm",
 ]
 
 [[package]]
 name = "intomind-pipeline"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "intomind-protocol",
  "libm",
@@ -95,7 +95,7 @@ dependencies = [
 
 [[package]]
 name = "intomind-protocol"
-version = "1.4.0"
+version = "1.4.1"
 
 [[package]]
 name = "itoa"

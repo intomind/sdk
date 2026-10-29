@@ -1,6 +1,6 @@
 {
   "name": "@intomind/sdk",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "The IntoMind instrument client for JavaScript: the protocol, the session, the timebase, and a Web Bluetooth transport.",
   "license": "AGPL-3.0-only",
   "author": "IntoMind <support@intomind.com>",

@@ -40,6 +40,11 @@ pub struct Batch {
     pub counts: Vec<i32>,
     /// Lead-off status latched with the last sample.
     pub leadoff: u8,
+    /// Whether lead-off detection was running when these samples were taken,
+    /// from the packet's flag. `leadoff` is zero both when every electrode
+    /// was attached and when nothing was checking, and this tells the two
+    /// apart.
+    pub leadoff_active: bool,
     /// The gain these samples were taken at.
     pub gain: u8,
     /// The sample rate these samples were taken at.
@@ -639,6 +644,7 @@ impl Session {
             channels,
             counts,
             leadoff: h.loff_statp,
+            leadoff_active: h.flags & frame::flags::LEADOFF_ACTIVE != 0,
             gain: frame::GAIN_BY_CODE[h.gain_code as usize],
             sample_rate_hz: frame::sps_of_rate_code(h.rate_code).unwrap_or(0),
             mode: (h.flags & frame::flags::MODE_MASK) >> frame::flags::MODE_SHIFT,

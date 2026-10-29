@@ -62,6 +62,16 @@ function samples(events: Event[]): Batch {
   return at(events, found, "samples").batch;
 }
 
+test("a batch says whether lead-off detection was running", () => {
+  // A fresh session for each, because a packet seen twice is passed on once.
+  const p = P.decodePacket(PACKET_BYTES, 4);
+  for (const on of [false, true]) {
+    const bytes = P.encodePacket({ ...p, leadoffActive: on });
+    const batch = samples(ready().onNotification(P.FILL.EEG_DATA, bytes));
+    assert.equal(batch.leadoffActive, on);
+  }
+});
+
 test("a device says what it is and nothing is assumed", () => {
   const s = ready();
   const info = s.requireInfo();
