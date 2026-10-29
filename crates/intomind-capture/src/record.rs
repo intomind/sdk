@@ -135,7 +135,7 @@ pub struct DeviceFacts {
 /// Nothing here is guessed: what is not declared is written as unknown.
 #[derive(Debug, Clone, Default)]
 pub struct Setup {
-    /// Facts about the bench no code can discover, as a JSON object: the
+    /// Facts about the hardware no code can discover, as a JSON object: the
     /// keys the Python library's `use_site` takes, `board_revision`,
     /// `mains_hz`, `psu_volts`, `firmware_sha256`, `firmware_artifact`,
     /// `electrode_montage`, `subject_id`, `notes`, and a structured
