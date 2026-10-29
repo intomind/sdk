@@ -591,9 +591,10 @@ fn export_mat(cap: &Recording, out: &Path, problems: &[String]) -> Result<J, Err
     for (name, a) in &found {
         vars.push(mat_variable(name, vec![1, a.data.len() as u64], &a.data));
     }
-    // The manifest as MATLAB text: UTF-16 code units.
+    // The manifest as MATLAB text: UTF-16 code units, written as one column,
+    // which MATLAB opens as one row of characters, the way it holds text.
     let text: Vec<u16> = pyjson::dumps_sorted(&cap.meta).encode_utf16().collect();
-    let mut v = mat_variable("manifest_json", vec![1, text.len() as u64], &Data::U16(text));
+    let mut v = mat_variable("manifest_json", vec![text.len() as u64, 1], &Data::U16(text));
     v.matlab_class = "char".into();
     v.int_decode = Some(2);
     vars.push(v);

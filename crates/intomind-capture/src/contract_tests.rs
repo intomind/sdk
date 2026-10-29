@@ -160,6 +160,36 @@ fn every_export_is_the_python_librarys() {
                     problems.push(format!("{label} {fmt}: the file is not the bytes Python wrote"));
                 }
             }
+            if let Some(m) = want.get("mat") {
+                let mine = mat_digest(&bytes);
+                let Some(Value::Array(vars)) = m.get("variables") else { panic!("no variables") };
+                let theirs = (
+                    m.field("header_tail").py_str(),
+                    vars.iter()
+                        .map(|v| {
+                            let Value::Array(v) = v else { panic!() };
+                            let shape: Vec<u64> = match &v[2] {
+                                Value::Array(s) => s.iter().map(|d| d.as_i64().unwrap() as u64).collect(),
+                                _ => panic!(),
+                            };
+                            let attrs: Vec<String> = match &v[4] {
+                                Value::Array(a) => a
+                                    .iter()
+                                    .map(|a| {
+                                        let Value::Array(a) = a else { panic!() };
+                                        format!("{} {} {}", a[0].py_str(), a[1].py_str(), a[2].py_str())
+                                    })
+                                    .collect(),
+                                _ => panic!(),
+                            };
+                            format!("{} {} {:?} {} {:?}", v[0].py_str(), v[1].py_str(), shape, v[3].py_str(), attrs)
+                        })
+                        .collect::<Vec<_>>(),
+                );
+                if mine != theirs {
+                    problems.push(format!("{label} {fmt}: {mine:?} differs from {theirs:?}"));
+                }
+            }
             if let Some(Value::Array(arrays)) = want.get("arrays") {
                 let mine = read_npz(&bytes).unwrap();
                 let digest: Vec<String> = mine
@@ -198,4 +228,192 @@ fn header_len(npy: &[u8]) -> usize {
         1 => 10 + u16::from_le_bytes([npy[8], npy[9]]) as usize,
         _ => 12 + u32::from_le_bytes([npy[8], npy[9], npy[10], npy[11]]) as usize,
     }
+}
+
+/// A MATLAB file as h5py reports it: the end of MATLAB's header, then each
+/// variable's name, element type, shape, the sha256 of its elements and its
+/// attributes, in the order h5py lists them.
+///
+/// Read by following the HDF5 structures from the superblock, as the HDF5
+/// specification lays them out, never from where this crate's writer puts
+/// them. It reads what a MATLAB export can hold: a version 0 superblock, a
+/// symbol table group, version 1 object headers, and contiguous or compact
+/// data. Anything else fails the test rather than being skipped.
+fn mat_digest(file: &[u8]) -> (String, Vec<String>) {
+    let u16_at = |p: usize| u16::from_le_bytes(file[p..p + 2].try_into().unwrap()) as usize;
+    let u32_at = |p: usize| u32::from_le_bytes(file[p..p + 4].try_into().unwrap()) as usize;
+    let u64_at = |p: usize| u64::from_le_bytes(file[p..p + 8].try_into().unwrap());
+    let tail: String = file[116..128].iter().map(|b| format!("{b:02x}")).collect();
+
+    // HDF5 looks for its superblock at 0, 512, 1024 and so on.
+    let sb = (0..)
+        .map(|i| 512 * i)
+        .take_while(|&p| p + 96 <= file.len())
+        .find(|&p| &file[p..p + 8] == b"\x89HDF\r\n\x1a\n")
+        .expect("an HDF5 superblock");
+    assert_eq!(file[sb + 8], 0, "superblock version");
+    assert_eq!((file[sb + 13], file[sb + 14]), (8, 8), "the size of addresses and lengths");
+    let base = u64_at(sb + 24) as usize;
+    let at = |a: u64| base + a as usize;
+
+    // An object header's messages, as (type, body).
+    let messages = |h: usize| -> Vec<(u16, &[u8])> {
+        assert_eq!(file[h], 1, "object header version");
+        let (n, size) = (u16_at(h + 2), u32_at(h + 8));
+        let (mut p, end, mut out) = (h + 16, h + 16 + size, Vec::new());
+        while out.len() < n {
+            assert!(p + 8 <= end, "a message past the end of its header");
+            let (kind, len) = (u16_at(p) as u16, u16_at(p + 2));
+            assert_ne!(kind, 0x0010, "a continuation, which a MATLAB export does not need");
+            out.push((kind, &file[p + 8..p + 8 + len]));
+            p += 8 + len;
+        }
+        out
+    };
+    // A datatype as numpy names it, and its size.
+    let dtype = |t: &[u8]| -> (String, usize) {
+        let size = u32::from_le_bytes(t[4..8].try_into().unwrap()) as usize;
+        let order = if size == 1 {
+            "|"
+        } else if t[1] & 1 == 0 {
+            "<"
+        } else {
+            ">"
+        };
+        match t[0] & 0x0f {
+            0 => (format!("{order}{}{size}", if t[1] & 0x08 != 0 { "i" } else { "u" }), size),
+            1 => (format!("{order}f{size}"), size),
+            3 => (format!("|S{size}"), size),
+            c => panic!("datatype class {c}"),
+        }
+    };
+    // A dataspace's dimensions.
+    let dims = |d: &[u8]| -> Vec<u64> {
+        assert_eq!(d[0], 1, "dataspace version");
+        (0..d[1] as usize).map(|i| u64::from_le_bytes(d[8 + 8 * i..16 + 8 * i].try_into().unwrap())).collect()
+    };
+
+    // The root group's B-tree and local heap.
+    let root = messages(at(u64_at(sb + 56 + 8)));
+    let st = root.iter().find(|m| m.0 == 0x0011).expect("the root group's symbol table").1;
+    let (btree, heap) =
+        (u64::from_le_bytes(st[0..8].try_into().unwrap()), u64::from_le_bytes(st[8..16].try_into().unwrap()));
+    let h = at(heap);
+    assert_eq!(&file[h..h + 4], b"HEAP");
+    let names = at(u64_at(h + 24));
+    let name = |off: u64| -> String {
+        let s = &file[names + off as usize..];
+        String::from_utf8(s[..s.iter().position(|&c| c == 0).unwrap()].to_vec()).unwrap()
+    };
+    // Every symbol node under the B-tree, in key order.
+    fn leaves(file: &[u8], at: &dyn Fn(u64) -> usize, node: u64, out: &mut Vec<u64>) {
+        let p = at(node);
+        assert_eq!(&file[p..p + 4], b"TREE");
+        assert_eq!(file[p + 4], 0, "a group B-tree");
+        let (level, used) = (file[p + 5], u16::from_le_bytes([file[p + 6], file[p + 7]]) as usize);
+        for i in 0..used {
+            let c = p + 24 + 8 + 16 * i;
+            let child = u64::from_le_bytes(file[c..c + 8].try_into().unwrap());
+            if level == 0 {
+                out.push(child);
+            } else {
+                leaves(file, at, child, out);
+            }
+        }
+    }
+    let mut snods = Vec::new();
+    leaves(file, &at, btree, &mut snods);
+
+    let mut vars = Vec::new();
+    for s in snods {
+        let p = at(s);
+        assert_eq!(&file[p..p + 4], b"SNOD");
+        for e in 0..u16_at(p + 6) {
+            let entry = p + 8 + 40 * e;
+            let var = name(u64_at(entry));
+            let msgs = messages(at(u64_at(entry + 8)));
+            let body = |kind: u16| msgs.iter().find(|m| m.0 == kind).map(|m| m.1).expect("a dataset message");
+            let shape = dims(body(0x0001));
+            let (dt, _) = dtype(body(0x0003));
+            let layout = body(0x0008);
+            assert_eq!(layout[0], 3, "layout version");
+            let data: &[u8] = match layout[1] {
+                0 => &layout[4..4 + u16::from_le_bytes([layout[2], layout[3]]) as usize],
+                1 => {
+                    let (a, n) = (
+                        u64::from_le_bytes(layout[2..10].try_into().unwrap()),
+                        u64::from_le_bytes(layout[10..18].try_into().unwrap()),
+                    );
+                    if a == u64::MAX {
+                        &[]
+                    } else {
+                        &file[at(a)..at(a) + n as usize]
+                    }
+                }
+                c => panic!("layout class {c}"),
+            };
+            let mut attrs: Vec<String> = msgs
+                .iter()
+                .filter(|m| m.0 == 0x000C)
+                .map(|m| {
+                    let a = m.1;
+                    assert_eq!(a[0], 1, "attribute version");
+                    let (nlen, tlen, slen) = (
+                        u16::from_le_bytes([a[2], a[3]]) as usize,
+                        u16::from_le_bytes([a[4], a[5]]) as usize,
+                        u16::from_le_bytes([a[6], a[7]]) as usize,
+                    );
+                    let pad = |n: usize| n.div_ceil(8) * 8;
+                    let aname = String::from_utf8(a[8..8 + nlen - 1].to_vec()).unwrap();
+                    let t = &a[8 + pad(nlen)..8 + pad(nlen) + tlen];
+                    let space = &a[8 + pad(nlen) + pad(tlen)..];
+                    assert_eq!(space[1], 0, "a scalar attribute");
+                    let v = &a[8 + pad(nlen) + pad(tlen) + pad(slen)..];
+                    let (adt, size) = dtype(t);
+                    let v = &v[..size];
+                    let value = match t[0] & 0x0f {
+                        // numpy drops a fixed string's trailing nulls.
+                        3 => py_bytes(&v[..v.iter().rposition(|&c| c != 0).map_or(0, |i| i + 1)]),
+                        0 if t[1] & 0x08 != 0 => {
+                            let mut b = [if v[size - 1] & 0x80 != 0 { 0xff } else { 0 }; 8];
+                            b[..size].copy_from_slice(v);
+                            i64::from_le_bytes(b).to_string()
+                        }
+                        0 => {
+                            let mut b = [0u8; 8];
+                            b[..size].copy_from_slice(v);
+                            u64::from_le_bytes(b).to_string()
+                        }
+                        c => panic!("an attribute of datatype class {c}"),
+                    };
+                    format!("{aname} {adt} {value}")
+                })
+                .collect();
+            attrs.sort();
+            vars.push(format!("{var} {dt} {shape:?} {} {attrs:?}", sha256(data)));
+        }
+    }
+    (tail, vars)
+}
+
+/// Python's `repr` of a bytes object.
+fn py_bytes(b: &[u8]) -> String {
+    let q = if b.contains(&b'\'') && !b.contains(&b'"') { '"' } else { '\'' };
+    let mut s = format!("b{q}");
+    for &c in b {
+        match c {
+            b'\\' => s.push_str("\\\\"),
+            b'\t' => s.push_str("\\t"),
+            b'\n' => s.push_str("\\n"),
+            b'\r' => s.push_str("\\r"),
+            c if c as char == q => {
+                s.push('\\');
+                s.push(q);
+            }
+            0x20..=0x7e => s.push(c as char),
+            c => s.push_str(&format!("\\x{c:02x}")),
+        }
+    }
+    s.push(q);
+    s
 }
