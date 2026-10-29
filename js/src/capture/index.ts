@@ -10,9 +10,15 @@
  * what the Python library writes, with the same summary.
  * docs.intomind.com/files.html states what both promise.
  *
+ * A recording is made here as the Python library's recorder makes one:
+ * `Clock` maps the device's time onto the host's two clocks, `Take` holds
+ * what a run collected, and `save` makes the recording's files with the
+ * manifest the library writes. `Session` collects a take and saves it for
+ * you; these are what it uses.
+ *
  * Nothing here reads or writes a disk: a collection is handed its files'
- * bytes, and an export hands back the file's bytes. `capture/node` does both
- * on a folder in Node.
+ * bytes, an export hands back the file's bytes, and a saved recording is its
+ * files' bytes. `capture/node` does each on a folder in Node.
  *
  * ```ts
  * import { Collection, exportRecording } from "@intomind/sdk/capture";
@@ -28,6 +34,21 @@ export { Collection, Recording, checkLabel } from "./recording.ts";
 export type { CollectionOptions, Parts, Source, Verification } from "./recording.ts";
 export { FORMATS, exportRecording, fileName, formatOf } from "./export.ts";
 export type { ExportOptions, Exported, Format } from "./export.ts";
-export { toPlain } from "./pyjson.ts";
-export type { Value } from "./pyjson.ts";
+export { dumps, dumpsIndented, dumpsSorted, float, fromPlain, int, isValue, loads, toPlain } from "./pyjson.ts";
+export type { Json, Value } from "./pyjson.ts";
 export type { Data, NpyArray } from "./npy.ts";
+export { Clock, findSteps, hostClocks } from "./clock.ts";
+export type { HostClocks, Sync } from "./clock.ts";
+export {
+  MANIFEST_VERSION,
+  Take,
+  checksums,
+  configAfter,
+  describeChain,
+  hostVersions,
+  montageFields,
+  processing,
+  save,
+} from "./record.ts";
+export type { DeviceFacts, GitState, Packet, Run, Saved, Setup } from "./record.ts";
+export { PACKAGE_VERSION } from "./version.ts";

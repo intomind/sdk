@@ -25,37 +25,179 @@ export type Value =
   /** Keys in the order they first arrived. A key repeated keeps its first place and takes its last value, as a Python dict does. */
   | { readonly kind: "object"; readonly entries: [string, Value][] };
 
+/** What a field that takes JSON accepts: plain JavaScript data, read as `fromPlain` reads it, or a `Value`. */
+export type Json =
+  | Value
+  | null
+  | undefined
+  | boolean
+  | number
+  | bigint
+  | string
+  | readonly Json[]
+  | ReadonlyMap<string, Json>
+  | { readonly [key: string]: Json };
+
+// Every value this module makes, so that one can be told from plain data an
+// application hands in, whatever shape that data has.
+const MADE = new WeakSet<object>();
+
+function made<T extends Value>(v: T): T {
+  MADE.add(v);
+  return v;
+}
+
+/** Whether `x` is a value this module made, from `loads` or one of the constructors here. */
+export function isValue(x: unknown): x is Value {
+  return typeof x === "object" && x !== null && MADE.has(x);
+}
+
 /** The null value. */
-export const NULL: Value = { kind: "null" };
+export const NULL: Value = made({ kind: "null" });
 
 /** A string value. */
 export function str(value: string): Value {
-  return { kind: "str", value };
+  return made({ kind: "str", value });
 }
 
 /** An integer value, from a number that is a whole number or from a bigint. */
 export function int(value: number | bigint): Value {
-  return { kind: "int", value: BigInt(value).toString() };
+  return made({ kind: "int", value: BigInt(value).toString() });
+}
+
+/** An integer value from its decimal digits, which may be any length. */
+function intDigits(value: string): Value {
+  return made({ kind: "int", value });
 }
 
 /** A float value. */
 export function float(value: number): Value {
-  return { kind: "float", value };
+  return made({ kind: "float", value });
 }
 
 /** A boolean value. */
 export function bool(value: boolean): Value {
-  return { kind: "bool", value };
+  return made({ kind: "bool", value });
 }
 
 /** An array value. */
 export function array(items: Value[]): Value {
-  return { kind: "array", items };
+  return made({ kind: "array", items });
 }
 
 /** An object value, its keys in the order given. */
 export function object(entries: [string, Value][]): Value {
-  return { kind: "object", entries };
+  return made({ kind: "object", entries });
+}
+
+/**
+ * Plain JavaScript data as a value: null and undefined as null, a boolean, a
+ * string, a bigint as an integer, a number as an integer when it is a whole
+ * number a double holds exactly and as a float otherwise, an array, and a
+ * `Map` or a plain object with its keys in their order. A value this module
+ * made is itself, so a float with no fraction, which Python writes as `3.0`,
+ * is said with `float(3)` or read with `loads`. A plain object puts keys that
+ * look like integers first, as JavaScript orders them; a `Map` keeps any
+ * order. A key whose value is undefined is left out, as `JSON.stringify`
+ * leaves it.
+ */
+export function fromPlain(x: unknown): Value {
+  if (isValue(x)) return x;
+  if (x === null || x === undefined) return NULL;
+  switch (typeof x) {
+    case "boolean":
+      return bool(x);
+    case "string":
+      return str(x);
+    case "bigint":
+      return int(x);
+    case "number":
+      return Number.isSafeInteger(x) && !Object.is(x, -0) ? int(x) : float(x);
+    case "object": {
+      if (Array.isArray(x)) return array(x.map(fromPlain));
+      const entries: [string, Value][] = [];
+      if (x instanceof Map) {
+        for (const [k, v] of x) {
+          if (typeof k !== "string") throw new TypeError(`a key must be a string, not a ${typeof k}`);
+          if (v !== undefined) entries.push([k, fromPlain(v)]);
+        }
+        return object(entries);
+      }
+      const proto = Object.getPrototypeOf(x);
+      if (proto !== Object.prototype && proto !== null) {
+        throw new TypeError(`${Object.prototype.toString.call(x)} is not data a JSON value can hold`);
+      }
+      for (const [k, v] of Object.entries(x)) if (v !== undefined) entries.push([k, fromPlain(v)]);
+      return object(entries);
+    }
+    default:
+      throw new TypeError(`a ${typeof x} is not data a JSON value can hold`);
+  }
+}
+
+/** `d[key] = value` on a Python dict: a key already there keeps its place and takes the value, a new one goes last. */
+export function set(d: Value, key: string, value: Value): void {
+  if (d.kind !== "object") return;
+  for (const e of d.entries) {
+    if (e[0] === key) {
+      e[1] = value;
+      return;
+    }
+  }
+  d.entries.push([key, value]);
+}
+
+/** `d.pop(key, None)` on a Python dict. */
+export function pop(d: Value, key: string): Value {
+  if (d.kind !== "object") return NULL;
+  const at = d.entries.findIndex(([k]) => k === key);
+  if (at < 0) return NULL;
+  return d.entries.splice(at, 1)[0]![1];
+}
+
+/** `dict(d)` in Python: a new object with the same keys in the same order, its values shared. */
+export function copyObject(d: Value): Value {
+  return d.kind === "object" ? object(d.entries.map(([k, v]) => [k, v])) : d;
+}
+
+/** A boolean, an integer or a float. */
+export function isNumber(v: Value): boolean {
+  return v.kind === "bool" || v.kind === "int" || v.kind === "float";
+}
+
+/** The value as an exact integer, for a boolean, an integer, or a float with no fraction. */
+function exactInt(v: Value): bigint | null {
+  if (v.kind === "bool") return v.value ? 1n : 0n;
+  if (v.kind === "int") return BigInt(v.value);
+  if (v.kind === "float" && Number.isInteger(v.value)) return BigInt(v.value);
+  return null;
+}
+
+/** Python's `==` between two values JSON can hold: numbers by their exact value, whatever their type, and `True` as 1. */
+export function pyEq(a: Value, b: Value): boolean {
+  switch (a.kind) {
+    case "null":
+      return b.kind === "null";
+    case "str":
+      return b.kind === "str" && a.value === b.value;
+    case "array":
+      return b.kind === "array" && a.items.length === b.items.length && a.items.every((x, i) => pyEq(x, b.items[i]!));
+    case "object":
+      return (
+        b.kind === "object" &&
+        a.entries.length === b.entries.length &&
+        a.entries.every(([k, v]) => b.entries.some(([k2, v2]) => k === k2 && pyEq(v, v2)))
+      );
+    default: {
+      if (!isNumber(b)) return false;
+      const x = exactInt(a);
+      const y = exactInt(b);
+      if (x !== null && y !== null) return x === y;
+      // At least one is a float with a fraction or not finite, which no
+      // integer equals.
+      return a.kind === "float" && b.kind === "float" && a.value === b.value;
+    }
+  }
 }
 
 /** The value under `key`, when `v` is an object that has it. */
@@ -321,15 +463,15 @@ class Parser {
     const c = this.s[this.i]!;
     if (c === "{") return this.object();
     if (c === "[") return this.array();
-    if (c === '"') return { kind: "str", value: this.string() };
+    if (c === '"') return str(this.string());
     if (c === "n" && this.eat("null")) return NULL;
-    if (c === "t" && this.eat("true")) return { kind: "bool", value: true };
-    if (c === "f" && this.eat("false")) return { kind: "bool", value: false };
-    if (c === "N" && this.eat("NaN")) return { kind: "float", value: NaN };
-    if (c === "I" && this.eat("Infinity")) return { kind: "float", value: Infinity };
+    if (c === "t" && this.eat("true")) return bool(true);
+    if (c === "f" && this.eat("false")) return bool(false);
+    if (c === "N" && this.eat("NaN")) return float(NaN);
+    if (c === "I" && this.eat("Infinity")) return float(Infinity);
     if (c === "-" && this.s.startsWith("-Infinity", this.i)) {
       this.i += "-Infinity".length;
-      return { kind: "float", value: -Infinity };
+      return float(-Infinity);
     }
     if (c === "-" || (c >= "0" && c <= "9")) return this.number();
     throw this.err("expecting value");
@@ -368,11 +510,11 @@ class Parser {
       if (digits() === 0) this.i = save;
       else isFloat = true;
     }
-    if (isFloat) return { kind: "float", value: Number(s.slice(start, this.i)) };
+    if (isFloat) return float(Number(s.slice(start, this.i)));
     const t = s.slice(start, intEnd);
     const neg = t.startsWith("-");
     const body = neg ? t.slice(1) : t;
-    return { kind: "int", value: body === "0" || !neg ? body : "-" + body };
+    return intDigits(body === "0" || !neg ? body : "-" + body);
   }
 
   hex4(): number {
@@ -458,7 +600,7 @@ class Parser {
     this.ws();
     if (this.s[this.i] === "]") {
       this.i++;
-      return { kind: "array", items };
+      return array(items);
     }
     for (;;) {
       this.ws();
@@ -468,7 +610,7 @@ class Parser {
       if (c === ",") this.i++;
       else if (c === "]") {
         this.i++;
-        return { kind: "array", items };
+        return array(items);
       } else throw this.err("expecting ',' delimiter");
     }
   }
@@ -480,7 +622,7 @@ class Parser {
     this.ws();
     if (this.s[this.i] === "}") {
       this.i++;
-      return { kind: "object", entries };
+      return object(entries);
     }
     for (;;) {
       this.ws();
@@ -503,7 +645,7 @@ class Parser {
       if (c === ",") this.i++;
       else if (c === "}") {
         this.i++;
-        return { kind: "object", entries };
+        return object(entries);
       } else throw this.err("expecting ',' delimiter");
     }
   }
@@ -534,8 +676,8 @@ function writeFloat(f: number): string {
   return repr(f);
 }
 
-/** Two keys in Python's order, which is code point order, not UTF-16's. */
-function compareKeys(a: string, b: string): number {
+/** Two strings in Python's order, which is code point order, not UTF-16's. */
+export function compareKeys(a: string, b: string): number {
   const n = Math.min(a.length, b.length);
   for (let i = 0; i < n; i++) {
     const x = a.codePointAt(i)!;
@@ -548,6 +690,15 @@ function compareKeys(a: string, b: string): number {
 
 /** `json.dumps(value, sort_keys=True)`: one line, `", "` and `": "`. */
 export function dumpsSorted(v: Value): string {
+  return oneLine(v, true);
+}
+
+/** `json.dumps(value)`: one line, keys in their order. */
+export function dumps(v: Value): string {
+  return oneLine(v, false);
+}
+
+function oneLine(v: Value, sort: boolean): string {
   const parts: string[] = [];
   const go = (v: Value): void => {
     switch (v.kind) {
@@ -575,7 +726,7 @@ export function dumpsSorted(v: Value): string {
         parts.push("]");
         return;
       case "object": {
-        const items = [...v.entries].sort((a, b) => compareKeys(a[0], b[0]));
+        const items = sort ? [...v.entries].sort((a, b) => compareKeys(a[0], b[0])) : v.entries;
         parts.push("{");
         items.forEach(([k, x], i) => {
           if (i > 0) parts.push(", ");
