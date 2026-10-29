@@ -69,6 +69,16 @@ fn floats_are_written_as_python_writes_them() {
 }
 
 #[test]
+fn strings_are_quoted_as_python_quotes_them() {
+    let n = fixture("numbers.json");
+    let rows = rows(&n, "strings");
+    assert!(rows.len() > 2000, "{}", rows.len());
+    for r in rows {
+        assert_eq!(pyjson::repr_str(r[0].as_str().unwrap()), r[1].py_str(), "{:?}", r[0]);
+    }
+}
+
+#[test]
 fn json_reads_and_writes_as_pythons_does() {
     let n = fixture("numbers.json");
     for r in rows(&n, "json") {

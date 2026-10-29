@@ -15,8 +15,15 @@ Writes, beside this script:
                    library returns without its path, and the file's sha256
                    for bdf, edf, csv and tsv, its arrays for npz, its
                    variables for mat, or the refusal
-    numbers.json   floats as Python formats them, and JSON as it reads and
-                   writes it, which every byte above depends on
+    numbers.json   floats as Python formats them, JSON as it reads and
+                   writes it, and strings as its repr writes them, which
+                   every byte above depends on
+
+and, where each implementation compiles it in, the table of characters
+Python's repr writes as escapes:
+
+    crates/intomind-capture/src/unprintable.rs
+    js/src/capture/unprintable.ts
 
 Run it again and nothing changes unless the library does: the archives are
 stamped with a fixed time and every random source is seeded.
@@ -27,11 +34,13 @@ import hashlib
 import json
 import math
 import pathlib
+import platform
 import random
 import shutil
 import struct
 import sys
 import tempfile
+import unicodedata
 import warnings
 import zipfile
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR
@@ -231,6 +240,13 @@ def make_recordings() -> None:
     write("far-below-zero", counts=signal(rng, n, 2, dc=-150_000.4, amp=0.3),
           meta=manifest("far-below-zero", n, channels=2))
     write("wide-range", counts=signal(rng, n, 2, dc=0.0, amp=4000.0), meta=manifest("wide-range", n, channels=2))
+    # One microvolt a count, and a signal reaching 32125 either way: the EDF
+    # range comes out at exactly -32767.5 to 32767.5, so every sample
+    # digitizes to an exact half and rounds to the even neighbour.
+    halves = np.array([np.round(32125 * np.sin(np.linspace(0, 7, n) + c)) for c in range(2)], dtype=np.int64)
+    halves[:, 0], halves[:, 1] = (-32125, 32125), (32125, -32125)
+    write("exact-halves", counts=halves,
+          meta=manifest("exact-halves", n, channels=2, gain=1, vref_uv=1 << 23, adc_bits=24))
 
     # Every packet delivered twice, as two subscriptions recorded it.
     base = signal(rng, n, 2)
@@ -402,8 +418,16 @@ def make_numbers() -> dict:
         '[1, 2.0, 3e10, 4.5e-7, 1e16, 1e-5, 0.0001, 100000000000000000000.0]',
         '{"nested": {"z": [], "a": {}, "m": [{"y": 1, "x": 2}]}, "": "empty key"}',
     ]
+    texts = ["", "plain", "it's", 'say "hi"', 'both \' and "', "back\\slash", "tab\tnew\nline\rcr",
+             "\x00\x01\x1f\x7f", "\x80\x9f\xa0\xad\xff", "é ü ñ", "zero\u200bwidth", "\ufeffbom",
+             "line\u2028para\u2029", "emoji \U0001f600", "\U000e0001 tag", "\U0010ffff end", "\u0378 unassigned"]
+    for lo, hi in unprintable():
+        for cp in {lo - 1, lo, hi, hi + 1}:
+            if 0 <= cp <= sys.maxunicode and not 0xD800 <= cp <= 0xDFFF:
+                texts.append(f"a{chr(cp)}b")
     return dict(
         note="Floats are given as the little-endian hex of their bits, so none is rounded on the way in.",
+        strings=[[t, repr(t)] for t in texts],
         repr=[[bits(x), repr(x)] for x in xs],
         fixed=[[bits(x), p, f"{x:.{p}f}"] for x in xs if abs(x) < 1e22 for p in (rnd.randint(0, 12),)],
         general=[[bits(x), p, f"{x:.{p}g}"] for x in xs for p in (8, 6)],
@@ -411,6 +435,44 @@ def make_numbers() -> dict:
                   for x in small for p in (rnd.randint(0, 7),)],
         json=[[d, json.dumps(json.loads(d), sort_keys=True), json.dumps(json.loads(d), indent=2)] for d in docs],
     )
+
+
+def unprintable() -> list[tuple[int, int]]:
+    """Every run of characters `str.isprintable` refuses, which `repr`
+    writes as escapes rather than as themselves."""
+    runs, start = [], None
+    for cp in range(sys.maxunicode + 2):
+        bad = cp <= sys.maxunicode and not chr(cp).isprintable()
+        if bad and start is None:
+            start = cp
+        elif not bad and start is not None:
+            runs.append((start, cp - 1))
+            start = None
+    return runs
+
+
+def write_tables() -> None:
+    """The table each implementation compiles in, from this Python."""
+    runs = unprintable()
+    whence = (f"Python {platform.python_version()}, whose characters are those of Unicode "
+              f"{unicodedata.unidata_version}")
+    rows = lambda per: [", ".join(f"({a}, {b})" if per else f"[{a}, {b}]" for a, b in runs[i:i + 8])
+                        for i in range(0, len(runs), 8)]
+    root = HERE.parent.parent
+    (root / "crates" / "intomind-capture" / "src" / "unprintable.rs").write_text(
+        "//! The characters Python's `repr` writes as escapes rather than as\n"
+        "//! themselves: what `str.isprintable` refuses, as runs of code points.\n"
+        f"//! Written by contract/recordings/make.py from {whence}.\n\n"
+        "/// Each run, first and last code point, in order.\n"
+        "pub(crate) const UNPRINTABLE: &[(u32, u32)] = &[\n"
+        + "".join(f"    {r},\n" for r in rows(True)) + "];\n")
+    (root / "js" / "src" / "capture" / "unprintable.ts").write_text(
+        "/**\n * The characters Python's `repr` writes as escapes rather than as\n"
+        " * themselves: what `str.isprintable` refuses, as runs of code points.\n"
+        f" * Written by contract/recordings/make.py from {whence}.\n */\n\n"
+        "/** Each run, first and last code point, in order. */\n"
+        "export const UNPRINTABLE: readonly (readonly [number, number])[] = [\n"
+        + "".join(f"  {r},\n" for r in rows(False)) + "];\n")
 
 
 def main() -> None:
@@ -422,6 +484,7 @@ def main() -> None:
     expected = make_expected()
     (HERE / "expected.json").write_text(json.dumps(expected, indent=1, sort_keys=True) + "\n")
     (HERE / "numbers.json").write_text(json.dumps(make_numbers(), indent=0) + "\n")
+    write_tables()
     n = len(expected["recordings"])
     print(f"{n} recordings, exported by intomind {expected['library']}")
 

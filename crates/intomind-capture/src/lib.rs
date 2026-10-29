@@ -44,6 +44,7 @@ mod pyfmt;
 mod pyjson;
 pub mod record;
 pub mod recording;
+mod unprintable;
 mod zip;
 
 use serde::{Deserialize, Serialize};

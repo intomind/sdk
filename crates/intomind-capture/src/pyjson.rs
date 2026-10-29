@@ -247,9 +247,8 @@ fn python_float(s: &str) -> Option<f64> {
 }
 
 /// Python's `repr` of a string: single quotes unless the text holds a single
-/// quote and no double quote. Escapes are Python's for ASCII. A character
-/// outside ASCII is written as itself, which is what Python does for every
-/// printable one.
+/// quote and no double quote, and every character Python does not print as
+/// itself written as its escape, from Python's own table.
 pub(crate) fn repr_str(s: &str) -> String {
     let quote = if s.contains('\'') && !s.contains('"') { '"' } else { '\'' };
     let mut out = String::with_capacity(s.len() + 2);
@@ -264,12 +263,32 @@ pub(crate) fn repr_str(s: &str) -> String {
                 out.push('\\');
                 out.push(c);
             }
-            c if (c as u32) < 0x20 || c as u32 == 0x7f => out.push_str(&format!("\\x{:02x}", c as u32)),
+            c if unprintable(c) => match c as u32 {
+                x if x < 0x100 => out.push_str(&format!("\\x{x:02x}")),
+                x if x < 0x10000 => out.push_str(&format!("\\u{x:04x}")),
+                x => out.push_str(&format!("\\U{x:08x}")),
+            },
             c => out.push(c),
         }
     }
     out.push(quote);
     out
+}
+
+/// Whether Python's `repr` writes this character as an escape.
+fn unprintable(c: char) -> bool {
+    let x = c as u32;
+    crate::unprintable::UNPRINTABLE
+        .binary_search_by(|&(lo, hi)| {
+            if hi < x {
+                std::cmp::Ordering::Less
+            } else if lo > x {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        })
+        .is_ok()
 }
 
 /// Why a document is not JSON as Python reads it.

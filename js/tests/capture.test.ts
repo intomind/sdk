@@ -24,7 +24,7 @@ import { exportToFile, openCollection } from "../src/capture/node.ts";
 import { roundHalfEven } from "../src/capture/edf.ts";
 import { bytesOf, descr } from "../src/capture/npy.ts";
 import { fixed, general, quantize, repr } from "../src/capture/pyfmt.ts";
-import { ParseError, dumpsIndented, dumpsSorted, get, loads, pyStr } from "../src/capture/pyjson.ts";
+import { ParseError, dumpsIndented, dumpsSorted, get, loads, pyStr, reprStr } from "../src/capture/pyjson.ts";
 import type { Value } from "../src/capture/pyjson.ts";
 import { readNpz } from "../src/capture/recording.ts";
 
@@ -62,6 +62,16 @@ function hex(b: Uint8Array): string {
   for (const x of b) s += x.toString(16).padStart(2, "0");
   return s;
 }
+
+test("strings are quoted as Python quotes them", () => {
+  const n = fixture("numbers.json");
+  const rows = items(get(n, "strings"));
+  assert.ok(rows.length > 2000, `${rows.length}`);
+  for (const row of rows) {
+    const [s, want] = items(row);
+    assert.equal(reprStr(text(s!)), text(want!), JSON.stringify(text(s!)));
+  }
+});
 
 test("floats are written as Python writes them", () => {
   const n = fixture("numbers.json");

@@ -58,12 +58,13 @@ pub fn check_label(label: &str) -> Result<&str, Error> {
         && b.iter().all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'-'));
     if !ok {
         return Err(error(format!(
-            "'{label}' is not a capture label. A label is letters, digits, dots, dashes and underscores, \
-             starts with a letter or a digit, and is at most 128 characters."
+            "{} is not a capture label. A label is letters, digits, dots, dashes and underscores, \
+             starts with a letter or a digit, and is at most 128 characters.",
+            pyjson::repr_str(label)
         )));
     }
     if label.contains("..") {
-        return Err(error(format!("'{label}' is not a capture label: it walks up a directory")));
+        return Err(error(format!("{} is not a capture label: it walks up a directory", pyjson::repr_str(label))));
     }
     Ok(label)
 }

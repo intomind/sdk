@@ -45,11 +45,11 @@ export function checkLabel(label: string): string {
   }
   if (!ok) {
     throw new CaptureError(
-      `'${label}' is not a capture label. A label is letters, digits, dots, dashes and underscores, ` +
+      `${J.reprStr(label)} is not a capture label. A label is letters, digits, dots, dashes and underscores, ` +
         "starts with a letter or a digit, and is at most 128 characters.",
     );
   }
-  if (label.includes("..")) throw new CaptureError(`'${label}' is not a capture label: it walks up a directory`);
+  if (label.includes("..")) throw new CaptureError(`${J.reprStr(label)} is not a capture label: it walks up a directory`);
   return label;
 }
 

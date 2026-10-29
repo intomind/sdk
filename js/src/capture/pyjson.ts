@@ -11,6 +11,7 @@
  */
 
 import { repr } from "./pyfmt.ts";
+import { UNPRINTABLE } from "./unprintable.ts";
 
 /** One JSON value as Python holds it after `json.loads`. */
 export type Value =
@@ -220,8 +221,8 @@ export function pyRepr(v: Value): string {
 
 /**
  * Python's `repr` of a string: single quotes unless the text holds a single
- * quote and no double quote. Escapes are Python's for ASCII. A character
- * outside ASCII is written as itself.
+ * quote and no double quote, and every character Python does not print as
+ * itself written as its escape, from Python's own table.
  */
 export function reprStr(s: string): string {
   const quote = s.includes("'") && !s.includes('"') ? '"' : "'";
@@ -233,10 +234,27 @@ export function reprStr(s: string): string {
     else if (c === "\r") out += "\\r";
     else if (c === "\t") out += "\\t";
     else if (c === quote) out += "\\" + c;
-    else if (code < 0x20 || code === 0x7f) out += "\\x" + code.toString(16).padStart(2, "0");
-    else out += c;
+    else if (unprintable(code)) {
+      if (code < 0x100) out += "\\x" + code.toString(16).padStart(2, "0");
+      else if (code < 0x10000) out += "\\u" + code.toString(16).padStart(4, "0");
+      else out += "\\U" + code.toString(16).padStart(8, "0");
+    } else out += c;
   }
   return out + quote;
+}
+
+/** Whether Python's `repr` writes this code point as an escape. */
+function unprintable(code: number): boolean {
+  let lo = 0;
+  let hi = UNPRINTABLE.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const [a, b] = UNPRINTABLE[mid]!;
+    if (b < code) lo = mid + 1;
+    else if (a > code) hi = mid - 1;
+    else return true;
+  }
+  return false;
 }
 
 /** Why a document is not JSON as Python reads it. */

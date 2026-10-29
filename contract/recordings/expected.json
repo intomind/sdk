@@ -3554,6 +3554,343 @@
     }
    }
   },
+  "exact-halves": {
+   "bdf": {
+    "sha256": "c4f81cc3af6426a01d2522f2e5c581cea7a3c8386016feb4bf848679fb34f438",
+    "summary": {
+     "bits": 24,
+     "channels": 2,
+     "contact": "not known",
+     "continuity": "BDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 0,
+     "family": "BDF+",
+     "format": "bdf",
+     "gaps": 0,
+     "label": "exact-halves",
+     "lossy": false,
+     "lsb_uv": 1.0,
+     "max_error_uv": 0.0019530953140929341,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 0.0039061906281823294,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "csv": {
+    "sha256": "d29402f98c985fff597fb07b4651075400b257598c1c685f95e5802c129908bb",
+    "summary": {
+     "channels": 2,
+     "contact": "not known",
+     "counts_recovered": true,
+     "decimals": 3,
+     "delimiter": ",",
+     "format": "csv",
+     "label": "exact-halves",
+     "lossy": false,
+     "lsb_uv": 1.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "edf": {
+    "sha256": "64a8311abefe9870530c34271c77dafdb6d15a923ea9fa28ff8e1da97ae0752a",
+    "summary": {
+     "bits": 16,
+     "channels": 2,
+     "contact": "not known",
+     "continuity": "EDF+C",
+     "counts_recovered": false,
+     "electrode_off_stretches": 0,
+     "family": "EDF+",
+     "format": "edf",
+     "gaps": 0,
+     "label": "exact-halves",
+     "lossy": true,
+     "lsb_uv": 1.0,
+     "max_error_uv": 0.5,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 1.0,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "mat": {
+    "mat": {
+     "header_tail": "00000000000000000002494d",
+     "variables": [
+      [
+       "device_ticks",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "gap_before",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "host_time",
+       "<f8",
+       [
+        1,
+        600
+       ],
+       "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ],
+      [
+       "index",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "leadoff",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'uint8'"
+        ]
+       ]
+      ],
+      [
+       "manifest_json",
+       "<u2",
+       [
+        1935,
+        1
+       ],
+       "ecccff67e9164fa3a696f805ce77976466a6828220004e79cde46de1b6158603",
+       [
+        [
+         "MATLAB_class",
+         "|S4",
+         "b'char'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "2"
+        ]
+       ]
+      ],
+      [
+       "uv",
+       "<f8",
+       [
+        2,
+        600
+       ],
+       "5e642dd1c66511d51e8a29ee242e27135ee2d56f7731d627ec16adedb145bdd2",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ]
+     ]
+    },
+    "summary": {
+     "channels": 2,
+     "contact": "not known",
+     "counts_recovered": true,
+     "format": "mat",
+     "label": "exact-halves",
+     "lossy": false,
+     "lsb_uv": 1.0,
+     "max_error_uv": 0.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "stored_dtype": "float64",
+     "variables": [
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "manifest_json",
+      "uv"
+     ]
+    }
+   },
+   "npz": {
+    "arrays": [
+     [
+      "ch1_uv",
+      "<f4",
+      [
+       600
+      ],
+      "69c1dc38176267b42dcc50f1efb5e1a09e35063c4f7743a9ebe346b0166b1959"
+     ],
+     [
+      "ch2_uv",
+      "<f4",
+      [
+       600
+      ],
+      "0fde1058e538bd457a8c4026d6d4286017fcd46952afe4402f0df912a4f7225f"
+     ],
+     [
+      "index",
+      "<i8",
+      [
+       600
+      ],
+      "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685"
+     ],
+     [
+      "device_ticks",
+      "<i8",
+      [
+       600
+      ],
+      "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25"
+     ],
+     [
+      "host_time",
+      "<f8",
+      [
+       600
+      ],
+      "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346"
+     ],
+     [
+      "leadoff",
+      "|u1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "gap_before",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "manifest_json",
+      "<U1935",
+      [],
+      "e8285226be586b2a6926f82209de09a749acf12df7074e4608811d63a84254f5"
+     ]
+    ],
+    "summary": {
+     "arrays": [
+      "ch1_uv",
+      "ch2_uv",
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "manifest_json"
+     ],
+     "channels": 2,
+     "contact": "not known",
+     "counts_recovered": true,
+     "format": "npz",
+     "label": "exact-halves",
+     "lossy": false,
+     "lsb_uv": 1.0,
+     "max_error_uv": 0.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "tsv": {
+    "sha256": "c95de8b96e6b2ffd91f8439343f0d6418b8338b05d1c7910d381696ed7f6b64a",
+    "summary": {
+     "channels": 2,
+     "contact": "not known",
+     "counts_recovered": true,
+     "decimals": 3,
+     "delimiter": "\t",
+     "format": "tsv",
+     "label": "exact-halves",
+     "lossy": false,
+     "lsb_uv": 1.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   }
+  },
   "far-below-zero": {
    "bdf": {
     "sha256": "b669eabe633b3668c354a485ef30cc699baa46ea443fb08b7faeecea034d6c31",
