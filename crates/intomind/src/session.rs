@@ -12,6 +12,12 @@ use intomind_protocol::frame::{self, Continuity, DataHeader};
 use intomind_protocol::status::StatusMsg;
 use intomind_protocol::{uuid_fill, Error as WireError};
 
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+
+use intomind_capture::clock::{Clock, HostClocks};
+use intomind_capture::record::{self, DeviceFacts, Run, Setup, Take};
+use intomind_capture::recording::{self as stored, Collection};
+
 use crate::timebase::{Exchange, Timebase};
 use crate::Error;
 
@@ -172,6 +178,35 @@ pub struct Session {
     /// what a copy is recognized by.
     recent: [Option<(u32, u64)>; 8],
     recent_at: usize,
+    /// The map a recording's samples are dated with, as the Python library
+    /// keeps it.
+    clock: Option<Clock>,
+    /// Whether the device is streaming, as this host knows it: from a
+    /// start the device accepted until a stop was asked for, or USB power
+    /// ended the stream.
+    streaming: AtomicBool,
+    /// Breaks the device announced over this session, counted as the
+    /// Python library counts them: a packet flagged as a discontinuity,
+    /// which the first packet of every stream is, or one whose index is not
+    /// the next expected.
+    pub gaps_announced: u32,
+    /// 1.4: whether USB power ended the last stream. A device that does not
+    /// record while plugged in ends the natural signal's stream when USB
+    /// power appears, and its packets say so.
+    pub ended_by_usb: bool,
+    leadoff_setting: Option<bool>,
+    /// What `set_leadoff` last asked for, until the device accepts it: 0
+    /// nothing, 1 off, 2 on.
+    leadoff_asked: AtomicU8,
+    recorder: Option<Recorder>,
+}
+
+/// What a recording is collecting, while the recorder is armed.
+#[derive(Debug, Default)]
+struct Recorder {
+    take: Take,
+    armed: bool,
+    gaps_at_arm: u32,
 }
 
 impl Session {
@@ -184,6 +219,7 @@ impl Session {
     pub fn on_device_info(&mut self, bytes: &[u8]) -> Result<DeviceInfo, Error> {
         let info = DeviceInfo::parse(bytes)?;
         self.timebase = Some(Timebase::new(info.time_tick_hz));
+        self.clock = Some(Clock::new(info.time_tick_hz));
         self.info = Some(info);
         Ok(info)
     }
@@ -219,8 +255,14 @@ impl Session {
         self.command(Opcode::StartStream, None)
     }
 
-    /// Ask the device to stop streaming.
+    /// Ask the device to stop streaming. From here the host treats the
+    /// stream as stopped, answered or not, and the clock's map may move
+    /// again.
     pub fn stop_stream(&self) -> Command {
+        self.streaming.store(false, Ordering::Relaxed);
+        if let Some(c) = &self.clock {
+            c.thaw();
+        }
         self.command(Opcode::StopStream, None)
     }
 
@@ -264,6 +306,7 @@ impl Session {
         if !self.can(p::device_info::capability::LEADOFF) {
             return Err(Error::NotCapable("leadoff"));
         }
+        self.leadoff_asked.store(if on { 2 } else { 1 }, Ordering::Relaxed);
         Ok(self.command(Opcode::SetLeadoff, Some(on as u8)))
     }
 
@@ -282,6 +325,95 @@ impl Session {
         let tb = self.timebase.as_mut().ok_or(Error::NoDeviceInfo)?;
         tb.observe(Exchange { before, after, device_ticks: ticks });
         Ok(())
+    }
+
+    /// The answer to a time request, with both host clocks read either side
+    /// of it, which is what a recording's clock needs: `HostClocks::now()`
+    /// reads them, monotonic first. The single-clock fit `on_time_sync`
+    /// keeps is fed from the wall clock too, so `host_time` still answers.
+    pub fn on_time_sync_clocks(&mut self, payload: &[u8], before: HostClocks, after: HostClocks) -> Result<(), Error> {
+        if payload.len() < 8 {
+            return Err(Error::Wire(WireError::Truncated));
+        }
+        let ticks = u64::from_le_bytes(payload[..8].try_into().unwrap());
+        let tb = self.timebase.as_mut().ok_or(Error::NoDeviceInfo)?;
+        tb.observe(Exchange { before: before.realtime, after: after.realtime, device_ticks: ticks });
+        if let Some(c) = self.clock.as_mut() {
+            c.observe(ticks, before, after);
+        }
+        Ok(())
+    }
+
+    /// The device's clock as the Python library maps it: fitted against
+    /// the host's monotonic clock and anchored to its wall clock, and held
+    /// still while a stream runs. A recording's samples are dated with it
+    /// and carry its record. None before device info.
+    pub fn clock(&self) -> Option<&Clock> {
+        self.clock.as_ref()
+    }
+
+    /// Whether the device is streaming, as far as this host knows.
+    pub fn streaming(&self) -> bool {
+        self.streaming.load(Ordering::Relaxed)
+    }
+
+    /// Whether lead-off detection is running: as the device's packets last
+    /// declared it, or as this host last set it. None until either has
+    /// said, because the protocol has no read for the setting.
+    pub fn leadoff_setting(&self) -> Option<bool> {
+        self.leadoff_setting
+    }
+
+    /// Arm the recorder: from here every sample and packet is collected
+    /// until `disarm_recorder`, with what was collected before dropped.
+    ///
+    /// Arm on a count that starts again at zero, as the Python library
+    /// does. On a stream that is running, send `reset_epoch`, let the
+    /// packets numbered before it drain, about fifty milliseconds, then
+    /// arm. On one that is not, arm, then send `reset_epoch` and
+    /// `start_stream`.
+    pub fn arm_recorder(&mut self) {
+        self.recorder = Some(Recorder { take: Take::new(), armed: true, gaps_at_arm: self.gaps_announced });
+    }
+
+    /// Stop collecting. What was collected stays, for `save_recording`.
+    pub fn disarm_recorder(&mut self) {
+        if let Some(r) = self.recorder.as_mut() {
+            r.armed = false;
+        }
+    }
+
+    /// What the recorder has collected since it was armed.
+    pub fn recorded(&self) -> Option<&Take> {
+        self.recorder.as_ref().map(|r| &r.take)
+    }
+
+    /// Write what the recorder collected as the recording `label`, with
+    /// the manifest the Python library writes: the device's own facts, its
+    /// clock's record now, and the breaks announced while armed, with what
+    /// `setup` declares and `run` adds. Returns the manifest.
+    pub fn save_recording(
+        &self,
+        collection: &Collection,
+        label: &str,
+        setup: &Setup,
+        run: &Run,
+    ) -> Result<serde_json::Value, stored::Error> {
+        let info = self.info.ok_or_else(|| stored::Error::new("read device info first: a recording states what the device said"))?;
+        let empty = Recorder::default();
+        let r = self.recorder.as_ref().unwrap_or(&empty);
+        let device = DeviceFacts {
+            device_id: info.device_id.iter().map(|b| format!("{b:02x}")).collect(),
+            firmware: format!("{}.{}.{}", info.fw_version.0, info.fw_version.1, info.fw_version.2),
+            protocol: Some(format!("{}.{}", info.proto_version.0, info.proto_version.1)),
+            tick_hz: info.time_tick_hz as u64,
+            vref_uv: info.vref_uv as u64,
+            adc_bits: Some(info.adc_bits as u64),
+            channels: Some(info.channel_count as u64),
+            clock: self.clock.as_ref().map(Clock::quality),
+            gaps_in_run: self.gaps_announced.saturating_sub(r.gaps_at_arm) as u64,
+        };
+        record::save(collection, label, &r.take, &device, setup, run)
     }
 
     /// Zero `sample_index` and start a fresh epoch.
@@ -551,7 +683,10 @@ impl Session {
                 Err(_) => self.undecodable(),
             },
             uuid_fill::CONTROL_RSP => match p::control::Response::parse(bytes) {
-                Ok(r) => vec![Event::Answer { opcode: r.opcode as u8, status: r.status, payload: r.payload.to_vec() }],
+                Ok(r) => {
+                    self.on_answer(r.opcode, r.status);
+                    vec![Event::Answer { opcode: r.opcode as u8, status: r.status, payload: r.payload.to_vec() }]
+                }
                 Err(_) => self.undecodable(),
             },
             uuid_fill::EMBEDDINGS => match crate::embeddings::Embedding::parse(bytes) {
@@ -576,6 +711,30 @@ impl Session {
         }
     }
 
+    /// What an answer changes here: a start the device accepted holds the
+    /// clock's map still under the stream, and a lead-off setting it
+    /// accepted is the setting.
+    fn on_answer(&mut self, opcode: Opcode, status: Status) {
+        if status != Status::Ok {
+            return;
+        }
+        match opcode {
+            Opcode::StartStream => {
+                self.streaming.store(true, Ordering::Relaxed);
+                self.ended_by_usb = false;
+                if let Some(c) = &self.clock {
+                    c.freeze();
+                }
+            }
+            Opcode::SetLeadoff => match self.leadoff_asked.swap(0, Ordering::Relaxed) {
+                1 => self.leadoff_setting = Some(false),
+                2 => self.leadoff_setting = Some(true),
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
     fn undecodable(&mut self) -> Vec<Event> {
         self.undecodable += 1;
         vec![Event::Undecodable]
@@ -591,19 +750,28 @@ impl Session {
             Err(_) => return self.undecodable(),
         };
         let mut events = Vec::with_capacity(2);
+        // A packet with the first index and the device time of one just
+        // passed on is that packet again, delivered twice by the host.
+        // Dropped and counted, so no sample is passed on twice and no break
+        // is announced that did not happen, after a reset of the count as
+        // much as before one. A device that restarts its count carries a
+        // new device time, so a restart is never mistaken for a copy, and
+        // anything else is judged by the contract's continuity rule
+        // unchanged.
+        let key = (h.sample_index, h.device_time);
+        if self.recent.contains(&Some(key)) {
+            self.duplicates = self.duplicates.saturating_add(1);
+            return vec![Event::Duplicate { index: h.sample_index }];
+        }
+        // A break as the Python library counts one, for a recording: the
+        // packet says so, which the first of every stream does, or its
+        // index is not the next.
+        let flagged = h.flags & frame::flags::DISCONTINUITY != 0
+            || self.previous.is_some_and(|(i, n, _)| h.sample_index != i.wrapping_add(n as u32));
+        if flagged {
+            self.gaps_announced = self.gaps_announced.saturating_add(1);
+        }
         if let Some((prev_index, prev_n, prev_time)) = self.previous {
-            // A packet with the first index and the device time of one just
-            // passed on is that packet again, delivered twice by the host.
-            // Dropped and counted, so no sample is passed on twice and no
-            // break is announced that did not happen. A device that restarts
-            // its count carries a new device time, so a restart is never
-            // mistaken for a copy, and anything else is judged by the
-            // contract's continuity rule unchanged.
-            let key = (h.sample_index, h.device_time);
-            if self.recent.contains(&Some(key)) {
-                self.duplicates = self.duplicates.saturating_add(1);
-                return vec![Event::Duplicate { index: h.sample_index }];
-            }
             match frame::continuity(prev_index, prev_n, h.sample_index, h.flags) {
                 Continuity::Continuous => {}
                 Continuity::Gap { lost } => {
@@ -631,6 +799,22 @@ impl Session {
         self.previous = Some((h.sample_index, h.n_samples, h.device_time));
         self.recent[self.recent_at] = Some((h.sample_index, h.device_time));
         self.recent_at = (self.recent_at + 1) % self.recent.len();
+        let synthetic = bytes[0] == frame::PACKET_TYPE_SYNTHETIC;
+        let leadoff_active = h.flags & frame::flags::LEADOFF_ACTIVE != 0;
+        // 1.4: a device that does not record while plugged in ends the
+        // natural signal's stream when USB power appears, and says so in
+        // every packet from then on. The samples already converted are
+        // still delivered.
+        if h.flags & frame::flags::USB_PRESENT != 0 && !synthetic && self.streaming() && info.proto_version >= (1, 4) {
+            self.streaming.store(false, Ordering::Relaxed);
+            if let Some(c) = &self.clock {
+                c.thaw();
+            }
+            self.ended_by_usb = true;
+        }
+        // The packet says whether detection was running: the one read of
+        // the setting the protocol offers.
+        self.leadoff_setting = Some(leadoff_active);
         let mut counts = Vec::with_capacity(h.n_samples as usize * channels);
         for i in 0..h.n_samples as usize {
             for c in 0..channels {
@@ -638,18 +822,53 @@ impl Session {
                 counts.push(frame::int24_be([payload[o], payload[o + 1], payload[o + 2]]));
             }
         }
-        events.push(Event::Samples(Batch {
+        let batch = Batch {
             index: h.sample_index,
             device_time: h.device_time,
             channels,
             counts,
             leadoff: h.loff_statp,
-            leadoff_active: h.flags & frame::flags::LEADOFF_ACTIVE != 0,
+            leadoff_active,
             gain: frame::GAIN_BY_CODE[h.gain_code as usize],
             sample_rate_hz: frame::sps_of_rate_code(h.rate_code).unwrap_or(0),
             mode: (h.flags & frame::flags::MODE_MASK) >> frame::flags::MODE_SHIFT,
-            synthetic: bytes[0] == frame::PACKET_TYPE_SYNTHETIC,
-        }));
+            synthetic,
+        };
+        self.collect(&batch, h.rate_code, flagged);
+        events.push(Event::Samples(batch));
         events
+    }
+
+    /// Give an armed recorder the packet and its samples, each dated as the
+    /// Python library dates it: the packet's device time stepped by the
+    /// rate for each sample after the first, and the clock's map now.
+    fn collect(&mut self, b: &Batch, rate_code: u8, flagged: bool) {
+        let (Some(r), Some(info)) = (self.recorder.as_mut(), self.info) else { return };
+        if !r.armed {
+            return;
+        }
+        let rate = frame::sps_of_rate_code(rate_code);
+        r.take.packet(record::Packet {
+            index: b.index as i64,
+            device_time: b.device_time as i64,
+            gain: b.gain as i64,
+            sample_rate_hz: rate.map(i64::from),
+            mode: ["normal", "test", "short", "synthetic"][(b.mode & 3) as usize].to_string(),
+            synthetic: b.synthetic,
+        });
+        let tick_per = match rate {
+            Some(sps) if sps > 0 => info.time_tick_hz as f64 / sps as f64,
+            _ => 0.0,
+        };
+        let rows: Vec<i64> = b.counts.iter().map(|&c| c as i64).collect();
+        for (i, row) in rows.chunks(b.channels.max(1)).enumerate().take(b.rows()) {
+            let ticks = if tick_per == 0.0 {
+                b.device_time as i64
+            } else {
+                (b.device_time as f64 + i as f64 * tick_per) as i64
+            };
+            let host = self.clock.as_ref().map_or(ticks as f64 / info.time_tick_hz as f64, |c| c.host_time(ticks));
+            r.take.sample(b.index as i64 + i as i64, ticks, host, row, b.leadoff, flagged && i == 0, Some(b.leadoff_active));
+        }
     }
 }

@@ -4,9 +4,11 @@
 //! program writes, the Command Center and the Python library included: a
 //! set of files sharing one name, `name.npz` with the samples,
 //! `name.meta.json` with the manifest, `name.events.json` with the markers,
-//! and `name.sha256` written last. [`export`] writes any such recording as
-//! npz, edf, bdf, csv, tsv or mat, each byte for byte or array for array
-//! what the Python library writes, with the same summary.
+//! and `name.sha256` written last. [`record`] writes it, with the manifest
+//! the Python library's recorder writes, and [`clock`] dates the samples on
+//! the host's clocks as the library dates them. [`export`] writes any such
+//! recording as npz, edf, bdf, csv, tsv or mat, each byte for byte or array
+//! for array what the Python library writes, with the same summary.
 //! docs.intomind.com/files.html states what both promise.
 //!
 //! The types at the top of this crate are the flat-file format it was
@@ -29,14 +31,18 @@
 
 #![deny(missing_docs)]
 
+pub mod clock;
 #[cfg(test)]
 mod contract_tests;
 mod edf;
 pub mod export;
 mod hdf5;
+mod montage;
 mod npy;
+mod placement;
 mod pyfmt;
 mod pyjson;
+pub mod record;
 pub mod recording;
 mod zip;
 

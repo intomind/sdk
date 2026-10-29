@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use crate::export;
 use crate::pyfmt;
 use crate::pyjson::{self, Value};
+use crate::record;
 use crate::recording::{read_npz, Collection};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../contract/recordings");
@@ -416,4 +417,56 @@ fn py_bytes(b: &[u8]) -> String {
     }
     s.push(q);
     s
+}
+
+fn recorder_fixture() -> Value {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contract/recorder/sessions.json");
+    pyjson::loads(&std::fs::read_to_string(path).expect("the recorder fixture is in the repository")).expect("JSON")
+}
+
+#[test]
+fn where_the_electrodes_went_is_recorded_as_the_library_records_it() {
+    let f = recorder_fixture();
+    let Some(Value::Array(cases)) = f.get("montage") else { panic!("no montage cases") };
+    assert!(cases.len() >= 30, "{}", cases.len());
+    let mut problems = Vec::new();
+    for c in cases {
+        let name = c.field("name").py_str();
+        let channels = c.field("channels").as_i64().map(|n| n as u64);
+        let got = record::montage_fields(c.field("site"), channels, c.field("layout"), c.field("place"));
+        match (got, c.get("result"), c.get("raises")) {
+            (Ok(v), Some(want), _) if pyjson::dumps(&v) == pyjson::dumps(want) => {}
+            (Ok(v), Some(want), _) => {
+                problems.push(format!("{name}: {} differs from {}", pyjson::dumps(&v), pyjson::dumps(want)))
+            }
+            (Err(e), _, Some(want)) => {
+                problems.push(format!("{name}: raised {e:?}, the library raised {}", want.py_str()))
+            }
+            (got, _, _) => problems.push(format!("{name}: {got:?} where the library did otherwise")),
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn a_chain_is_described_as_the_library_describes_it() {
+    use intomind_protocol::pipeline::{Stage, MAX_PARAMS};
+    let f = recorder_fixture();
+    let Some(Value::Array(chains)) = f.get("chains") else { panic!("no chains") };
+    for c in chains {
+        let Value::Array(stages) = c.field("stages") else { panic!() };
+        let stages: Vec<Stage> = stages
+            .iter()
+            .map(|s| {
+                let Value::Array(p) = s.field("params") else { panic!() };
+                let mut params = [0u16; MAX_PARAMS];
+                for (i, x) in p.iter().enumerate() {
+                    params[i] = x.as_i64().unwrap() as u16;
+                }
+                Stage { kind: s.field("kind").as_i64().unwrap() as u8, n_params: p.len() as u8, params }
+            })
+            .collect();
+        let rate = c.field("rate").as_i64().map(|r| r as u32);
+        assert_eq!(record::describe_chain(&stages, rate), c.field("description").py_str(), "{}", pyjson::dumps(c));
+    }
 }

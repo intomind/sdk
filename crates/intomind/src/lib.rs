@@ -28,6 +28,12 @@
 //! }
 //! ```
 //!
+//! A recording is made by the session too, as the Python library's
+//! recorder makes one: give it each time exchange with both host clocks
+//! through `on_time_sync_clocks`, arm it with `arm_recorder`, and write
+//! what it collected with `save_recording`, which `capture::recording`
+//! reads back and `capture::export` exports.
+//!
 //! What a device can do is what the device says it can do. Nothing here
 //! holds a table of hardware, and a capability is a bit the device
 //! reports rather than a version number this crate compares against.
@@ -50,6 +56,7 @@ pub use timebase::{Exchange, Fit, Timebase, MAX_SKEW_PPM, MAX_SKEW_STDERR_PPM};
 pub use transfer::{activate, Step, Transfer, TransferError};
 
 pub use intomind_capture as capture;
+pub use intomind_capture::clock::{Clock, HostClocks};
 #[cfg(feature = "model")]
 pub use intomind_model as model;
 

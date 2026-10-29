@@ -21,9 +21,13 @@ intomind-model = { workspace = true, optional = true }
 # interrupted one resumes only against the same bytes. The codec crate
 # stays dependency free; this one is a host crate and may hash.
 sha2 = "0.10"
+# A recording's manifest, handed back as the capture crate builds it.
+serde_json = "1"
 
 [dev-dependencies]
-serde_json = "1"
+# The recorder fixture's floats are read exactly, so a clock record can be
+# held to the library's bit for bit.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 # The publication check reads every tracked file. A small engine, because
 # this is a check and not a feature.
 regex-lite = "0.1"

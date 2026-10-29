@@ -34,6 +34,13 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+impl Error {
+    /// An error in these words.
+    pub fn new(what: impl Into<String>) -> Error {
+        Error(what.into())
+    }
+}
+
 pub(crate) fn error(what: impl Into<String>) -> Error {
     Error(what.into())
 }
@@ -285,6 +292,37 @@ pub(crate) fn read_npz(bytes: &[u8]) -> Result<Vec<(String, Array)>, Error> {
         let key = name.strip_suffix(".npy").unwrap_or(&name).to_string();
         let a = npy::read(&data).map_err(|e| error(format!("{name}: {}", e.0)))?;
         out.push((key, a));
+    }
+    Ok(out)
+}
+
+/// One array as [`npz_digest`] lists it.
+#[doc(hidden)]
+pub type ArrayDigest = (String, String, Vec<usize>, String, bool);
+
+/// The arrays of an npz as the recorder fixture lists them: name, numpy
+/// type, shape, the sha256 of the elements in C order, and whether the file
+/// stores them in Fortran order. For the fixture tests of the crates that
+/// write recordings, which hold each array to the Python library's.
+#[doc(hidden)]
+pub fn npz_digest(archive: &[u8]) -> Result<Vec<ArrayDigest>, Error> {
+    use sha2::{Digest, Sha256};
+    let mut out = Vec::new();
+    for (name, a) in read_npz(archive)? {
+        let c_order = if a.fortran && a.shape.len() == 2 {
+            let (rows, cols) = (a.shape[0], a.shape[1]);
+            let keep: Vec<usize> = (0..rows).flat_map(|r| (0..cols).map(move |c| c * rows + r)).collect();
+            Array { shape: a.shape.clone(), fortran: false, data: a.data.take(&keep) }
+        } else {
+            Array { shape: a.shape.clone(), fortran: false, data: a.data.clone() }
+        };
+        let file = npy::write(&c_order);
+        let start = match file[6] {
+            1 => 10 + u16::from_le_bytes([file[8], file[9]]) as usize,
+            _ => 12 + u32::from_le_bytes([file[8], file[9], file[10], file[11]]) as usize,
+        };
+        let sha: String = Sha256::digest(&file[start..]).iter().map(|b| format!("{b:02x}")).collect();
+        out.push((name, a.data.descr(), a.shape.clone(), sha, a.fortran));
     }
     Ok(out)
 }
