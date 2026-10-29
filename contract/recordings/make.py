@@ -247,6 +247,15 @@ def make_recordings() -> None:
     halves[:, 0], halves[:, 1] = (-32125, 32125), (32125, -32125)
     write("exact-halves", counts=halves,
           meta=manifest("exact-halves", n, channels=2, gain=1, vref_uv=1 << 23, adc_bits=24))
+    # What a recorder armed and stopped before a packet came keeps: every
+    # array empty, the counts with them, which reads as no channels.
+    savez(CAPTURES / "no-samples.npz", dict(
+        counts=np.array([], np.int64), index=np.array([], np.int64), device_ticks=np.array([], np.int64),
+        host_time=np.array([], np.float64), leadoff=np.array([], np.uint8), gap_before=np.array([], bool),
+        leadoff_active=np.array([], bool)))
+    (CAPTURES / "no-samples.meta.json").write_text(json.dumps(manifest(
+        "no-samples", 0, channels=4, fs=0.0, gain=None, rate_sps=None, signal_source=None, synthetic=None), indent=2))
+    prov.write_checksums("no-samples")
 
     # Every packet delivered twice, as two subscriptions recorded it.
     base = signal(rng, n, 2)

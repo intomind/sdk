@@ -87,6 +87,8 @@ export function exportRecording(
   const v = collection.verify(label);
   if (!v.ok) throw new CaptureError(`refusing to export ${label}: ${v.problems.join("; ")}`);
   const cap = collection.load(label);
+  // A recording with no samples has nothing any format can hold.
+  if (cap.samples === 0 || cap.channels === 0) throw new CaptureError(`refusing to export ${label}: it holds no samples`);
   const now = options.now ?? Math.floor(Date.now() / 1000);
   let out: [Uint8Array, Value];
   switch (name) {

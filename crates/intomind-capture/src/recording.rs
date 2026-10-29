@@ -244,6 +244,13 @@ impl Collection {
         let leadoff = take("leadoff");
         let gap_before = take("gap_before");
         let leadoff_active = take("leadoff_active");
+        // A recorder armed and stopped before a packet came keeps its counts
+        // as one empty list, which the library reads as no channels.
+        let counts = if counts.shape.len() == 1 && counts.data.len() == 0 {
+            Array { shape: vec![0, 0], fortran: false, data: counts.data }
+        } else {
+            counts
+        };
         if counts.shape.len() != 2 {
             return Err(error(format!("{label}: the counts are not channels by samples")));
         }

@@ -63,6 +63,10 @@ pub fn export(collection: &Collection, label: &str, format: &str, path: Option<&
         return Err(error(format!("refusing to export {label}: {}", v.problems.join("; "))));
     }
     let cap = collection.load(label)?;
+    // A recording with no samples has nothing any format can hold.
+    if cap.samples() == 0 || cap.channels() == 0 {
+        return Err(error(format!("refusing to export {label}: it holds no samples")));
+    }
     let out = path_for(collection, label, path, name)?;
     let problems = v.problems;
     match name {

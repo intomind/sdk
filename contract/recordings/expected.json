@@ -6995,6 +6995,26 @@
     }
    }
   },
+  "no-samples": {
+   "bdf": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   },
+   "csv": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   },
+   "edf": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   },
+   "mat": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   },
+   "npz": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   },
+   "tsv": {
+    "refused": "refusing to export no-samples: it holds no samples"
+   }
+  },
   "no-ticks": {
    "bdf": {
     "sha256": "224a4b3008f4d0a84f16f0fd2c08bf94a9844cdc4decf4966f1027efca5bce3a",

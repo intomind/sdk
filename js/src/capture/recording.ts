@@ -263,7 +263,7 @@ export class Collection {
       const [, a] = arrays.splice(at, 1)[0]!;
       return a;
     };
-    const counts = take("counts");
+    let counts = take("counts");
     if (counts === null) throw new CaptureError(`${label}: the recording has no 'counts'`);
     const index = take("index");
     if (index === null) throw new CaptureError(`${label}: the recording has no 'index'`);
@@ -273,6 +273,9 @@ export class Collection {
     const leadoff = take("leadoff");
     const gapBefore = take("gap_before");
     const leadoffActive = take("leadoff_active");
+    // A recorder armed and stopped before a packet came keeps its counts as
+    // one empty list, which the library reads as no channels.
+    if (counts.shape.length === 1 && counts.shape[0] === 0) counts = { shape: [0, 0], fortran: false, data: counts.data };
     if (counts.shape.length !== 2) throw new CaptureError(`${label}: the counts are not channels by samples`);
     const parts: Parts = { counts, index, hostTime, deviceTicks, leadoff, gapBefore, leadoffActive, meta, manifestText };
     const repairs: string[] = [];
