@@ -1,6 +1,6 @@
 [package]
 name = "intomind-capture"
-description = "The IntoMind capture format: what a recording is on disk, written so it can be read in fifty years."
+description = "What an IntoMind recording is on disk: read as every IntoMind program writes it, and exported as npz, edf, bdf, csv, tsv and mat."
 documentation = "https://docs.intomind.com/rust.html"
 repository = "https://github.com/intomind/sdk"
 homepage = "https://intomind.com"
@@ -16,3 +16,7 @@ license.workspace = true
 intomind-protocol = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Deflate for the `.npz` a recording and an export are written in, as numpy
+# writes them, and the checksum every recording carries.
+miniz_oxide = "0.8"
+sha2 = "0.10"

@@ -1,0 +1,210 @@
+[
+  {
+    "kind": "cue",
+    "cond": "start",
+    "host_time": 1767262830.1,
+    "mono": 4503695.699999999
+  },
+  {
+    "kind": "cue",
+    "cond": 7,
+    "host_time": 1767262830.2,
+    "mono": 4503695.8
+  },
+  {
+    "kind": "cue",
+    "cond": null,
+    "host_time": 1767262830.3
+  },
+  {
+    "kind": "cue",
+    "cond": {
+      "step": "light",
+      "hz": 15.0
+    },
+    "host_time": 1767262830.4
+  },
+  {
+    "kind": "button",
+    "host_time": 1767262830.5
+  },
+  {
+    "cond": "no time"
+  },
+  {
+    "cond": "as text",
+    "host_time": "1767262830.6"
+  },
+  {
+    "cond": "before",
+    "host_time": 1767262829.0
+  },
+  {
+    "cond": "after",
+    "host_time": 1767262840.0
+  },
+  {
+    "cond": true,
+    "host_time": 1767262830.7
+  },
+  {
+    "cond": "many 0",
+    "host_time": 1767262831.0
+  },
+  {
+    "cond": "many 1",
+    "host_time": 1767262831.001
+  },
+  {
+    "cond": "many 2",
+    "host_time": 1767262831.002
+  },
+  {
+    "cond": "many 3",
+    "host_time": 1767262831.003
+  },
+  {
+    "cond": "many 4",
+    "host_time": 1767262831.004
+  },
+  {
+    "cond": "many 5",
+    "host_time": 1767262831.005
+  },
+  {
+    "cond": "many 6",
+    "host_time": 1767262831.006
+  },
+  {
+    "cond": "many 7",
+    "host_time": 1767262831.007
+  },
+  {
+    "cond": "many 8",
+    "host_time": 1767262831.008
+  },
+  {
+    "cond": "many 9",
+    "host_time": 1767262831.009
+  },
+  {
+    "cond": "many 10",
+    "host_time": 1767262831.01
+  },
+  {
+    "cond": "many 11",
+    "host_time": 1767262831.011
+  },
+  {
+    "cond": "many 12",
+    "host_time": 1767262831.012
+  },
+  {
+    "cond": "many 13",
+    "host_time": 1767262831.013
+  },
+  {
+    "cond": "many 14",
+    "host_time": 1767262831.014
+  },
+  {
+    "cond": "many 15",
+    "host_time": 1767262831.015
+  },
+  {
+    "cond": "many 16",
+    "host_time": 1767262831.016
+  },
+  {
+    "cond": "many 17",
+    "host_time": 1767262831.017
+  },
+  {
+    "cond": "many 18",
+    "host_time": 1767262831.018
+  },
+  {
+    "cond": "many 19",
+    "host_time": 1767262831.019
+  },
+  {
+    "cond": "many 20",
+    "host_time": 1767262831.02
+  },
+  {
+    "cond": "many 21",
+    "host_time": 1767262831.021
+  },
+  {
+    "cond": "many 22",
+    "host_time": 1767262831.022
+  },
+  {
+    "cond": "many 23",
+    "host_time": 1767262831.023
+  },
+  {
+    "cond": "many 24",
+    "host_time": 1767262831.024
+  },
+  {
+    "cond": "many 25",
+    "host_time": 1767262831.025
+  },
+  {
+    "cond": "many 26",
+    "host_time": 1767262831.026
+  },
+  {
+    "cond": "many 27",
+    "host_time": 1767262831.027
+  },
+  {
+    "cond": "many 28",
+    "host_time": 1767262831.028
+  },
+  {
+    "cond": "many 29",
+    "host_time": 1767262831.029
+  },
+  {
+    "cond": "many 30",
+    "host_time": 1767262831.03
+  },
+  {
+    "cond": "many 31",
+    "host_time": 1767262831.031
+  },
+  {
+    "cond": "many 32",
+    "host_time": 1767262831.032
+  },
+  {
+    "cond": "many 33",
+    "host_time": 1767262831.033
+  },
+  {
+    "cond": "many 34",
+    "host_time": 1767262831.034
+  },
+  {
+    "cond": "many 35",
+    "host_time": 1767262831.035
+  },
+  {
+    "cond": "many 36",
+    "host_time": 1767262831.036
+  },
+  {
+    "cond": "many 37",
+    "host_time": 1767262831.037
+  },
+  {
+    "cond": "many 38",
+    "host_time": 1767262831.038
+  },
+  {
+    "cond": "many 39",
+    "host_time": 1767262831.039
+  }
+]

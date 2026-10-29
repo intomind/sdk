@@ -6,14 +6,15 @@ Build on an IntoMind device, in the language you already use.
 |---|---|
 | `crates/intomind-protocol` | the wire, and nothing else |
 | `crates/intomind` | one device as a state machine, over any transport |
-| `crates/intomind-capture` | what a recording is on disk |
+| `crates/intomind-capture` | what a recording is on disk, read and exported as the Python library does it |
 | `crates/intomind-model` | the device's encoder, the arithmetic exactly as the device does it |
 | `crates/intomind-pipeline` | the device's processing chain, so a host can check one before sending it and reproduce what the device did |
-| `js/` | the same, in TypeScript, for browsers and Node |
+| `js/` | the protocol, the session and the timebase in TypeScript, for browsers and Node |
 
 Python users want `intomind` on PyPI, which is the instrument library and
 carries the recorder, the provenance, the exports, and the analyses as
-well. This repository is the protocol and the model for everyone else.
+well. This repository is the protocol and the model for everyone else, and
+in Rust the same recordings, read and exported.
 
 ## One contract, several implementations, held together by tests
 
@@ -33,6 +34,14 @@ JSON number cannot hold a device time exactly and a reader that parses one
 as a number agrees with an equally rounded expectation. And a count that
 does not exist is null: a break in the timeline has no extent, and zero
 would claim that nothing was lost.
+
+`contract/recordings` is emitted by the Python library, which defines every
+file a recording becomes. It holds synthetic recordings, none of them a
+person's, and for each one and each export format what the library wrote:
+the file byte for byte for bdf, edf, csv and tsv, the arrays for npz and
+mat, the summary, or the refusal and its words. The Rust exporter is held
+to it on every test run. `make.py` beside it makes it again from the
+library.
 
 ## Your head, on your device
 

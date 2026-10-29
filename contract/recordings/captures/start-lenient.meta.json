@@ -1,0 +1,117 @@
+{
+  "manifest_version": 7,
+  "label": "start-lenient",
+  "started_utc": "2026-1-5T3:4:5z",
+  "finished_utc": "2026-01-01T10:20:33Z",
+  "captured_unix": 1767262833.25,
+  "device_id": "00000000c0de0001",
+  "firmware_version": "1.4.5",
+  "firmware_sha256": null,
+  "firmware_artifact": null,
+  "tick_hz": 1000000,
+  "vref_uv": 4500000,
+  "adc_bits": 24,
+  "channels": 2,
+  "device_proto": "1.4",
+  "board_revision": "unknown",
+  "electrode_montage": null,
+  "montage": null,
+  "montage_error": null,
+  "montage_matches_device": null,
+  "montage_source": null,
+  "electrode_layout": null,
+  "placement": null,
+  "mains_hz": null,
+  "psu_volts": null,
+  "subject_id": null,
+  "regs_before": null,
+  "regs_after": null,
+  "regs_diff": {},
+  "config_after": null,
+  "device_config_changed_by_run": false,
+  "gain": 24,
+  "rate_sps": 250,
+  "fs_effective": 249.95,
+  "protocol_id": "fixture",
+  "protocol_params": {},
+  "signal_chain": {
+    "adapter": {
+      "name": "intomind.ble",
+      "version": "1",
+      "first_party": true,
+      "transport": "bluetooth-le"
+    },
+    "filtering": "none",
+    "filters": null
+  },
+  "signal_source": "normal",
+  "synthetic": false,
+  "quality": {
+    "gaps": [],
+    "n_gaps": 0,
+    "epoch_resets": 0,
+    "samples_received": 600,
+    "samples_expected": 600,
+    "samples_lost": 0
+  },
+  "gaps_announced": 0,
+  "clock": {
+    "n_syncs": 8,
+    "skew": 1.0000123,
+    "offset": 4501984.819461971,
+    "skew_pinned": false,
+    "residual_ms": 0.41,
+    "max_half_rtt_ms": 15.588760375976562,
+    "span_s": 2.5,
+    "fitted_against": "monotonic",
+    "anchors": [
+      [
+        1767262830.0,
+        4503695.6
+      ],
+      [
+        1767262830.3,
+        4503695.899999999
+      ],
+      [
+        1767262830.6,
+        4503696.199999999
+      ],
+      [
+        1767262830.9,
+        4503696.5
+      ],
+      [
+        1767262831.2,
+        4503696.8
+      ],
+      [
+        1767262831.5,
+        4503697.1
+      ],
+      [
+        1767262831.8,
+        4503697.399999999
+      ],
+      [
+        1767262832.1,
+        4503697.699999999
+      ]
+    ],
+    "frame_mono": 4503695.6,
+    "wall_clock_steps": [],
+    "wall_clock_stepped": false
+  },
+  "git_commit": null,
+  "git_dirty": null,
+  "host_versions": {
+    "python": "3.13.2",
+    "platform": "Linux",
+    "numpy": "2.2.4",
+    "scipy": "1.15.2",
+    "bleak": null
+  },
+  "n": 600,
+  "fw": "1.4.5",
+  "experiment": "fixture"
+}

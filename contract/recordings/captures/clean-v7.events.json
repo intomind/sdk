@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "cue",
+    "cond": "rest",
+    "host_time": 1767262830.0,
+    "mono": 4503695.6
+  },
+  {
+    "kind": "cue",
+    "cond": "eyes closed",
+    "host_time": 1767262830.8,
+    "mono": 4503696.399999999
+  },
+  {
+    "kind": "cue",
+    "cond": "rest",
+    "host_time": 1767262831.6,
+    "mono": 4503697.199999999
+  },
+  {
+    "kind": "cue",
+    "cond": "end",
+    "host_time": 1767262832.39,
+    "mono": 4503697.989999999
+  }
+]

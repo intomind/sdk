@@ -1,13 +1,22 @@
-//! The capture format.
+//! What a recording is on disk.
 //!
-//! A recording is a directory. The samples are one flat file of native
-//! endian integers, the events are another, and a manifest in JSON says
-//! what they are and how they were made. Nothing is compressed and
-//! nothing is packed into a container, because the point of this format
-//! is that somebody can read it in fifty years with a hex editor and the
-//! manifest beside them.
+//! Two formats are here. [`recording`] reads the format every IntoMind
+//! program writes, the Command Center and the Python library included: a
+//! set of files sharing one name, `name.npz` with the samples,
+//! `name.meta.json` with the manifest, `name.events.json` with the markers,
+//! and `name.sha256` written last. [`export`] writes any such recording as
+//! npz, edf, bdf, csv, tsv or mat, each byte for byte or array for array
+//! what the Python library writes, with the same summary.
+//! docs.intomind.com/files.html states what both promise.
 //!
-//! Three rules hold it together:
+//! The types at the top of this crate are the flat-file format it was
+//! published with in 1.4.0, kept as published: a recording is a directory,
+//! the samples one flat file of native endian integers, the events another,
+//! and a manifest in JSON. Nothing is compressed and nothing is packed into
+//! a container, so somebody can read it in fifty years with a hex editor
+//! and the manifest beside them.
+//!
+//! Three rules hold that format together:
 //!
 //! 1. A gap is written down. The sample file has no silent splices. Every
 //!    break in the timeline is a row in the gap list with the index range
@@ -19,6 +28,17 @@
 //!    never guessed and never defaulted to something plausible.
 
 #![deny(missing_docs)]
+
+#[cfg(test)]
+mod contract_tests;
+mod edf;
+pub mod export;
+mod hdf5;
+mod npy;
+mod pyfmt;
+mod pyjson;
+pub mod recording;
+mod zip;
 
 use serde::{Deserialize, Serialize};
 

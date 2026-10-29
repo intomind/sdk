@@ -1,11 +1,23 @@
 # intomind-capture
 
-What an IntoMind recording is on disk: a directory holding the samples in
-one flat file of native-endian integers, the events in another, and a JSON
-manifest that says what they are and how they were made. Nothing is
-compressed or packed, so a recording can be read in fifty years with a hex
-editor and the manifest beside it. A gap is written down: the sample file
-has no silent splices.
+What an IntoMind recording is on disk. `recording` reads the recordings
+every IntoMind program writes, the Command Center and the Python library
+included: the samples in `name.npz`, the manifest in `name.meta.json`, the
+markers in `name.events.json`, and the checksums in `name.sha256`, written
+last. `export` writes any such recording as npz, edf, bdf, csv, tsv or mat,
+each the same file the Python library writes, with the same summary.
+
+```rust
+use intomind_capture::{export, recording::Collection};
+
+let recordings = Collection::open(Collection::default_dir());
+let summary = export::export(&recordings, "my-recording", "bdf", None)?;
+```
+
+docs.intomind.com/files.html states what a recording and every export
+promise. The flat-file format this crate was first published with is kept
+as it was: a directory holding the samples in one file of native-endian
+integers, the events in another, and a JSON manifest.
 
 ## License
 
