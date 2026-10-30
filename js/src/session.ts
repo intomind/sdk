@@ -6,8 +6,9 @@
  * stack, a desktop one, or a test with no Bluetooth at all.
  *
  * A recording is made here too, as the Python library's recorder makes one:
- * give each time exchange with both host clocks to `onTimeSyncClocks`, arm
- * the recorder with `armRecorder`, and take what it collected with
+ * give each time exchange with both host clocks to `onTimeSyncClocks`, which
+ * the browser connection's `timeSync` does itself, arm the recorder with
+ * `armRecorder`, and take what it collected with
  * `saveRecording`, whose files `capture.Collection` reads back and
  * `capture/node` writes into a folder.
  */

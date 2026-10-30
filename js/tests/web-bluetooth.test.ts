@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { hostClocks } from "../src/capture/clock.ts";
+import * as J from "../src/capture/pyjson.ts";
 import * as P from "../src/protocol.ts";
 import { NoBluetooth, connect, requestDevice } from "../src/web-bluetooth.ts";
 import type { Event } from "../src/session.ts";
@@ -165,6 +167,79 @@ test("a time exchange is bracketed by the host clock", async () => {
   const mapped = link.session.hostTime(1_234_567_890n)!;
   const exchange = link.session.timebase!.exchanges[0]!;
   assert.ok(mapped >= exchange.before && mapped <= exchange.after);
+});
+
+test("a time exchange in the browser reaches the clock a recording is dated with, on both host clocks", async () => {
+  const { device, characteristics } = fakeDevice();
+  const link = await connect(device);
+  const control = characteristics.get(P.CONTROL)!;
+  const answers = characteristics.get(P.CONTROL_RESPONSE)!;
+  control.onWrite = (bytes) => {
+    if (bytes[0] !== P.OPCODES.time_sync) return;
+    const ticks = new Uint8Array(8);
+    new DataView(ticks.buffer).setBigUint64(0, 1_234_567_890n, true);
+    answers.notify(P.encodeResponse(P.OPCODES.time_sync, 0, ticks));
+  };
+
+  const clock = link.session.clock!;
+  assert.equal(clock.syncs.length, 0);
+  const before = hostClocks();
+  await link.timeSync();
+  await link.timeSync();
+  const after = hostClocks();
+  assert.equal(clock.syncs.length, 2, "every exchange reaches the recording's clock");
+  for (const s of clock.syncs) {
+    assert.equal(s.device, 1_234_567_890 / link.info.tickHz);
+    assert.ok(s.mono >= before.monotonic && s.mono <= after.monotonic, "the monotonic clock brackets it");
+    assert.ok(s.host >= before.realtime && s.host <= after.realtime, "the wall clock brackets it");
+  }
+  assert.equal(link.session.timebase!.exchanges.length, 2, "the published fit still takes each exchange once");
+});
+
+test("a recording made through the browser connection is dated by the device's clock and comes back as its files", async () => {
+  const { device, characteristics } = fakeDevice();
+  const link = await connect(device);
+  const control = characteristics.get(P.CONTROL)!;
+  const answers = characteristics.get(P.CONTROL_RESPONSE)!;
+  const data = characteristics.get(P.EEG_DATA)!;
+  const tickHz = link.info.tickHz;
+  // The device's clock reads 100 s when the test begins and runs with the host's.
+  const t0 = hostClocks().monotonic;
+  const ticksNow = () => BigInt(Math.round((hostClocks().monotonic - t0 + 100) * tickHz));
+  control.onWrite = (bytes) => {
+    const op = bytes[0]!;
+    if (op === P.OPCODES.time_sync) {
+      const ticks = new Uint8Array(8);
+      new DataView(ticks.buffer).setBigUint64(0, ticksNow(), true);
+      answers.notify(P.encodeResponse(op, 0, ticks));
+    } else if (op === P.OPCODES.start_stream || op === P.OPCODES.stop_stream) {
+      answers.notify(P.encodeResponse(op, 0));
+    }
+  };
+  for (let i = 0; i < 3; i++) await link.timeSync();
+  link.session.armRecorder();
+  await link.request(link.session.startStream());
+  assert.ok(link.session.streaming);
+  const template = P.decodePacket(vectorBytes("eeg_data"), link.info.channels);
+  const per = template.counts.length;
+  const start = ticksNow();
+  for (let k = 0; k < 5; k++) {
+    const deviceTime = start + BigInt(Math.round((k * per * tickHz) / P.RATE_BY_CODE[template.rateCode]!));
+    data.notify(P.encodePacket({ ...template, index: k * per, deviceTime, discontinuity: false, usbPresent: false, samplesLostBefore: 0 }));
+  }
+  // Saved while the stream runs, as the Python library's record-while-streaming session saves.
+  const saved = link.session.saveRecording("browser-take");
+  await link.request(link.session.stopStream());
+  assert.ok(!link.session.streaming);
+
+  const names = saved.files.map(([name]) => name);
+  assert.ok(names.includes("browser-take.npz") && names.includes("browser-take.meta.json"), names.join(", "));
+  const m = saved.manifest;
+  assert.equal(J.asI64(J.field(m, "n")), BigInt(5 * per));
+  const clock = J.field(m, "clock");
+  assert.equal(J.asI64(J.field(clock, "n_syncs")), 3n, "the three exchanges dated the recording");
+  assert.equal(J.asStr(J.field(clock, "fitted_against")), "monotonic");
+  assert.ok(J.truthy(J.field(clock, "map_frozen_at_stream_start")), "the map held still while the stream ran");
 });
 
 test("a characteristic the device does not carry is not written to", async () => {
