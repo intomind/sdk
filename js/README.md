@@ -29,6 +29,8 @@ application built on top of it.
 | `src/session.ts` | one device as a state machine: bytes in, events out |
 | `src/timebase.ts` | device time onto host time, and what it refuses to believe |
 | `src/web-bluetooth.ts` | the browser transport, and the only file that touches a radio |
+| `src/capture/` | recordings: the recorder, the reader and the six exports, as the Python library makes them |
+| `src/capture/node.ts` | recordings on disk, in the folder the Python library uses, for Node |
 | `src/index.ts` | the public surface |
 
 The protocol, the session, and the timebase do no input and no output.
@@ -110,6 +112,23 @@ kept, because the offset is the part that was measured.
 await device.timeSync();
 device.session.timebase?.fit;            // skewUsed says whether the rate is real
 device.session.hostTime(batch.deviceTime);
+```
+
+## Recordings
+
+The session records as the Python library records, and
+`@intomind/sdk/capture` reads recordings and exports them in the Python
+library's six formats: BDF, EDF, CSV and TSV byte for byte the files Python
+writes, NPZ and MATLAB holding the same arrays.
+
+```ts
+for (let i = 0; i < 5; i++) await device.timeSync();
+device.session.armRecorder();
+await device.request(device.session.resetEpoch());
+await device.request(device.session.startStream());
+// ...
+await device.request(device.session.stopStream());
+const saved = device.session.saveRecording("my-recording");  // each file's name and bytes
 ```
 
 ## The model
