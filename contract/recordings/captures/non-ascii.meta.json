@@ -121,6 +121,6 @@
   "processing": {
     "origin": "host",
     "stages": [],
-    "description": "band-pass 1 to 45 Hz, then a notch at 50 Hz, then a moving average over eight samples, as the caf\u00e9's bench set it"
+    "description": "band-pass 1 to 45 Hz, then a notch at 50 Hz, then a moving average over eight samples, as the caf\u00e9's desk set it"
   }
 }

@@ -146,7 +146,7 @@ class Link:
 
 
 def device(info_bytes: bytes):
-    dev = client.Device(types.SimpleNamespace(address="EE:AE:00:00:00:01", name="IntoMind One", details={}))
+    dev = client.Device(types.SimpleNamespace(address="02:00:00:00:00:01", name="IntoMind One", details={}))
     dev.info = P.decode_device_info(info_bytes)
     link = Link(dev)
     dev._client = link
@@ -591,9 +591,9 @@ def sessions() -> list[dict]:
     s = Stream(8)
     add("site-declared", [
         dict(op="info", bytes=ONE.hex(), pipeline=answer("pipeline", bytes([0]) + DEFAULT_500)),
-        dict(op="site", site=dict(board_revision="B3", mains_hz=50, psu_volts=3.7, firmware_sha256="ab" * 32,
+        dict(op="site", site=dict(board_revision="fixture", mains_hz=50, psu_volts=3.7, firmware_sha256="ab" * 32,
                                   firmware_artifact="app-1.4.5.bin", electrode_montage="four around a center",
-                                  subject_id="S01", notes="bench", montage=SITE_MONTAGE)),
+                                  subject_id="S01", notes="desk", montage=SITE_MONTAGE)),
         *syncs(8000.0, 1_767_226_300.0, 4000.0, 1),
         dict(op="arm"), dict(op="start"),
         dict(op="data", packets=[s.next(flags=DISC | ACTIVE)] + s.run(7, flags=ACTIVE)),
@@ -602,7 +602,7 @@ def sessions() -> list[dict]:
              extra=dict(experiment="site-check", gain=None, rate_sps=None, fs_effective=None, threshold=1.5,
                         regs_before=dict(reg_a=150, reg_b=96)),
              events=None, regs_after=dict(reg_a=150, reg_b=97, reg_c=0), now=[8002.0, 1_767_226_302.0]),
-    ], "a bench that declares its site and montage, registers that changed, and an extra that tries to erase a measurement")
+    ], "a setup that declares its site and montage, registers that changed, and an extra that tries to erase a measurement")
 
     s = Stream(9)
     add("placed", [

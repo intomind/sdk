@@ -307,7 +307,7 @@ def make_recordings() -> None:
     write("non-ascii", counts=signal(rng, n, 2), meta=manifest(
         "non-ascii", n, channels=2, device_name="Zoë's IntoMind One 🧠",
         processing=dict(origin="host", stages=[], description="band-pass 1 to 45 Hz, then a notch at 50 Hz, "
-                        "then a moving average over eight samples, as the café's bench set it"),
+                        "then a moving average over eight samples, as the café's desk set it"),
         montage=dict(electrode="gold cup, conductive paste", source="site")))
 
     # Integers where floats are usual, and floats where integers are.

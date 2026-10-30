@@ -193,7 +193,7 @@ impl Collection {
         }
         Ok(Verification {
             ok: true,
-            problems: vec!["unverified: no checksum file, not marked (recorded before P0)".into()],
+            problems: vec!["unverified: no checksum file, not marked (recorded before checksums were kept)".into()],
         })
     }
 

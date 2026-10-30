@@ -199,7 +199,7 @@ export class Collection {
         ],
       };
     }
-    return { ok: true, problems: ["unverified: no checksum file, not marked (recorded before P0)"] };
+    return { ok: true, problems: ["unverified: no checksum file, not marked (recorded before checksums were kept)"] };
   }
 
   /** Why the run was aborted, as its manifest says, or null. */
