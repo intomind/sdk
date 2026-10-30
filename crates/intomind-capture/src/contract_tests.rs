@@ -429,6 +429,53 @@ fn py_bytes(b: &[u8]) -> String {
     s
 }
 
+fn values_fixture() -> Value {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contract/recorder/values.json");
+    pyjson::loads(&std::fs::read_to_string(path).expect("the values fixture is in the repository")).expect("JSON")
+}
+
+#[test]
+fn numbers_are_equal_where_python_calls_them_equal_at_any_size() {
+    let f = values_fixture();
+    let Some(Value::Array(cases)) = f.get("equality") else { panic!("no comparisons") };
+    assert!(cases.len() >= 30, "{}", cases.len());
+    let mut problems = Vec::new();
+    for c in cases {
+        let Value::Array(c) = c else { panic!("a comparison is a list") };
+        let (a, b, want) = (&c[0], &c[1], c[2].truthy());
+        if a.py_eq(b) != want || b.py_eq(a) != want {
+            problems.push(format!("{} == {} is {want} in Python", a.py_repr(), b.py_repr()));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn the_adapter_and_the_filter_are_said_as_the_library_says_them_in_every_shape() {
+    let f = values_fixture();
+    let Some(Value::Array(cases)) = f.get("signal_chain") else { panic!("no signal chains") };
+    assert!(cases.len() >= 40, "{}", cases.len());
+    let mut problems = Vec::new();
+    for c in cases {
+        let name = c.field("name").py_str();
+        let setup = record::Setup {
+            adapter: c.get("adapter").map(Value::to_serde),
+            filter: c.get("filter").map(Value::to_serde),
+            filters_in: c.get("filters_in").and_then(|v| v.as_str()).map(String::from),
+            ..Default::default()
+        };
+        match (record::signal_chain(&setup), c.get("json"), c.get("raises")) {
+            (Ok(v), Some(want), _) if want.as_str() == Some(pyjson::dumps(&v).as_str()) => {}
+            (Ok(v), Some(want), _) => {
+                problems.push(format!("{name}: {} where the library wrote {}", pyjson::dumps(&v), want.py_str()))
+            }
+            (Err(_), _, Some(_)) => {}
+            (got, _, _) => problems.push(format!("{name}: {got:?} where the library did otherwise")),
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 fn recorder_fixture() -> Value {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contract/recorder/sessions.json");
     pyjson::loads(&std::fs::read_to_string(path).expect("the recorder fixture is in the repository")).expect("JSON")

@@ -500,9 +500,9 @@ fn fs_from_packets(packets: &[Packet], tick_hz: u64) -> f64 {
 }
 
 /// Which adapter produced the recording, and where it was filtered.
-fn signal_chain(setup: &Setup) -> Value {
+pub(crate) fn signal_chain(setup: &Setup) -> Result<Value, Fail> {
     let adapter = match setup.adapter.as_ref().map(Value::from_serde) {
-        Some(a) if a.truthy() => a,
+        Some(a) if a.truthy() => py_dict(&a)?,
         _ => Value::obj([
             ("name", Value::str("unknown")),
             ("version", Value::Null),
@@ -510,21 +510,18 @@ fn signal_chain(setup: &Setup) -> Value {
             ("transport", Value::Null),
         ]),
     };
+    // `getattr(dev, "filter", None) or {}`, read with `.get`, which only a
+    // dict has.
     let f = setup.filter.as_ref().map(Value::from_serde).unwrap_or(Value::Null);
+    if f.truthy() && !matches!(f, Value::Object(_)) {
+        return Err(Fail::Other(format!("AttributeError: {} has no attribute 'get'", f.py_repr())));
+    }
     let on = f.field("on").truthy();
     let filters = if on {
-        let bands = match f.field("bands") {
-            Value::Array(b) => b
-                .iter()
-                .map(|x| {
-                    Value::Array(match x {
-                        Value::Array(v) => v.clone(),
-                        other => vec![other.clone()],
-                    })
-                })
-                .collect(),
-            _ => Vec::new(),
-        };
+        // `[list(b) for b in (f.get("bands") or [])]`
+        let bands = f.field("bands");
+        let each = if bands.truthy() { placement::iterate(bands)? } else { Vec::new() };
+        let bands = each.iter().map(|b| placement::iterate(b).map(Value::Array)).collect::<Result<Vec<_>, _>>()?;
         Value::obj([
             ("hp_hz", f.field("hp_hz").clone()),
             ("lp_hz", f.field("lp_hz").clone()),
@@ -533,14 +530,43 @@ fn signal_chain(setup: &Setup) -> Value {
     } else {
         Value::Null
     };
-    Value::obj([
+    Ok(Value::obj([
         ("adapter", adapter),
         (
             "filtering",
             Value::str(if on { setup.filters_in.clone().unwrap_or_else(|| "device".into()) } else { "none".into() }),
         ),
         ("filters", filters),
-    ])
+    ]))
+}
+
+/// What `dict(v)` makes of a value a program declared: an object as itself,
+/// and a list of key and value pairs as an object, keys Python holds equal
+/// (`1`, `1.0` and `True`) kept once in their first form with the last
+/// value, and written as `json.dumps` writes a key that is not text.
+fn py_dict(v: &Value) -> Result<Value, Fail> {
+    if let Value::Object(_) = v {
+        return Ok(v.clone());
+    }
+    let mut out: Vec<(Value, Value)> = Vec::new();
+    for (i, item) in placement::iterate(v)?.into_iter().enumerate() {
+        if !matches!(item, Value::Array(_) | Value::Str(_) | Value::Object(_)) {
+            return Err(Fail::Other(format!(
+                "TypeError: cannot convert dictionary update sequence element #{i} to a sequence"
+            )));
+        }
+        let [key, value] = <[Value; 2]>::try_from(placement::iterate(&item)?).map_err(|p| {
+            Fail::Other(format!("ValueError: dictionary update sequence element #{i} has length {}; 2 is required", p.len()))
+        })?;
+        if key.json_key().is_none() {
+            return Err(Fail::Other(format!("TypeError: unhashable type: {}", key.py_repr())));
+        }
+        match out.iter_mut().find(|(have, _)| have.py_eq(&key)) {
+            Some(slot) => slot.1 = value,
+            None => out.push((key, value)),
+        }
+    }
+    Ok(Value::Object(out.into_iter().map(|(k, v)| (k.json_key().unwrap_or_default(), v)).collect()))
 }
 
 /// What the samples were, off the packets that carried them.
@@ -700,7 +726,7 @@ fn build(
         ("fs_effective", Value::Float(fs)),
         ("protocol_id", protocol.clone()),
         ("protocol_params", params),
-        ("signal_chain", signal_chain(setup)),
+        ("signal_chain", signal_chain(setup)?),
         ("signal_source", source),
         ("synthetic", synthetic),
         ("quality", gap_ledger(index)),

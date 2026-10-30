@@ -20,6 +20,10 @@ line, and which files were made read-only. Also the montage cases, where
 the electrodes went and what a manifest makes of it, and processing chains
 described in words.
 
+And values.json, where JSON may hold NaN and integers of any size: Python's
+`==` between numbers of every kind, and what a manifest says of the adapter
+and the filter a program declared, in every shape it can declare them.
+
 Run it again and nothing changes unless the library does: the clocks are the
 script's, and the archives are stamped with a fixed time.
 """
@@ -382,6 +386,90 @@ def chain_cases() -> list[dict]:
     ]
     return [dict(stages=[s.as_dict() for s in stages], rate=rate, chain=P.encode_chain(stages).hex(),
                  description=P.describe_chain(stages, rate)) for stages, rate in rows]
+
+
+def equality_cases() -> list[list]:
+    """Python's `==` between values JSON carries, numbers of every size and
+    type among them, as a manifest's list of changed settings and the
+    montage checks decide it: each pair and whether Python calls it equal."""
+    big, top = 10 ** 40, int(sys.float_info.max)
+    pairs = [
+        (big, 1e40), (int(1e40), 1e40), (-big, -1e40), (-int(1e40), -1e40), (10 ** 38, 1e38),
+        (int(1e38), 1e38), (2 ** 127, 2.0 ** 127), (2 ** 127 + 1, 2.0 ** 127), (2 ** 128, 2.0 ** 128),
+        (2 ** 53 + 1, 2.0 ** 53), (2 ** 53, 2.0 ** 53), (top, sys.float_info.max), (top + 1, sys.float_info.max),
+        (10 ** 400, float("inf")), (-(10 ** 400), float("-inf")), (big, big), (big, big + 1),
+        (True, 1), (True, 1.0), (False, 0), (False, -0.0), (0, -0.0), (0.0, -0.0), (2.5, 2), (2.5, 2.5),
+        (float("nan"), float("nan")), (float("inf"), float("inf")), (1, "1"), (None, 0), (None, None),
+        (False, None), ("a", "a"), ([big], [1e40]), ([int(1e40)], [1e40]), (dict(a=big), dict(a=1e40)),
+        (dict(a=True), dict(a=1)), (dict(a=1, b=2), dict(b=2, a=1)), ([1, 2], [1, 2, 3]),
+    ]
+    return [[a, b, a == b] for a, b in pairs]
+
+
+def signal_chain_cases() -> list[dict]:
+    """What a manifest says of the adapter and the filter, for every shape a
+    program can declare them in: `signal_chain` on a device carrying them,
+    as the JSON it writes, or what it raises."""
+    class Declared:
+        """A device as `signal_chain` reads one: ADAPTER, filter, FILTERS_IN."""
+
+    adapter = dict(name="an adapter", version="2.1", first_party=False, transport="usb")
+    on = dict(on=True, hp_hz=0.5, lp_hz=40.0, bands=[[48, 52], [98, 102]])
+    cases = [
+        dict(name="nothing declared"),
+        dict(name="an adapter", adapter=adapter),
+        dict(name="an adapter with a key of its own", adapter=dict(adapter, serial="A7")),
+        dict(name="an empty adapter is unknown", adapter={}),
+        dict(name="an adapter of null is unknown", adapter=None),
+        dict(name="an adapter as pairs", adapter=[["name", "pairs"], ["version", 3]]),
+        dict(name="an adapter as pairs, a key repeated", adapter=[["name", "first"], ["name", "last"]]),
+        dict(name="an adapter as pairs, keys that are numbers", adapter=[[1, "one"], [True, "again"], ["1", "text"],
+                                                                     [2.5, "float"], [None, "null"], [False, 0]]),
+        dict(name="an adapter as pairs of letters", adapter=["ab", "cd"]),
+        dict(name="an adapter as pairs, one an object", adapter=[dict(k=1, v=2)]),
+        dict(name="an adapter as text", adapter="ab"),
+        dict(name="an adapter as a number", adapter=5),
+        dict(name="an adapter as true", adapter=True),
+        dict(name="an adapter pair too short", adapter=[["name"]]),
+        dict(name="an adapter pair that is a number", adapter=[5]),
+        dict(name="an adapter pair with a list for a key", adapter=[[["k"], "v"]]),
+        dict(name="a filter off", filter=dict(on, on=False)),
+        dict(name="a filter on", filter=on),
+        dict(name="a filter on, in the host", filter=on, filters_in="host"),
+        dict(name="a filter off, in the host", filter=dict(on, on=False), filters_in="host"),
+        dict(name="a filter on and nothing else", filter=dict(on=True)),
+        dict(name="a filter on, said with a number", filter=dict(on=1, bands=[[1, 2]])),
+        dict(name="a filter on, said with text", filter=dict(on="yes")),
+        dict(name="a filter with no bands", filter=dict(on, bands=[])),
+        dict(name="a filter with bands of null", filter=dict(on, bands=None)),
+        dict(name="a band of three values", filter=dict(on, bands=[[1, 2, 3]])),
+        dict(name="an empty band", filter=dict(on, bands=[[]])),
+        dict(name="a band as text", filter=dict(on, bands=["ab"])),
+        dict(name="bands as text", filter=dict(on, bands="ab")),
+        dict(name="a band as an object", filter=dict(on, bands=[dict(lo=48, hi=52)])),
+        dict(name="bands as an object", filter=dict(on, bands=dict(a=1))),
+        dict(name="a band as a number", filter=dict(on, bands=[5])),
+        dict(name="bands as a number", filter=dict(on, bands=5)),
+        dict(name="a band of null", filter=dict(on, bands=[None])),
+        dict(name="an empty filter", filter={}),
+        dict(name="a filter of null", filter=None),
+        dict(name="a filter that is a list", filter=[1]),
+        dict(name="a filter that is an empty list", filter=[]),
+        dict(name="a filter that is text", filter="on"),
+        dict(name="a filter that is empty text", filter=""),
+        dict(name="a filter that is zero", filter=0),
+        dict(name="a filter that is true", filter=True),
+    ]
+    for c in cases:
+        dev = Declared()
+        for key, attr in (("adapter", "ADAPTER"), ("filter", "filter"), ("filters_in", "FILTERS_IN")):
+            if key in c:
+                setattr(dev, attr, c[key])
+        try:
+            c["json"] = json.dumps(prov.signal_chain(dev))
+        except Exception as e:  # noqa: BLE001
+            c["raises"] = f"{type(e).__name__}: {e}"
+    return cases
 
 
 # ---------------------------------------------------------------- sessions
@@ -753,8 +841,11 @@ def main() -> int:
     finally:
         shutil.rmtree(work, ignore_errors=True)
     (HERE / "sessions.json").write_text(json.dumps(result, indent=1, sort_keys=False) + "\n")
+    values = dict(library=intomind.__version__, equality=equality_cases(), signal_chain=signal_chain_cases())
+    (HERE / "values.json").write_text(json.dumps(values, indent=1) + "\n")
     print(f"{len(result['sessions'])} sessions, {len(result['montage'])} montage cases and "
-          f"{len(result['chains'])} chains, from intomind {intomind.__version__}")
+          f"{len(result['chains'])} chains, {len(values['equality'])} comparisons and "
+          f"{len(values['signal_chain'])} signal chains, from intomind {intomind.__version__}")
     return 0
 
 

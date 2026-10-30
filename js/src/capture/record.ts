@@ -224,7 +224,7 @@ export interface GitState {
  */
 export interface Setup {
   /**
-   * Facts about the bench no code can discover, as an object: the keys the
+   * Facts about the hardware no code can discover, as an object: the keys the
    * Python library's `use_site` takes, `board_revision`, `mains_hz`,
    * `psu_volts`, `firmware_sha256`, `firmware_artifact`,
    * `electrode_montage`, `subject_id`, `notes`, and a structured `montage`.
@@ -507,18 +507,46 @@ function pyIter(v: Value): Value[] {
   throw new Fail("other", `TypeError: ${J.pyRepr(v)} is not iterable`);
 }
 
+/**
+ * What `dict(v)` makes of a value a program declared: an object as itself,
+ * and a list of key and value pairs as an object, keys Python holds equal
+ * (`1`, `1.0` and `True`) kept once in their first form with the last
+ * value, and written as `json.dumps` writes a key that is not text.
+ */
+function pyDict(v: Value): Value {
+  if (v.kind === "object") return v;
+  const out: [Value, Value][] = [];
+  pyIter(v).forEach((item, i) => {
+    if (item.kind !== "array" && item.kind !== "str" && item.kind !== "object") {
+      throw new Fail("other", `TypeError: cannot convert dictionary update sequence element #${i} to a sequence`);
+    }
+    const pair = pyIter(item);
+    if (pair.length !== 2) {
+      throw new Fail("other", `ValueError: dictionary update sequence element #${i} has length ${pair.length}; 2 is required`);
+    }
+    const [key, value] = pair as [Value, Value];
+    if (J.jsonKey(key) === null) throw new Fail("other", `TypeError: unhashable type: ${J.pyRepr(key)}`);
+    const slot = out.find(([have]) => J.pyEq(have, key));
+    if (slot) slot[1] = value;
+    else out.push([key, value]);
+  });
+  return J.object(out.map(([k, x]) => [J.jsonKey(k)!, x]));
+}
+
 /** Which adapter produced the recording, and where it was filtered. */
-function signalChain(setup: Setup): Value {
+export function signalChain(setup: Setup): Value {
   const declared = J.fromPlain(setup.adapter);
   const adapter = J.truthy(declared)
-    ? declared
+    ? pyDict(declared)
     : J.object([
         ["name", J.str("unknown")],
         ["version", J.NULL],
         ["first_party", J.bool(false)],
         ["transport", J.NULL],
       ]);
+  // `getattr(dev, "filter", None) or {}`, read with `.get`, which only a dict has.
   const f = J.fromPlain(setup.filter);
+  if (J.truthy(f) && f.kind !== "object") throw new Fail("other", `AttributeError: ${J.pyRepr(f)} has no attribute 'get'`);
   const on = J.truthy(J.field(f, "on"));
   let filters: Value = J.NULL;
   if (on) {

@@ -155,7 +155,9 @@ impl Value {
             (Int(a), Int(b)) => a == b,
             (a, b) if a.is_number() && b.is_number() => match (a.exact_int(), b.exact_int()) {
                 (Some(x), Some(y)) => x == y,
-                _ => a.as_f64() == b.as_f64(),
+                // At least one is a float with a fraction, or not finite,
+                // which no integer equals.
+                _ => matches!((a, b), (Float(x), Float(y)) if x == y),
             },
             _ => false,
         }
@@ -166,14 +168,34 @@ impl Value {
         matches!(self, Value::Bool(_) | Value::Int(_) | Value::Float(_))
     }
 
-    /// The value as an exact integer, for a boolean, an integer, or a
-    /// float with no fraction.
-    fn exact_int(&self) -> Option<i128> {
+    /// The value as an integer's canonical digits, whatever its size, for a
+    /// boolean, an integer, or a finite float with no fraction written out
+    /// in full: Python compares an integer and a float by their exact values.
+    fn exact_int(&self) -> Option<String> {
         match self {
-            Value::Bool(b) => Some(*b as i128),
-            Value::Int(d) => d.parse().ok(),
-            Value::Float(f) if f.is_finite() && f.fract() == 0.0 && f.abs() < 1e38 => Some(*f as i128),
+            Value::Bool(b) => Some(if *b { "1" } else { "0" }.into()),
+            Value::Int(d) => Some(d.clone()),
+            Value::Float(f) if f.is_finite() && f.fract() == 0.0 => {
+                Some(if *f == 0.0 { "0".into() } else { format!("{f:.0}") })
+            }
             _ => None,
+        }
+    }
+
+    /// The text `json.dumps` writes for this value as a dict's key, and None
+    /// for a list or an object, which no dict holds as a key.
+    pub(crate) fn json_key(&self) -> Option<String> {
+        match self {
+            Value::Str(s) => Some(s.clone()),
+            Value::Int(d) => Some(d.clone()),
+            Value::Float(f) => {
+                let mut s = String::new();
+                write_float(&mut s, *f);
+                Some(s)
+            }
+            Value::Bool(b) => Some(if *b { "true" } else { "false" }.into()),
+            Value::Null => Some("null".into()),
+            Value::Array(_) | Value::Object(_) => None,
         }
     }
 

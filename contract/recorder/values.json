@@ -1,0 +1,658 @@
+{
+ "library": "1.4.1",
+ "equality": [
+  [
+   10000000000000000000000000000000000000000,
+   1e+40,
+   false
+  ],
+  [
+   10000000000000000303786028427003666890752,
+   1e+40,
+   true
+  ],
+  [
+   -10000000000000000000000000000000000000000,
+   -1e+40,
+   false
+  ],
+  [
+   -10000000000000000303786028427003666890752,
+   -1e+40,
+   true
+  ],
+  [
+   100000000000000000000000000000000000000,
+   1e+38,
+   false
+  ],
+  [
+   99999999999999997748809823456034029568,
+   1e+38,
+   true
+  ],
+  [
+   170141183460469231731687303715884105728,
+   1.7014118346046923e+38,
+   true
+  ],
+  [
+   170141183460469231731687303715884105729,
+   1.7014118346046923e+38,
+   false
+  ],
+  [
+   340282366920938463463374607431768211456,
+   3.402823669209385e+38,
+   true
+  ],
+  [
+   9007199254740993,
+   9007199254740992.0,
+   false
+  ],
+  [
+   9007199254740992,
+   9007199254740992.0,
+   true
+  ],
+  [
+   179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368,
+   1.7976931348623157e+308,
+   true
+  ],
+  [
+   179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858369,
+   1.7976931348623157e+308,
+   false
+  ],
+  [
+   10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+   Infinity,
+   false
+  ],
+  [
+   -10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+   -Infinity,
+   false
+  ],
+  [
+   10000000000000000000000000000000000000000,
+   10000000000000000000000000000000000000000,
+   true
+  ],
+  [
+   10000000000000000000000000000000000000000,
+   10000000000000000000000000000000000000001,
+   false
+  ],
+  [
+   true,
+   1,
+   true
+  ],
+  [
+   true,
+   1.0,
+   true
+  ],
+  [
+   false,
+   0,
+   true
+  ],
+  [
+   false,
+   -0.0,
+   true
+  ],
+  [
+   0,
+   -0.0,
+   true
+  ],
+  [
+   0.0,
+   -0.0,
+   true
+  ],
+  [
+   2.5,
+   2,
+   false
+  ],
+  [
+   2.5,
+   2.5,
+   true
+  ],
+  [
+   NaN,
+   NaN,
+   false
+  ],
+  [
+   Infinity,
+   Infinity,
+   true
+  ],
+  [
+   1,
+   "1",
+   false
+  ],
+  [
+   null,
+   0,
+   false
+  ],
+  [
+   null,
+   null,
+   true
+  ],
+  [
+   false,
+   null,
+   false
+  ],
+  [
+   "a",
+   "a",
+   true
+  ],
+  [
+   [
+    10000000000000000000000000000000000000000
+   ],
+   [
+    1e+40
+   ],
+   false
+  ],
+  [
+   [
+    10000000000000000303786028427003666890752
+   ],
+   [
+    1e+40
+   ],
+   true
+  ],
+  [
+   {
+    "a": 10000000000000000000000000000000000000000
+   },
+   {
+    "a": 1e+40
+   },
+   false
+  ],
+  [
+   {
+    "a": true
+   },
+   {
+    "a": 1
+   },
+   true
+  ],
+  [
+   {
+    "a": 1,
+    "b": 2
+   },
+   {
+    "b": 2,
+    "a": 1
+   },
+   true
+  ],
+  [
+   [
+    1,
+    2
+   ],
+   [
+    1,
+    2,
+    3
+   ],
+   false
+  ]
+ ],
+ "signal_chain": [
+  {
+   "name": "nothing declared",
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter",
+   "adapter": {
+    "name": "an adapter",
+    "version": "2.1",
+    "first_party": false,
+    "transport": "usb"
+   },
+   "json": "{\"adapter\": {\"name\": \"an adapter\", \"version\": \"2.1\", \"first_party\": false, \"transport\": \"usb\"}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter with a key of its own",
+   "adapter": {
+    "name": "an adapter",
+    "version": "2.1",
+    "first_party": false,
+    "transport": "usb",
+    "serial": "A7"
+   },
+   "json": "{\"adapter\": {\"name\": \"an adapter\", \"version\": \"2.1\", \"first_party\": false, \"transport\": \"usb\", \"serial\": \"A7\"}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an empty adapter is unknown",
+   "adapter": {},
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter of null is unknown",
+   "adapter": null,
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as pairs",
+   "adapter": [
+    [
+     "name",
+     "pairs"
+    ],
+    [
+     "version",
+     3
+    ]
+   ],
+   "json": "{\"adapter\": {\"name\": \"pairs\", \"version\": 3}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as pairs, a key repeated",
+   "adapter": [
+    [
+     "name",
+     "first"
+    ],
+    [
+     "name",
+     "last"
+    ]
+   ],
+   "json": "{\"adapter\": {\"name\": \"last\"}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as pairs, keys that are numbers",
+   "adapter": [
+    [
+     1,
+     "one"
+    ],
+    [
+     true,
+     "again"
+    ],
+    [
+     "1",
+     "text"
+    ],
+    [
+     2.5,
+     "float"
+    ],
+    [
+     null,
+     "null"
+    ],
+    [
+     false,
+     0
+    ]
+   ],
+   "json": "{\"adapter\": {\"1\": \"again\", \"1\": \"text\", \"2.5\": \"float\", \"null\": \"null\", \"false\": 0}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as pairs of letters",
+   "adapter": [
+    "ab",
+    "cd"
+   ],
+   "json": "{\"adapter\": {\"a\": \"b\", \"c\": \"d\"}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as pairs, one an object",
+   "adapter": [
+    {
+     "k": 1,
+     "v": 2
+    }
+   ],
+   "json": "{\"adapter\": {\"k\": \"v\"}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "an adapter as text",
+   "adapter": "ab",
+   "raises": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+  },
+  {
+   "name": "an adapter as a number",
+   "adapter": 5,
+   "raises": "TypeError: 'int' object is not iterable"
+  },
+  {
+   "name": "an adapter as true",
+   "adapter": true,
+   "raises": "TypeError: 'bool' object is not iterable"
+  },
+  {
+   "name": "an adapter pair too short",
+   "adapter": [
+    [
+     "name"
+    ]
+   ],
+   "raises": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+  },
+  {
+   "name": "an adapter pair that is a number",
+   "adapter": [
+    5
+   ],
+   "raises": "TypeError: cannot convert dictionary update sequence element #0 to a sequence"
+  },
+  {
+   "name": "an adapter pair with a list for a key",
+   "adapter": [
+    [
+     [
+      "k"
+     ],
+     "v"
+    ]
+   ],
+   "raises": "TypeError: unhashable type: 'list'"
+  },
+  {
+   "name": "a filter off",
+   "filter": {
+    "on": false,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     [
+      48,
+      52
+     ],
+     [
+      98,
+      102
+     ]
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter on",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     [
+      48,
+      52
+     ],
+     [
+      98,
+      102
+     ]
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[48, 52], [98, 102]]}}"
+  },
+  {
+   "name": "a filter on, in the host",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     [
+      48,
+      52
+     ],
+     [
+      98,
+      102
+     ]
+    ]
+   },
+   "filters_in": "host",
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"host\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[48, 52], [98, 102]]}}"
+  },
+  {
+   "name": "a filter off, in the host",
+   "filter": {
+    "on": false,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     [
+      48,
+      52
+     ],
+     [
+      98,
+      102
+     ]
+    ]
+   },
+   "filters_in": "host",
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter on and nothing else",
+   "filter": {
+    "on": true
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": null, \"lp_hz\": null, \"bands\": []}}"
+  },
+  {
+   "name": "a filter on, said with a number",
+   "filter": {
+    "on": 1,
+    "bands": [
+     [
+      1,
+      2
+     ]
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": null, \"lp_hz\": null, \"bands\": [[1, 2]]}}"
+  },
+  {
+   "name": "a filter on, said with text",
+   "filter": {
+    "on": "yes"
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": null, \"lp_hz\": null, \"bands\": []}}"
+  },
+  {
+   "name": "a filter with no bands",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": []
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": []}}"
+  },
+  {
+   "name": "a filter with bands of null",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": null
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": []}}"
+  },
+  {
+   "name": "a band of three values",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     [
+      1,
+      2,
+      3
+     ]
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[1, 2, 3]]}}"
+  },
+  {
+   "name": "an empty band",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     []
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[]]}}"
+  },
+  {
+   "name": "a band as text",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     "ab"
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[\"a\", \"b\"]]}}"
+  },
+  {
+   "name": "bands as text",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": "ab"
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[\"a\"], [\"b\"]]}}"
+  },
+  {
+   "name": "a band as an object",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     {
+      "lo": 48,
+      "hi": 52
+     }
+    ]
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[\"lo\", \"hi\"]]}}"
+  },
+  {
+   "name": "bands as an object",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": {
+     "a": 1
+    }
+   },
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"device\", \"filters\": {\"hp_hz\": 0.5, \"lp_hz\": 40.0, \"bands\": [[\"a\"]]}}"
+  },
+  {
+   "name": "a band as a number",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     5
+    ]
+   },
+   "raises": "TypeError: 'int' object is not iterable"
+  },
+  {
+   "name": "bands as a number",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": 5
+   },
+   "raises": "TypeError: 'int' object is not iterable"
+  },
+  {
+   "name": "a band of null",
+   "filter": {
+    "on": true,
+    "hp_hz": 0.5,
+    "lp_hz": 40.0,
+    "bands": [
+     null
+    ]
+   },
+   "raises": "TypeError: 'NoneType' object is not iterable"
+  },
+  {
+   "name": "an empty filter",
+   "filter": {},
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter of null",
+   "filter": null,
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter that is a list",
+   "filter": [
+    1
+   ],
+   "raises": "AttributeError: 'list' object has no attribute 'get'"
+  },
+  {
+   "name": "a filter that is an empty list",
+   "filter": [],
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter that is text",
+   "filter": "on",
+   "raises": "AttributeError: 'str' object has no attribute 'get'"
+  },
+  {
+   "name": "a filter that is empty text",
+   "filter": "",
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter that is zero",
+   "filter": 0,
+   "json": "{\"adapter\": {\"name\": \"unknown\", \"version\": null, \"first_party\": false, \"transport\": null}, \"filtering\": \"none\", \"filters\": null}"
+  },
+  {
+   "name": "a filter that is true",
+   "filter": true,
+   "raises": "AttributeError: 'bool' object has no attribute 'get'"
+  }
+ ]
+}

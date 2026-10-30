@@ -26,7 +26,7 @@ import { groupedFixed } from "../src/capture/pyfmt.ts";
 import * as npy from "../src/capture/npy.ts";
 import * as J from "../src/capture/pyjson.ts";
 import type { Value } from "../src/capture/pyjson.ts";
-import { configAfter, describeChain, hostVersions, montageFields, processing } from "../src/capture/record.ts";
+import { configAfter, describeChain, hostVersions, montageFields, processing, signalChain } from "../src/capture/record.ts";
 import { readNpz } from "../src/capture/recording.ts";
 import { PACKAGE_VERSION } from "../src/capture/version.ts";
 import { FILL, decodeModelInterval, decodeNameParts, decodePipelineState, decodeStatus } from "../src/protocol.ts";
@@ -332,6 +332,41 @@ test("where the electrodes went is recorded as the library records it", () => {
     if (raised !== null) problems.push(`${name}: raised ${raised}, the library ${want !== undefined ? "did not" : "raised too"}`);
     else if (want === undefined) problems.push(`${name}: recorded where the library raised ${J.pyStr(J.field(c, "raises"))}`);
     else if (J.dumps(got!) !== J.dumps(want)) problems.push(`${name}: ${J.dumps(got!)} differs from ${J.dumps(want)}`);
+  }
+  assert.equal(problems.length, 0, problems.join("\n"));
+});
+
+const values = J.loads(readFileSync(new URL("../../contract/recorder/values.json", import.meta.url), "utf8"));
+
+test("numbers are equal where Python calls them equal, at any size", () => {
+  const cases = items(J.get(values, "equality"));
+  assert.ok(cases.length >= 30, String(cases.length));
+  const problems: string[] = [];
+  for (const c of cases) {
+    const [a, b, eq] = items(c) as [Value, Value, Value];
+    const want = J.truthy(eq);
+    if (J.pyEq(a, b) !== want || J.pyEq(b, a) !== want) problems.push(`${J.pyRepr(a)} == ${J.pyRepr(b)} is ${want} in Python`);
+  }
+  assert.equal(problems.length, 0, problems.join("\n"));
+});
+
+test("the adapter and the filter are said as the library says them, in every shape a program declares them", () => {
+  const cases = items(J.get(values, "signal_chain"));
+  assert.ok(cases.length >= 40, String(cases.length));
+  const problems: string[] = [];
+  for (const c of cases) {
+    const name = text(J.field(c, "name"));
+    const filtersIn = J.get(c, "filters_in");
+    let got: string | null = null;
+    try {
+      got = J.dumps(signalChain({ adapter: J.get(c, "adapter"), filter: J.get(c, "filter"), filtersIn: filtersIn ? text(filtersIn) : undefined }));
+    } catch {
+      got = null;
+    }
+    const want = J.get(c, "json");
+    if (got === null && want !== undefined) problems.push(`${name}: refused where the library wrote ${text(want)}`);
+    else if (got !== null && want === undefined) problems.push(`${name}: ${got} where the library raised ${J.pyStr(J.field(c, "raises"))}`);
+    else if (got !== null && got !== text(want!)) problems.push(`${name}: ${got} where the library wrote ${text(want!)}`);
   }
   assert.equal(problems.length, 0, problems.join("\n"));
 });

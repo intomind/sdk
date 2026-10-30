@@ -225,7 +225,7 @@ fn in_object(d: &Value, k: &Value) -> Result<bool, Fail> {
 
 /// What `for r in value` yields: a list's items, a string's characters,
 /// an object's keys.
-fn iterate(v: &Value) -> Result<Vec<Value>, Fail> {
+pub(crate) fn iterate(v: &Value) -> Result<Vec<Value>, Fail> {
     match v {
         Value::Array(a) => Ok(a.clone()),
         Value::Str(s) => Ok(s.chars().map(|c| Value::str(c.to_string())).collect()),

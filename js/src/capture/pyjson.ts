@@ -669,6 +669,23 @@ function writeStr(s: string): string {
   return out + '"';
 }
 
+/** The text `json.dumps` writes for a value as a dict's key, and null for a list or an object, which no dict holds as a key. */
+export function jsonKey(v: Value): string | null {
+  switch (v.kind) {
+    case "str":
+    case "int":
+      return v.value;
+    case "float":
+      return writeFloat(v.value);
+    case "bool":
+      return v.value ? "true" : "false";
+    case "null":
+      return "null";
+    default:
+      return null;
+  }
+}
+
 function writeFloat(f: number): string {
   if (Number.isNaN(f)) return "NaN";
   if (f === Infinity) return "Infinity";
