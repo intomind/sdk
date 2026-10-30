@@ -23,7 +23,12 @@
     "sourceMap": true,
     "noEmit": true,
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "paths": {
+      "@intomind/sdk": ["./src/index.ts"],
+      "@intomind/sdk/capture": ["./src/capture/index.ts"],
+      "@intomind/sdk/capture/node": ["./src/capture/node.ts"]
+    }
   },
   "include": [
     "src/**/*.ts",

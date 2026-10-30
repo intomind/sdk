@@ -9,18 +9,18 @@ Build on an IntoMind device, in the language you already use.
 | `crates/intomind-capture` | what a recording is on disk, read and exported as the Python library does it |
 | `crates/intomind-model` | the device's encoder, the arithmetic exactly as the device does it |
 | `crates/intomind-pipeline` | the device's processing chain, so a host can check one before sending it and reproduce what the device did |
-| `js/` | the protocol, the session and the timebase in TypeScript, for browsers and Node |
+| `js/` | the protocol, the session, the timebase, recording and the six exports in TypeScript, for browsers and Node |
 
 Python users want `intomind` on PyPI, which is the instrument library and
 carries the recorder, the provenance, the exports, and the analyses as
 well. This repository is the protocol and the model for everyone else, and
-in Rust the same recordings, read and exported.
+in Rust and in JavaScript the same recordings, recorded, read and exported.
 
 ## One contract, several implementations, held together by tests
 
 `contract/conformance.json` is emitted by the device firmware from the
-codec the device itself runs. It carries 66 messages with the fields those
-bytes mean, 56 malformed ones with the reason each is not a message, the
+codec the device itself runs. It carries 72 messages with the fields those
+bytes mean, 59 malformed ones with the reason each is not a message, the
 scaling from counts to microvolts, and the continuity rule.
 
 Every implementation here decodes those vectors to the stated fields and

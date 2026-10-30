@@ -398,7 +398,7 @@ impl Session {
         label: &str,
         setup: &Setup,
         run: &Run,
-    ) -> Result<serde_json::Value, stored::Error> {
+    ) -> Result<intomind_capture::json::Value, stored::Error> {
         let info = self.info.ok_or_else(|| stored::Error::new("read device info first: a recording states what the device said"))?;
         let empty = Recorder::default();
         let r = self.recorder.as_ref().unwrap_or(&empty);

@@ -97,20 +97,17 @@ fn scratch(name: &str) -> PathBuf {
 }
 
 /// A summary key for key, exactly: integers as integers, floats bit for
-/// bit, lists in order.
-fn same(want: &Value, got: &serde_json::Value) -> bool {
-    use serde_json::Value as J;
+/// bit, lists in order, an object's keys in any order.
+fn same(want: &Value, got: &Value) -> bool {
     match (want, got) {
-        (Value::Null, J::Null) => true,
-        (Value::Bool(a), J::Bool(b)) => a == b,
-        (Value::Int(a), J::Number(b)) => {
-            b.is_i64() && &b.as_i64().unwrap().to_string() == a || b.is_u64() && &b.as_u64().unwrap().to_string() == a
-        }
-        (Value::Float(a), J::Number(b)) => b.as_f64() == Some(*a) && !(b.is_i64() || b.is_u64()),
-        (Value::Str(a), J::String(b)) => a == b,
-        (Value::Array(a), J::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(x, y)| same(x, y)),
-        (Value::Object(a), J::Object(b)) => {
-            a.len() == b.len() && a.iter().all(|(k, v)| b.get(k).is_some_and(|y| same(v, y)))
+        (Value::Null, Value::Null) => true,
+        (Value::Bool(a), Value::Bool(b)) => a == b,
+        (Value::Int(a), Value::Int(b)) => a == b,
+        (Value::Float(a), Value::Float(b)) => a.to_bits() == b.to_bits(),
+        (Value::Str(a), Value::Str(b)) => a == b,
+        (Value::Array(a), Value::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(x, y)| same(x, y)),
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len() && a.iter().all(|(k, v)| got.get(k).is_some_and(|y| same(v, y)))
         }
         _ => false,
     }
@@ -151,7 +148,7 @@ fn every_export_is_the_python_librarys() {
             }
             let summary = match got {
                 Ok(mut s) => {
-                    s.as_object_mut().unwrap().remove("path");
+                    s.pop("path");
                     s
                 }
                 Err(e) => {
@@ -459,8 +456,8 @@ fn the_adapter_and_the_filter_are_said_as_the_library_says_them_in_every_shape()
     for c in cases {
         let name = c.field("name").py_str();
         let setup = record::Setup {
-            adapter: c.get("adapter").map(Value::to_serde),
-            filter: c.get("filter").map(Value::to_serde),
+            adapter: c.get("adapter").cloned(),
+            filter: c.get("filter").cloned(),
             filters_in: c.get("filters_in").and_then(|v| v.as_str()).map(String::from),
             ..Default::default()
         };

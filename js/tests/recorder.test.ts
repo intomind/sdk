@@ -359,7 +359,7 @@ test("the adapter and the filter are said as the library says them, in every sha
     const filtersIn = J.get(c, "filters_in");
     let got: string | null = null;
     try {
-      got = J.dumps(signalChain({ adapter: J.get(c, "adapter"), filter: J.get(c, "filter"), filtersIn: filtersIn ? text(filtersIn) : undefined }));
+      got = J.dumps(signalChain({ adapter: J.get(c, "adapter"), filter: J.get(c, "filter"), filtersIn: filtersIn ? text(filtersIn) : null }));
     } catch {
       got = null;
     }

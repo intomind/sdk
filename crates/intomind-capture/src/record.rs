@@ -126,7 +126,7 @@ pub struct DeviceFacts {
     /// Its channels.
     pub channels: Option<u64>,
     /// The clock record at saving: how far `host_time` can be trusted.
-    pub clock: Option<serde_json::Value>,
+    pub clock: Option<Value>,
     /// Breaks the device announced while this run was armed.
     pub gaps_in_run: u64,
 }
@@ -140,42 +140,49 @@ pub struct Setup {
     /// `mains_hz`, `psu_volts`, `firmware_sha256`, `firmware_artifact`,
     /// `electrode_montage`, `subject_id`, `notes`, and a structured
     /// `montage`.
-    pub site: Option<serde_json::Value>,
+    pub site: Option<Value>,
     /// The source tree of the application doing the recording, whose
     /// commit and whether it has changes are recorded.
     pub repo: Option<PathBuf>,
     /// The adapter that carried the samples: `name`, `version`,
     /// `first_party` and `transport`. Unknown when not declared.
-    pub adapter: Option<serde_json::Value>,
+    pub adapter: Option<Value>,
     /// The filter the device was set to, when one was: `on`, `hp_hz`,
     /// `lp_hz` and `bands`.
-    pub filter: Option<serde_json::Value>,
+    pub filter: Option<Value>,
     /// Where a filter ran, `device` unless the adapter filtered on the host.
     pub filters_in: Option<String>,
 }
 
 /// What the run adds to its recording.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Run {
-    /// The run's own fields, as a JSON object. `experiment` names what
+    /// The run's own fields, a JSON object. `experiment` names what
     /// was run. `started_utc`, `electrode_layout`, `placement`,
     /// `regs_before` and `config_before` are read as the Python library
     /// reads them, and every other field joins the manifest. A null never
-    /// replaces a value the device measured.
-    pub extra: serde_json::Map<String, serde_json::Value>,
+    /// replaces a value the device measured. `Value::object()` to start
+    /// with, then `set`.
+    pub extra: Value,
     /// The markers, written as `name.events.json` when there are any to
     /// keep, an empty list included.
-    pub events: Option<serde_json::Value>,
+    pub events: Option<Value>,
     /// The registers after the run, from an adapter that reads them.
-    pub regs_after: Option<serde_json::Value>,
+    pub regs_after: Option<Value>,
     /// What the device said it was set to after the run.
-    pub config_after: Option<serde_json::Value>,
+    pub config_after: Option<Value>,
     /// Why the run ended early, `link_lost` for a dropped link. An
     /// aborted recording gets no checksums.
     pub aborted: Option<String>,
     /// When the recording finished, in seconds since 1970. The host clock
     /// now, when not given.
     pub finished_unix: Option<f64>,
+}
+
+impl Default for Run {
+    fn default() -> Run {
+        Run { extra: Value::object(), events: None, regs_after: None, config_after: None, aborted: None, finished_unix: None }
+    }
 }
 
 /// What a recording made by this crate says made it.
@@ -195,8 +202,8 @@ pub fn save(
     device: &DeviceFacts,
     setup: &Setup,
     run: &Run,
-) -> Result<serde_json::Value, Error> {
-    save_with(collection, label, take, device, setup, run, host_versions()).map(|m| m.to_serde())
+) -> Result<Value, Error> {
+    save_with(collection, label, take, device, setup, run, host_versions())
 }
 
 /// [`save`], naming the software that made the recording.
@@ -217,7 +224,11 @@ pub(crate) fn save_with(
 
     write(&path(".npz")?, &npz(take, finished)?)?;
 
-    let mut extra = Value::from_serde(&serde_json::Value::Object(run.extra.clone()));
+    let mut extra = match &run.extra {
+        Value::Object(_) => run.extra.clone(),
+        Value::Null => Value::object(),
+        other => return Err(error(format!("the run's extra fields are a JSON object, not {}", other.py_repr()))),
+    };
     let protocol = extra.pop("experiment");
     let regs_before = extra.pop("regs_before");
     let params = extra.clone();
@@ -227,13 +238,13 @@ pub(crate) fn save_with(
         setup,
         &take.packets,
         &regs_before,
-        &run.regs_after.as_ref().map(Value::from_serde).unwrap_or(Value::Null),
+        run.regs_after.as_ref().unwrap_or(&Value::Null),
         &protocol,
         params,
         extra,
         &take.index,
         &take.device_ticks,
-        &run.config_after.as_ref().map(Value::from_serde).unwrap_or(Value::Null),
+        run.config_after.as_ref().unwrap_or(&Value::Null),
         finished,
         versions,
     )
@@ -253,7 +264,7 @@ pub(crate) fn save_with(
     }
     write(&path(".meta.json")?, pyjson::dumps_indented(&meta, 2).as_bytes())?;
     if let Some(events) = &run.events {
-        write(&path(".events.json")?, pyjson::dumps_indented(&Value::from_serde(events), 2).as_bytes())?;
+        write(&path(".events.json")?, pyjson::dumps_indented(events, 2).as_bytes())?;
     }
     // Checksums mark a recording finalized. An aborted run never gets them.
     if run.aborted.as_ref().is_none_or(|w| w.is_empty()) {
@@ -372,7 +383,7 @@ fn append_session(collection: &Collection, meta: &Value) -> Result<(), Error> {
 }
 
 /// The library's `site()`: every fact it records, unknown until declared.
-fn site(declared: &Option<serde_json::Value>) -> Value {
+fn site(declared: &Option<Value>) -> Value {
     let mut s = Value::obj([
         ("board_revision", Value::str("unknown")),
         ("mains_hz", Value::Null),
@@ -383,9 +394,9 @@ fn site(declared: &Option<serde_json::Value>) -> Value {
         ("subject_id", Value::Null),
         ("notes", Value::str("")),
     ]);
-    if let Some(serde_json::Value::Object(o)) = declared {
+    if let Some(Value::Object(o)) = declared {
         for (k, v) in o {
-            s.set(k, Value::from_serde(v));
+            s.set(k, v.clone());
         }
     }
     s
@@ -501,7 +512,7 @@ fn fs_from_packets(packets: &[Packet], tick_hz: u64) -> f64 {
 
 /// Which adapter produced the recording, and where it was filtered.
 pub(crate) fn signal_chain(setup: &Setup) -> Result<Value, Fail> {
-    let adapter = match setup.adapter.as_ref().map(Value::from_serde) {
+    let adapter = match setup.adapter.clone() {
         Some(a) if a.truthy() => py_dict(&a)?,
         _ => Value::obj([
             ("name", Value::str("unknown")),
@@ -512,7 +523,7 @@ pub(crate) fn signal_chain(setup: &Setup) -> Result<Value, Fail> {
     };
     // `getattr(dev, "filter", None) or {}`, read with `.get`, which only a
     // dict has.
-    let f = setup.filter.as_ref().map(Value::from_serde).unwrap_or(Value::Null);
+    let f = setup.filter.clone().unwrap_or(Value::Null);
     if f.truthy() && !matches!(f, Value::Object(_)) {
         return Err(Fail::Other(format!("AttributeError: {} has no attribute 'get'", f.py_repr())));
     }
@@ -731,7 +742,7 @@ fn build(
         ("synthetic", synthetic),
         ("quality", gap_ledger(index)),
         ("gaps_announced", Value::int(device.gaps_in_run as i64)),
-        ("clock", device.clock.as_ref().map(Value::from_serde).unwrap_or(Value::Null)),
+        ("clock", device.clock.clone().unwrap_or(Value::Null)),
         ("git_commit", commit),
         ("git_dirty", dirty),
         ("host_versions", versions),
@@ -825,18 +836,15 @@ fn chain_value(state: &PipelineState, rate_sps: Option<u32>) -> Value {
 /// force at the rate the device was set to, read from a device that claims
 /// a processing chain, or the natural signal from one that does not. None
 /// where a device that claims one did not answer.
-pub fn processing(capable: bool, state: Option<&PipelineState>, rate_sps: Option<u32>) -> Option<serde_json::Value> {
+pub fn processing(capable: bool, state: Option<&PipelineState>, rate_sps: Option<u32>) -> Option<Value> {
     if !capable {
-        return Some(
-            Value::obj([
-                ("origin", Value::str("none")),
-                ("stages", Value::Array(Vec::new())),
-                ("description", Value::str("natural signal")),
-            ])
-            .to_serde(),
-        );
+        return Some(Value::obj([
+            ("origin", Value::str("none")),
+            ("stages", Value::Array(Vec::new())),
+            ("description", Value::str("natural signal")),
+        ]));
     }
-    state.map(|s| chain_value(s, rate_sps).to_serde())
+    state.map(|s| chain_value(s, rate_sps))
 }
 
 /// What the device said it was set to, read after a run, as the Python
@@ -852,7 +860,7 @@ pub fn config_after(
     indicator: Option<u8>,
     model_interval: Option<(u16, u16)>,
     name: Option<(&str, &str)>,
-) -> serde_json::Value {
+) -> Value {
     let rate = frame::sps_of_rate_code(status.rate_code).map(u32::from);
     let mut c = Value::obj([
         ("gain", frame::GAIN_BY_CODE.get(status.gain_code as usize).map_or(Value::Null, |g| Value::int(*g as i64))),
@@ -899,5 +907,5 @@ pub fn config_after(
         c.set("adjective", Value::str(a));
         c.set("composed_name", Value::str(parts.join(" ")));
     }
-    c.to_serde()
+    c
 }

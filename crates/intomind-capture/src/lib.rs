@@ -42,6 +42,14 @@ mod npy;
 mod placement;
 mod pyfmt;
 mod pyjson;
+/// JSON as the Python library reads and writes it: the value this crate
+/// hands back for a manifest, an export's summary and a clock record, and
+/// takes for what an application declares. Integers and floats are kept
+/// apart, every float exactly, keys in the order they arrived, and `NaN`
+/// and `Infinity` as Python writes them.
+pub mod json {
+    pub use crate::pyjson::{dumps, dumps_indented, dumps_sorted, loads, ParseError, Value};
+}
 pub mod record;
 pub mod recording;
 mod unprintable;

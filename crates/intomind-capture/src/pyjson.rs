@@ -6,19 +6,31 @@
 //! apart from a float, every float exactly, the order keys arrived in, and
 //! `NaN` and `Infinity`, which Python reads and writes although JSON does
 //! not define them.
+//!
+//! This is the value the crate hands an application and takes from one,
+//! published as [`crate::json`].
 
 use crate::pyfmt;
+use std::fmt;
+use std::ops::Index;
 
-/// One JSON value as Python holds it after `json.loads`.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum Value {
+/// One JSON value as Python holds it after `json.loads`: what a manifest,
+/// a summary, a clock record or a declaration is made of.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum Value {
+    /// `None`.
+    #[default]
     Null,
+    /// `True` or `False`.
     Bool(bool),
     /// An integer, as its canonical decimal digits. Python's integers have
     /// no limit, and digits keep every one exactly.
     Int(String),
+    /// A float, exactly.
     Float(f64),
+    /// A string.
     Str(String),
+    /// A list, in order.
     Array(Vec<Value>),
     /// Keys in the order they first arrived. A key repeated keeps its first
     /// place and takes its last value, as a Python dict does.
@@ -27,7 +39,7 @@ pub(crate) enum Value {
 
 impl Value {
     /// The value under `key`, when this is an object that has it.
-    pub(crate) fn get(&self, key: &str) -> Option<&Value> {
+    pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
             Value::Object(items) => items.iter().find(|(k, _)| k == key).map(|(_, v)| v),
             _ => None,
@@ -35,17 +47,18 @@ impl Value {
     }
 
     /// `meta.get(key)` in Python: the value, or Null where it is absent.
-    pub(crate) fn field(&self, key: &str) -> &Value {
+    pub fn field(&self, key: &str) -> &Value {
         const NULL: Value = Value::Null;
         self.get(key).unwrap_or(&NULL)
     }
 
-    pub(crate) fn is_null(&self) -> bool {
+    /// Whether this is `None`.
+    pub fn is_null(&self) -> bool {
         matches!(self, Value::Null)
     }
 
     /// Python's truth value.
-    pub(crate) fn truthy(&self) -> bool {
+    pub fn truthy(&self) -> bool {
         match self {
             Value::Null => false,
             Value::Bool(b) => *b,
@@ -59,7 +72,7 @@ impl Value {
 
     /// `float(value)` in Python, for a number, a boolean or a numeric
     /// string. None where Python would raise.
-    pub(crate) fn as_f64(&self) -> Option<f64> {
+    pub fn as_f64(&self) -> Option<f64> {
         match self {
             Value::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
             Value::Int(d) => d.parse::<f64>().ok(),
@@ -72,7 +85,7 @@ impl Value {
     /// `int(value)` in Python for an integer, a whole float, a boolean, or
     /// a string of digits. None where Python would raise or the result does
     /// not fit 64 bits.
-    pub(crate) fn as_i64(&self) -> Option<i64> {
+    pub fn as_i64(&self) -> Option<i64> {
         match self {
             Value::Bool(b) => Some(*b as i64),
             Value::Int(d) => d.parse().ok(),
@@ -89,7 +102,8 @@ impl Value {
         }
     }
 
-    pub(crate) fn as_str(&self) -> Option<&str> {
+    /// The text of a string.
+    pub fn as_str(&self) -> Option<&str> {
         match self {
             Value::Str(s) => Some(s),
             _ => None,
@@ -97,7 +111,7 @@ impl Value {
     }
 
     /// `str(value)` in Python.
-    pub(crate) fn py_str(&self) -> String {
+    pub fn py_str(&self) -> String {
         match self {
             Value::Str(s) => s.clone(),
             other => other.py_repr(),
@@ -105,23 +119,67 @@ impl Value {
     }
 
     /// An integer.
-    pub(crate) fn int(i: i64) -> Value {
+    pub fn int(i: i64) -> Value {
         Value::Int(i.to_string())
     }
 
     /// A string.
-    pub(crate) fn str(s: impl Into<String>) -> Value {
+    pub fn str(s: impl Into<String>) -> Value {
         Value::Str(s.into())
     }
 
     /// An object from its items, in order.
-    pub(crate) fn obj<const N: usize>(items: [(&str, Value); N]) -> Value {
+    pub fn obj<const N: usize>(items: [(&str, Value); N]) -> Value {
         Value::Object(items.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+    }
+
+    /// An empty object, for `set` to fill.
+    pub fn object() -> Value {
+        Value::Object(Vec::new())
+    }
+
+    /// A float.
+    pub fn float(f: f64) -> Value {
+        Value::Float(f)
+    }
+
+    /// A boolean's value.
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Value::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    /// `int(value)` as an unsigned 64-bit integer, where it fits.
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Value::Bool(b) => Some(*b as u64),
+            Value::Int(d) => d.parse().ok(),
+            Value::Float(f) if f.is_finite() && *f >= 0.0 && f.fract() == 0.0 && *f < 1.8e19 => Some(*f as u64),
+            _ => None,
+        }
+    }
+
+    /// The items of an array.
+    pub fn as_array(&self) -> Option<&Vec<Value>> {
+        match self {
+            Value::Array(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The items of an object, in order.
+    pub fn as_object(&self) -> Option<&Vec<(String, Value)>> {
+        match self {
+            Value::Object(o) => Some(o),
+            _ => None,
+        }
     }
 
     /// `d[key] = value` on a Python dict: a key already there keeps its
     /// place and takes the value, a new one goes last.
-    pub(crate) fn set(&mut self, key: &str, value: Value) {
+    pub fn set(&mut self, key: &str, value: Value) {
         if let Value::Object(items) = self {
             match items.iter_mut().find(|(k, _)| k == key) {
                 Some(slot) => slot.1 = value,
@@ -131,7 +189,7 @@ impl Value {
     }
 
     /// `d.pop(key, None)` on a Python dict.
-    pub(crate) fn pop(&mut self, key: &str) -> Value {
+    pub fn pop(&mut self, key: &str) -> Value {
         match self {
             Value::Object(items) => match items.iter().position(|(k, _)| k == key) {
                 Some(i) => items.remove(i).1,
@@ -143,7 +201,7 @@ impl Value {
 
     /// Python's `==` between two values JSON can hold: numbers by value,
     /// whatever their type, and `True` as 1.
-    pub(crate) fn py_eq(&self, other: &Value) -> bool {
+    pub fn py_eq(&self, other: &Value) -> bool {
         use Value::*;
         match (self, other) {
             (Null, Null) => true,
@@ -164,7 +222,7 @@ impl Value {
     }
 
     /// A boolean, an integer or a float.
-    pub(crate) fn is_number(&self) -> bool {
+    pub fn is_number(&self) -> bool {
         matches!(self, Value::Bool(_) | Value::Int(_) | Value::Float(_))
     }
 
@@ -184,7 +242,7 @@ impl Value {
 
     /// The text `json.dumps` writes for this value as a dict's key, and None
     /// for a list or an object, which no dict holds as a key.
-    pub(crate) fn json_key(&self) -> Option<String> {
+    pub fn json_key(&self) -> Option<String> {
         match self {
             Value::Str(s) => Some(s.clone()),
             Value::Int(d) => Some(d.clone()),
@@ -199,47 +257,8 @@ impl Value {
         }
     }
 
-    /// The value from `serde_json`'s, with its integers and floats kept
-    /// apart and its keys in the order it holds them.
-    pub(crate) fn from_serde(v: &serde_json::Value) -> Value {
-        match v {
-            serde_json::Value::Null => Value::Null,
-            serde_json::Value::Bool(b) => Value::Bool(*b),
-            serde_json::Value::Number(n) => match (n.as_i64(), n.as_u64()) {
-                (Some(i), _) => Value::Int(i.to_string()),
-                (_, Some(u)) => Value::Int(u.to_string()),
-                _ => Value::Float(n.as_f64().unwrap_or(f64::NAN)),
-            },
-            serde_json::Value::String(s) => Value::Str(s.clone()),
-            serde_json::Value::Array(a) => Value::Array(a.iter().map(Value::from_serde).collect()),
-            serde_json::Value::Object(o) => {
-                Value::Object(o.iter().map(|(k, v)| (k.clone(), Value::from_serde(v))).collect())
-            }
-        }
-    }
-
-    /// The value as `serde_json`'s, for an application. A number too large
-    /// for 64 bits becomes a float, and a float that is not finite becomes
-    /// null, as `serde_json` holds no other.
-    pub(crate) fn to_serde(&self) -> serde_json::Value {
-        match self {
-            Value::Null => serde_json::Value::Null,
-            Value::Bool(b) => serde_json::Value::Bool(*b),
-            Value::Int(d) => match (d.parse::<i64>(), d.parse::<u64>()) {
-                (Ok(i), _) => serde_json::Value::from(i),
-                (_, Ok(u)) => serde_json::Value::from(u),
-                _ => serde_json::Number::from_f64(d.parse::<f64>().unwrap_or(f64::NAN))
-                    .map_or(serde_json::Value::Null, serde_json::Value::Number),
-            },
-            Value::Float(f) => serde_json::Number::from_f64(*f).map_or(serde_json::Value::Null, serde_json::Value::Number),
-            Value::Str(s) => serde_json::Value::String(s.clone()),
-            Value::Array(a) => serde_json::Value::Array(a.iter().map(Value::to_serde).collect()),
-            Value::Object(o) => serde_json::Value::Object(o.iter().map(|(k, v)| (k.clone(), v.to_serde())).collect()),
-        }
-    }
-
     /// `repr(value)` in Python, for the values JSON can hold.
-    pub(crate) fn py_repr(&self) -> String {
+    pub fn py_repr(&self) -> String {
         match self {
             Value::Null => "None".into(),
             Value::Bool(true) => "True".into(),
@@ -253,6 +272,101 @@ impl Value {
                 o.iter().map(|(k, v)| format!("{}: {}", repr_str(k), v.py_repr())).collect::<Vec<_>>().join(", ")
             ),
         }
+    }
+}
+
+static NULL: Value = Value::Null;
+
+/// `value["key"]`: the value under the key of an object, or null where
+/// there is none, as `get` with a null in place of `None`.
+impl Index<&str> for Value {
+    type Output = Value;
+    fn index(&self, key: &str) -> &Value {
+        self.get(key).unwrap_or(&NULL)
+    }
+}
+
+/// `value[i]`: an array's item, or null past its end or for anything that
+/// is not an array.
+impl Index<usize> for Value {
+    type Output = Value;
+    fn index(&self, i: usize) -> &Value {
+        match self {
+            Value::Array(a) => a.get(i).unwrap_or(&NULL),
+            _ => &NULL,
+        }
+    }
+}
+
+/// The text `json.dumps` writes.
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&dumps(self))
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Value {
+        Value::Bool(b)
+    }
+}
+
+impl From<&str> for Value {
+    fn from(s: &str) -> Value {
+        Value::Str(s.to_string())
+    }
+}
+
+impl From<String> for Value {
+    fn from(s: String) -> Value {
+        Value::Str(s)
+    }
+}
+
+impl From<&String> for Value {
+    fn from(s: &String) -> Value {
+        Value::Str(s.clone())
+    }
+}
+
+impl From<f64> for Value {
+    fn from(f: f64) -> Value {
+        Value::Float(f)
+    }
+}
+
+impl From<f32> for Value {
+    fn from(f: f32) -> Value {
+        Value::Float(f as f64)
+    }
+}
+
+macro_rules! from_int {
+    ($($t:ty),*) => { $(
+        impl From<$t> for Value {
+            fn from(i: $t) -> Value {
+                Value::Int(i.to_string())
+            }
+        }
+    )* };
+}
+from_int!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize, isize);
+
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(items: Vec<T>) -> Value {
+        Value::Array(items.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<T: Clone + Into<Value>> From<&[T]> for Value {
+    fn from(items: &[T]) -> Value {
+        Value::Array(items.iter().cloned().map(Into::into).collect())
+    }
+}
+
+impl<T: Into<Value>> From<Option<T>> for Value {
+    fn from(item: Option<T>) -> Value {
+        item.map_or(Value::Null, Into::into)
     }
 }
 
@@ -313,12 +427,20 @@ fn unprintable(c: char) -> bool {
         .is_ok()
 }
 
-/// Why a document is not JSON as Python reads it.
+/// Why a document is not JSON as Python reads it, in `json.loads`'s words.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ParseError(pub(crate) String);
+pub struct ParseError(pub String);
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for ParseError {}
 
 /// `json.loads(text)`.
-pub(crate) fn loads(text: &str) -> Result<Value, ParseError> {
+pub fn loads(text: &str) -> Result<Value, ParseError> {
     let mut p = Parser { s: text.as_bytes(), i: 0, text };
     p.ws();
     let v = p.value()?;
@@ -592,12 +714,12 @@ fn write_float(out: &mut String, f: f64) {
 }
 
 /// `json.dumps(value, sort_keys=True)`: one line, `", "` and `": "`.
-pub(crate) fn dumps_sorted(v: &Value) -> String {
+pub fn dumps_sorted(v: &Value) -> String {
     one_line(v, true)
 }
 
 /// `json.dumps(value)`: one line, keys in their order.
-pub(crate) fn dumps(v: &Value) -> String {
+pub fn dumps(v: &Value) -> String {
     one_line(v, false)
 }
 
@@ -644,7 +766,7 @@ fn one_line(v: &Value, sort: bool) -> String {
 
 /// `json.dumps(value, indent=indent)`: keys in their order, `","` at line
 /// ends, and `": "` after a key.
-pub(crate) fn dumps_indented(v: &Value, indent: usize) -> String {
+pub fn dumps_indented(v: &Value, indent: usize) -> String {
     fn go(out: &mut String, v: &Value, indent: usize, level: usize) {
         let pad = |out: &mut String, n: usize| out.push_str(&" ".repeat(indent * n));
         match v {

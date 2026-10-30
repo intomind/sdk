@@ -251,8 +251,8 @@ impl Clock {
     /// The clock record a recording carries: how far `host_time` can be
     /// trusted, the anchors that align events afterwards, any step of the
     /// wall clock, and what the exchanges said while the map was held.
-    pub fn quality(&self) -> serde_json::Value {
-        self.record().to_serde()
+    pub fn quality(&self) -> Value {
+        self.record()
     }
 
     pub(crate) fn record(&self) -> Value {

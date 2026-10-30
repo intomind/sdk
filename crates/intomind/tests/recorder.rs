@@ -18,11 +18,11 @@ use intomind::protocol::pipeline::PipelineState;
 use intomind::protocol::status::StatusMsg;
 use intomind::protocol::uuid_fill;
 use intomind::{HostClocks, Session};
-use serde_json::{json, Value};
+use intomind::capture::json::{loads, Value};
 
 fn fixture() -> Value {
     let text = include_str!("../../../contract/recorder/sessions.json");
-    serde_json::from_str(text).expect("the fixture is JSON")
+    loads(text).expect("the fixture is JSON")
 }
 
 fn hex(s: &Value) -> Vec<u8> {
@@ -83,9 +83,12 @@ fn every_session_records_what_the_python_library_records() {
         // What the library's own Bluetooth adapter names itself, declared
         // here as an application declares its own.
         let mut setup = Setup {
-            adapter: Some(
-                json!({"name": "intomind.ble", "version": "1", "first_party": true, "transport": "bluetooth-le"}),
-            ),
+            adapter: Some(Value::obj([
+                ("name", Value::str("intomind.ble")),
+                ("version", Value::str("1")),
+                ("first_party", Value::Bool(true)),
+                ("transport", Value::str("bluetooth-le")),
+            ])),
             ..Setup::default()
         };
         let mut syncs = 0;
@@ -172,20 +175,21 @@ fn every_session_records_what_the_python_library_records() {
                 }
                 "save" => {
                     let label = step["label"].as_str().unwrap();
-                    let mut extra = step["extra"].as_object().unwrap().clone();
+                    let mut extra = step["extra"].clone();
+                    assert!(extra.as_object().is_some(), "{name}: extra is an object");
                     if step["with_processing"].as_bool() == Some(true) {
                         let description = processing.as_ref().map(|p| p["description"].clone());
                         if let Some(p) = &processing {
-                            extra.insert("processing".into(), p.clone());
+                            extra.set("processing", p.clone());
                         }
-                        extra.insert("signal".into(), description.unwrap_or_else(|| json!("unknown")));
+                        extra.set("signal", description.unwrap_or_else(|| Value::str("unknown")));
                     }
                     let run = Run {
                         extra,
                         events: step.get("events").filter(|e| !e.is_null()).cloned(),
                         regs_after: step.get("regs_after").filter(|e| !e.is_null()).cloned(),
                         config_after: match step.get("config_after") {
-                            Some(Value::String(s)) if s == "read" => config_after.clone(),
+                            Some(Value::Str(s)) if s == "read" => config_after.clone(),
                             Some(v) if !v.is_null() => Some(v.clone()),
                             _ => None,
                         },
@@ -255,7 +259,10 @@ fn every_session_records_what_the_python_library_records() {
                         problem(format!("files {files:?} differ from {theirs:?}"));
                     }
                     let arrays = npz_digest(&std::fs::read(dir.join(format!("{label}.npz"))).unwrap()).unwrap();
-                    let mine: Vec<Value> = arrays.iter().map(|(n, d, s, h, f)| json!([n, d, s, h, f])).collect();
+                    let mine: Vec<Value> = arrays
+                        .iter()
+                        .map(|(n, d, s, h, f)| Value::from(vec![Value::from(n), Value::from(d), Value::from(s.clone()), Value::from(h), Value::from(*f)]))
+                        .collect();
                     if Value::Array(mine.clone()) != want["arrays"] {
                         problem(format!("arrays {mine:?} differ from {}", want["arrays"]));
                     }

@@ -15,13 +15,12 @@
 
 use std::path::{Path, PathBuf};
 
-use serde_json::{json, Map, Value as J};
 
 use crate::edf::{self, Width};
 use crate::hdf5;
 use crate::npy::{self, Array, Data};
 use crate::pyfmt;
-use crate::pyjson::{self, Value};
+use crate::pyjson::{self, Value, Value as J};
 use crate::recording::{error, Collection, Error, Recording};
 use crate::zip;
 
@@ -102,27 +101,32 @@ fn write_file(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     std::fs::write(path, bytes).map_err(|e| error(format!("{}: {e}", path.display())))
 }
 
-/// A float as a summary carries it. A summary holds no NaN in practice, and
-/// one that did is written as null rather than as invalid JSON.
+/// A float as a summary carries it, as Python's dict holds it.
 fn f(x: f64) -> J {
-    serde_json::Number::from_f64(x).map(J::Number).unwrap_or(J::Null)
+    J::Float(x)
+}
+
+/// A summary's value from a Rust one.
+fn j<T: Into<J>>(x: T) -> J {
+    x.into()
 }
 
 /// The six keys every format answers with, and the problems verification
 /// reported, then the format's own.
 fn summary(cap: &Recording, path: &Path, fmt: &str, samples: usize, problems: &[String], extra: Vec<(&str, J)>) -> J {
-    let mut m = Map::new();
-    m.insert("label".into(), json!(cap.label()));
-    m.insert("path".into(), json!(path.display().to_string()));
-    m.insert("format".into(), json!(fmt));
-    m.insert("channels".into(), json!(cap.channels()));
-    m.insert("samples".into(), json!(samples));
-    m.insert("sample_rate_hz".into(), f(cap.fs()));
-    m.insert("provenance_problems".into(), json!(problems));
+    let mut m = J::obj([
+        ("label", j(cap.label())),
+        ("path", j(path.display().to_string())),
+        ("format", j(fmt)),
+        ("channels", j(cap.channels())),
+        ("samples", j(samples)),
+        ("sample_rate_hz", f(cap.fs())),
+        ("provenance_problems", j(problems)),
+    ]);
     for (k, v) in extra {
-        m.insert(k.into(), v);
+        m.set(k, v);
     }
-    J::Object(m)
+    m
 }
 
 fn column(cap: &Recording, c: usize) -> String {
@@ -249,13 +253,13 @@ fn export_npz(cap: &Recording, out: &Path, problems: &[String]) -> Result<J, Err
         n,
         problems,
         vec![
-            ("lossy", json!(!recovered)),
-            ("counts_recovered", json!(recovered)),
+            ("lossy", j(!recovered)),
+            ("counts_recovered", j(recovered)),
             ("max_error_uv", f(err)),
             ("lsb_uv", f(lsb)),
-            ("omitted", json!(omitted)),
-            ("arrays", json!(names)),
-            ("contact", json!(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
+            ("omitted", j(omitted)),
+            ("arrays", j(names)),
+            ("contact", j(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
         ],
     ))
 }
@@ -322,14 +326,14 @@ fn export_delimited(cap: &Recording, out: &Path, problems: &[String], fmt: &str,
         n,
         problems,
         vec![
-            ("delimiter", json!(delimiter.to_string())),
-            ("decimals", json!(dec)),
+            ("delimiter", j(delimiter.to_string())),
+            ("decimals", j(dec)),
             ("resolution_uv", f(resolution)),
             ("lsb_uv", f(lsb)),
-            ("counts_recovered", json!(recovered)),
-            ("lossy", json!(!recovered)),
-            ("omitted", json!(omitted)),
-            ("contact", json!(checked)),
+            ("counts_recovered", j(recovered)),
+            ("lossy", j(!recovered)),
+            ("omitted", j(omitted)),
+            ("contact", j(checked)),
         ],
     ))
 }
@@ -488,22 +492,22 @@ fn export_edf_family(
         info.samples_written,
         problems,
         vec![
-            ("lossy", json!(if bits == 16 { true } else { !recovered })),
-            ("counts_recovered", json!(recovered)),
+            ("lossy", j(if bits == 16 { true } else { !recovered })),
+            ("counts_recovered", j(recovered)),
             ("max_error_uv", f(info.max_error_uv)),
             ("quantum_uv", f(info.quantum_uv)),
             ("lsb_uv", f(lsb)),
-            ("bits", json!(bits)),
-            ("family", json!(w.family)),
-            ("continuity", json!(info.continuity)),
-            ("samples_dropped", json!(0)),
-            ("samples_filled", json!(info.samples_filled)),
-            ("gaps", json!(info.gaps)),
-            ("tail_filled", json!(info.tail_filled)),
-            ("contact", json!(checked)),
-            ("electrode_off_stretches", json!(off_stretches)),
-            ("samples_before_restart", json!(skip)),
-            ("n_annotations", json!(info.n_annotations)),
+            ("bits", j(bits)),
+            ("family", j(w.family)),
+            ("continuity", j(info.continuity)),
+            ("samples_dropped", j(0)),
+            ("samples_filled", j(info.samples_filled)),
+            ("gaps", j(info.gaps)),
+            ("tail_filled", j(info.tail_filled)),
+            ("contact", j(checked)),
+            ("electrode_off_stretches", j(off_stretches)),
+            ("samples_before_restart", j(skip)),
+            ("n_annotations", j(info.n_annotations)),
         ],
     ))
 }
@@ -615,14 +619,14 @@ fn export_mat(cap: &Recording, out: &Path, problems: &[String]) -> Result<J, Err
         n,
         problems,
         vec![
-            ("lossy", json!(false)),
-            ("counts_recovered", json!(true)),
+            ("lossy", j(false)),
+            ("counts_recovered", j(true)),
             ("max_error_uv", f(0.0)),
             ("lsb_uv", f(lsb)),
-            ("stored_dtype", json!("float64")),
-            ("omitted", json!(omitted)),
-            ("variables", json!(names)),
-            ("contact", json!(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
+            ("stored_dtype", j("float64")),
+            ("omitted", j(omitted)),
+            ("variables", j(names)),
+            ("contact", j(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
         ],
     ))
 }
