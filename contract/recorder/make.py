@@ -48,6 +48,11 @@ import numpy as np
 
 warnings.simplefilter("ignore")
 HERE = pathlib.Path(__file__).resolve().parent
+# Made without a sound: the library's experiments speak their cues and play
+# their tones through the host's speakers, so every cue goes nowhere here,
+# before anything of the library runs.
+from intomind import audio as _audio  # noqa: E402
+_audio.play = lambda tone, text="": None
 
 import intomind  # noqa: E402
 from intomind import client, experiments, montage as M, placement as PL  # noqa: E402
@@ -119,7 +124,10 @@ ONE_12 = info(minor=2, channels=2, caps=P.CAPABILITIES["leadoff"], length=76)
 
 class Link:
     """The radio: answers each control write as the device would, and
-    moves the host's clocks across a time exchange as the script says."""
+    moves the host's clocks across a time exchange as the script says. The
+    device acknowledges a write first and handles what it carried
+    afterwards, so its answer comes on the loop's next turn, once the write
+    has returned."""
 
     def __init__(self, dev):
         self.dev, self.is_connected = dev, True
@@ -136,7 +144,7 @@ class Link:
             answer = bytes([op, 0]) + int(ticks).to_bytes(8, "little")
         else:
             answer = self.answers.get(op) or bytes([op, 0])
-        self.dev._rsp.put_nowait(answer)
+        asyncio.get_running_loop().call_soon(self.dev._rsp.put_nowait, answer)
 
     async def read_gatt_char(self, _uuid):
         return self.status
@@ -550,6 +558,22 @@ def sessions() -> list[dict]:
         dict(op="save", label="breaks-copies-and-usb", extra=dict(experiment="demo-record"), events=None,
              now=[4010.0, 1_767_225_910.0]),
     ], "a lost run, a packet delivered twice, a restarted count, and USB power ending the stream")
+
+    s = Stream(19)
+    ended = [s.next(flags=DISC | ACTIVE)] + s.run(4, flags=ACTIVE) + [s.next(flags=ACTIVE | USB)]
+    s.index, s.t = 0, s.t + 1_000_000
+    again = [s.next(flags=DISC | ACTIVE)] + s.run(5, flags=ACTIVE)
+    add("usb-ended-then-started-again", [
+        dict(op="info", bytes=ONE.hex(), pipeline=answer("pipeline", bytes([0]) + DEFAULT_500)),
+        *syncs(4100.0, 1_767_225_950.0, 4000.0, 2, seed=20),
+        dict(op="arm"), dict(op="start"),
+        dict(op="data", packets=ended),
+        dict(op="start"),
+        dict(op="data", packets=again),
+        dict(op="stop"),
+        dict(op="save", label="usb-ended-then-started-again", extra=dict(experiment="demo-record"), events=None,
+             now=[4104.0, 1_767_225_954.0]),
+    ], "USB power ends the stream, and a stream started again once it is unplugged no longer says so")
 
     s = Stream(5)
     add("link-lost", [

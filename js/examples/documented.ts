@@ -5,7 +5,7 @@
  * against the package it documents (`npm run typecheck`). The release gate
  * holds the documentation's blocks to this file line for line, so what the
  * page shows is what compiled. The declarations between the blocks stand in
- * for what a page has at hand: the link it opened, a head's bytes, a
+ * for what a page already holds: the link it opened, a head's bytes, a
  * recording's files.
  */
 
@@ -71,7 +71,7 @@ for (let i = 0; i < 5; i++) await link.timeSync();   // a few exchanges before t
 link.session.armRecorder();
 await link.request(link.session.resetEpoch());
 await link.request(link.session.startStream());
-// the batches arrive as before
+// the batches arrive as in Connect and stream
 await link.request(link.session.stopStream());
 
 const saved = link.session.saveRecording("my-recording", {}, { extra: { experiment: "my-experiment" } });
@@ -82,12 +82,12 @@ import { Collection, exportRecording } from "@intomind/sdk/capture";
 
 const recordings = new Collection(files);                        // file name -> bytes
 const bdf = exportRecording(recordings, "my-recording", "bdf");  // also "edf", "npz", "csv", "tsv" and "mat"
-// bdf.bytes is the file, and bdf.summary what the Python API reports for it
+// bdf.bytes is the file, and bdf.summary what the Python library reports for it
 
 // Recordings and exports, in Node.
 import { defaultDir, exportToFile, openCollection } from "@intomind/sdk/capture/node";
 
-const summary = exportToFile(defaultDir(), "my-recording", "bdf");  // the folder the Python API uses
+const summary = exportToFile(defaultDir(), "my-recording", "bdf");  // the folder the Python library uses
 const recording = openCollection().load("my-recording");            // refused if its checksums do not match
 
 export {};

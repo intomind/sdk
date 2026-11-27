@@ -97,7 +97,7 @@ fn a_batch_carries_the_samples_the_vector_states() {
     let want = packet["fields"]["samples"].as_array().unwrap();
     assert_eq!(batch.rows(), want.len());
     assert_eq!(batch.channels, 4);
-    assert_eq!(batch.gain, 24);
+    assert_eq!(batch.gain as i64, packet["fields"]["gain"].as_i64().unwrap());
     assert_eq!(batch.sample_rate_hz, 500);
     for (row, expected) in want.iter().enumerate() {
         for (c, value) in expected.as_array().unwrap().iter().enumerate() {
@@ -113,7 +113,7 @@ fn a_batch_carries_the_samples_the_vector_states() {
     // And one count is worth what the device's own numbers say.
     let info = *s.info().unwrap();
     let uv = batch.microvolts(0, 0, &info);
-    assert!((uv - 0.022_351_741_790_771_484).abs() < 1e-12, "{uv}");
+    assert!((uv - 0.536_441_802_978_515_6).abs() < 1e-12, "{uv}");
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn a_break_is_announced_before_the_samples_that_follow_it() {
     assert!(matches!(events[1], Event::Samples(_)));
     assert_eq!(s.samples_lost, 3);
 
-    // The timeline re-based: a break whose extent is not a number.
+    // The timeline re-based: a break whose extent is not known.
     let events = s.on_notification(uuid_fill::EEG_DATA, &repoint(0, true));
     let Event::Gap(gap) = &events[0] else { panic!("{events:?}") };
     assert!(gap.is_rebase());
@@ -153,10 +153,10 @@ fn a_break_is_announced_before_the_samples_that_follow_it() {
 
 #[test]
 fn a_packet_delivered_twice_is_passed_on_once() {
-    // Measured on the bench: the system's Bluetooth service sends each
-    // notification once per program subscribed, and every subscriber hears
-    // all of the copies. A copy is the same packet, first index and device
-    // time; it is dropped and counted, and nothing is announced as a break.
+    // The system's Bluetooth service sends each notification once per
+    // program subscribed, and every subscriber hears all of the copies. A
+    // copy is the same packet, first index and device time; it is dropped
+    // and counted, and nothing is announced as a break.
     let v = vectors();
     let mut s = session_with_info(&v);
     let packet = bytes_of(find(&v, "decode", "eeg_data")[0]["bytes"].as_str().unwrap());

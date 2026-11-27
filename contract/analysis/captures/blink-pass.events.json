@@ -1,0 +1,85 @@
+[
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262832.5,
+    "trial": 0
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262835.0,
+    "mono": 4503700.6,
+    "trial": 1
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262837.5,
+    "mono": 4503703.1,
+    "trial": 2
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262840.0,
+    "mono": 4503705.6,
+    "trial": 3
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262842.5,
+    "mono": 4503708.1,
+    "trial": 4
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262845.0,
+    "mono": 4503710.6,
+    "trial": 5
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262847.5,
+    "mono": 4503713.1,
+    "trial": 6
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262850.0,
+    "mono": 4503715.6,
+    "trial": 7
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262852.5,
+    "mono": 4503718.1,
+    "trial": 8
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262855.0,
+    "mono": 4503720.6,
+    "trial": 9
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262857.5,
+    "mono": 4503723.1,
+    "trial": 10
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262860.0,
+    "mono": 4503725.6,
+    "trial": 11
+  }
+]

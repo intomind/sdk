@@ -5,12 +5,20 @@
 //! last recorded value, under a `BAD_ACQ_SKIP` annotation over exactly the
 //! hole. The file is whole records, and the last one is completed after the
 //! last sample the same way. A stretch where an electrode was off is a
-//! `BAD_LEADOFF` annotation, and the part of a recording where detection
-//! was off is `LEADOFF_NOT_CHECKED`, written only when it ran for the rest.
-//! The record duration carries the measured rate, and each signal's range
-//! is rounded outward so no sample is clipped. docs.intomind.com/files.html
-//! states these rules, and this module follows the Python library's
-//! `edf.py` line by line.
+//! `BAD_LEADOFF` annotation, the part of a recording where detection was
+//! off is `LEADOFF_NOT_CHECKED`, and the part where detection was on and the
+//! device had not yet judged contact, as before an IntoMind device's first
+//! judgment of a stream from firmware 1.4.6, 0.512 s in or later, is
+//! `LEADOFF_NOT_JUDGED`, each written
+//! only when contact was checked for the rest. The record duration carries the measured rate, and each signal's range
+//! is rounded outward so no sample is clipped. The header holds the record
+//! duration in eight characters, and each data record's onset is that
+//! duration, as written, after the onset of the record before it, as EDF+C
+//! requires. Every text the file holds, in its header and in its
+//! annotations, has each control character written as a question mark, as
+//! a character the format cannot hold is written, since EDFlib refuses a
+//! file that holds one. docs.intomind.com/files.html states these rules,
+//! and this module follows the Python library's `edf.py` line by line.
 
 use crate::pyfmt::{self, Toward};
 use crate::recording::{error, Error};
@@ -21,8 +29,20 @@ pub(crate) const SKIP_LABEL: &str = "BAD_ACQ_SKIP";
 /// channel's label.
 pub(crate) const LEADOFF_LABEL: &str = "BAD_LEADOFF";
 /// The annotation over the part of a recording where detection was off,
-/// written only when it ran for the rest.
+/// written only when contact was checked for the rest.
 pub(crate) const NOT_CHECKED_LABEL: &str = "LEADOFF_NOT_CHECKED";
+/// The annotation over the part of a recording where lead-off detection was
+/// on and the device had not yet judged contact, as before an IntoMind
+/// device's first judgment of a stream from firmware 1.4.6, 0.512 s in or
+/// later, whose lead-off bits read 0 until then, so that part does not read
+/// as electrodes attached. Written
+/// only when contact was checked for the rest.
+pub(crate) const NOT_JUDGED_LABEL: &str = "LEADOFF_NOT_JUDGED";
+
+/// A file is refused when its samples and placeholders together span more
+/// places than this, 2^28, or than a thousand places for each recorded
+/// sample, whichever is larger.
+const MOST_PLACES: i128 = 1 << 28;
 
 /// What differs between the two widths of the one container.
 pub(crate) struct Width {
@@ -51,10 +71,25 @@ pub(crate) const BDF: Width = Width {
     family: "BDF+",
 };
 
+/// The months as EDF+ writes them in a date, in English capitals whatever
+/// language the host is set to.
+const MONTH_NAMES: [&str; 12] = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/// How many characters the header's recording field holds.
+pub(crate) const RECORDING_WIDTH: usize = 80;
+
+/// A start date as EDF+ writes it in the recording field, DD-MMM-YYYY.
+pub(crate) fn startdate(start: (i64, u32, u32, u32, u32, u32)) -> String {
+    let (y, m, d, ..) = start;
+    format!("{d:02}-{}-{y:04}", MONTH_NAMES[(m - 1) as usize])
+}
+
 /// ASCII, left-justified, exactly `width` bytes: the first `width`
-/// characters, each outside ASCII written as `?`, padded with spaces.
+/// characters, each outside ASCII, and each control character, written as
+/// `?`, padded with spaces.
 pub(crate) fn field(s: &str, width: usize) -> Vec<u8> {
-    let mut b: Vec<u8> = s.chars().take(width).map(|c| if c.is_ascii() { c as u8 } else { b'?' }).collect();
+    let mut b: Vec<u8> =
+        s.chars().take(width).map(|c| if c.is_ascii() && !c.is_ascii_control() { c as u8 } else { b'?' }).collect();
     b.resize(width, b' ');
     b
 }
@@ -141,17 +176,67 @@ fn digitize(x: f64, pmin: f64, pmax: f64, dmin: i64, dmax: i64) -> i32 {
     d.max(dmin as f64).min(dmax as f64) as i32
 }
 
-/// One time-stamped annotation list.
+/// One time-stamped annotation list, its text in UTF-8 with each control
+/// character written as `?`.
 fn tal(onset: f64, duration: Option<f64>, text: &str) -> Vec<u8> {
-    let mut out = format!("{}{}", if onset >= 0.0 { "+" } else { "-" }, pyfmt::fixed(onset.abs(), 6)).into_bytes();
+    tal_at(&format!("{}{}", if onset >= 0.0 { "+" } else { "-" }, pyfmt::fixed(onset.abs(), 6)), duration, text)
+}
+
+/// One time-stamped annotation list whose onset is already written, its
+/// sign first.
+fn tal_at(onset: &str, duration: Option<f64>, text: &str) -> Vec<u8> {
+    let mut out = onset.as_bytes().to_vec();
     if let Some(d) = duration {
         out.push(0x15);
         out.extend(pyfmt::fixed(d, 6).as_bytes());
     }
     out.push(0x14);
+    let text: String = text.chars().map(|c| if c.is_control() { '?' } else { c }).collect();
     out.extend(text.as_bytes());
     out.extend([0x14, 0x00]);
     out
+}
+
+/// The onset of data record `r`, its sign first, as Python writes
+/// `r * Decimal(stated)` to six places: the record duration as the header's
+/// eight characters hold it, `stated`, counted exactly `r` times, a tie
+/// rounded to the even digit. None where `stated` is not a finite number.
+fn record_onset(stated: &str, r: usize) -> Option<String> {
+    let (neg, body) = match stated.as_bytes().first() {
+        Some(b'-') => (true, &stated[1..]),
+        Some(b'+') => (false, &stated[1..]),
+        _ => (false, stated),
+    };
+    let (mantissa, exp) = match body.find(['e', 'E']) {
+        Some(at) => (&body[..at], body[at + 1..].parse::<i32>().ok()?),
+        None => (body, 0),
+    };
+    let (whole, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let all_digits = |t: &str| t.bytes().all(|b| b.is_ascii_digit());
+    if (whole.is_empty() && frac.is_empty()) || !all_digits(whole) || !all_digits(frac) || whole.len() + frac.len() > 30 {
+        return None;
+    }
+    // The value is `digits` times ten to `exp`.
+    let digits = format!("{whole}{frac}").parse::<u128>().ok()?.checked_mul(r as u128)?;
+    let exp = exp - frac.len() as i32;
+    let millionths = if exp >= -6 {
+        let mut text = digits.to_string();
+        if digits != 0 {
+            text.extend(std::iter::repeat_n('0', (exp + 6) as usize));
+        }
+        text
+    } else {
+        let shift = (-6 - exp) as u32;
+        let (q, rem, div) = match 10u128.checked_pow(shift) {
+            Some(div) => (digits / div, digits % div, Some(div)),
+            None => (0, digits, None),
+        };
+        let up = div.is_some_and(|div| 2 * rem > div || (2 * rem == div && q % 2 == 1));
+        (q + up as u128).to_string()
+    };
+    let text = format!("{millionths:0>7}");
+    let (units, places) = text.split_at(text.len() - 6);
+    Some(format!("{}{units}.{places}", if neg && digits != 0 { "-" } else { "+" }))
 }
 
 /// One event: its onset from the start of the file, in seconds, and its
@@ -165,8 +250,13 @@ pub(crate) struct Event {
 /// reads it, or 2000-01-01 where it cannot.
 pub(crate) fn start_of(started: Option<&str>) -> (i64, u32, u32, u32, u32, u32) {
     const DEFAULT: (i64, u32, u32, u32, u32, u32) = (2000, 1, 1, 0, 0, 0);
-    let Some(s) = started else { return DEFAULT };
-    parse_start(s).unwrap_or(DEFAULT)
+    known_start(started).unwrap_or(DEFAULT)
+}
+
+/// The start of a recording, as Python's `strptime(started, "%Y-%m-%dT%H:%M:%SZ")`
+/// reads it, or `None` where it cannot.
+pub(crate) fn known_start(started: Option<&str>) -> Option<(i64, u32, u32, u32, u32, u32)> {
+    started.and_then(parse_start)
 }
 
 fn parse_start(s: &str) -> Option<(i64, u32, u32, u32, u32, u32)> {
@@ -258,6 +348,9 @@ pub(crate) struct Input<'a> {
     pub(crate) index: &'a [i64],
     pub(crate) events: &'a [Event],
     pub(crate) patient: &'a str,
+    /// The recording field, written as it is given, cut to its 80
+    /// characters, or with nothing in it, "Startdate DD-MMM-YYYY X X X" on
+    /// the start's date.
     pub(crate) recording: &'a str,
     pub(crate) prefilter: &'a str,
     pub(crate) transducer: &'a str,
@@ -291,7 +384,18 @@ pub(crate) fn write(input: &Input, w: &Width) -> Result<(Vec<u8>, Written), Erro
             w.family
         )));
     }
-    // Where each sample belongs, counted in samples from the first.
+    // Where each sample belongs, counted in samples from the first. A hole
+    // is a run of places no sample holds, and each place gets a placeholder,
+    // so every sample after a hole keeps its time in any reader.
+    let placed = idx[n - 1] as i128 - idx[0] as i128 + 1;
+    let most = MOST_PLACES.max(1000 * n as i128);
+    if placed > most {
+        return Err(error(format!(
+            "refusing to write {}: {n} samples, with a placeholder for every lost sample, would take {placed} sample \
+             positions, more than the {most} this writer writes for {n} samples",
+            w.family
+        )));
+    }
     let pos: Vec<usize> = idx.iter().map(|&i| (i - idx[0]) as usize).collect();
     let span = pos[n - 1] + 1;
     let fs = input.fs;
@@ -300,6 +404,11 @@ pub(crate) fn write(input: &Input, w: &Width) -> Result<(Vec<u8>, Written), Erro
     }
     let nsr = (fs.round_ties_even() as i64).max(1) as usize;
     let dur = nsr as f64 / fs;
+    // The duration as the header's eight characters hold it. A reader puts
+    // each record that long after the one before it, and EDF+C requires each
+    // record's onset to be exactly the end of the record before, so the
+    // onsets are counted in it, to the digit.
+    let stated = num(dur);
     let n_rec = span.div_ceil(nsr);
     let used = n_rec * nsr;
     let tail = used - span;
@@ -313,7 +422,7 @@ pub(crate) fn write(input: &Input, w: &Width) -> Result<(Vec<u8>, Written), Erro
     let mut stretch_counts = Vec::new();
     for (text, flags) in input.stretches {
         if flags.len() != n {
-            return Err(error(format!("stretch '{text}' has {} flags for {n} samples", flags.len())));
+            return Err(error(format!("stretch {text:?} has {} flags for {n} samples", flags.len())));
         }
         let mut on = vec![false; used + 1];
         for (i, &f) in flags.iter().enumerate() {
@@ -362,7 +471,10 @@ pub(crate) fn write(input: &Input, w: &Width) -> Result<(Vec<u8>, Written), Erro
     }
     let annot_bytes: Vec<Vec<u8>> = (0..n_rec)
         .map(|r| {
-            let mut blob = tal((r * nsr) as f64 / fs, None, "");
+            let mut blob = match record_onset(&stated, r) {
+                Some(onset) => tal_at(&onset, None, ""),
+                None => tal((r * nsr) as f64 / fs, None, ""),
+            };
             for (t, d, label) in &ann[r] {
                 blob.extend(tal(*t, *d, label));
             }
@@ -390,7 +502,10 @@ pub(crate) fn write(input: &Input, w: &Width) -> Result<(Vec<u8>, Written), Erro
     let mut out = Vec::new();
     out.extend(w.version);
     out.extend(field(input.patient, 80));
-    out.extend(field(input.recording, 80));
+    // Without a recording field, the form EDF+ gives a start date with
+    // nothing else known.
+    let own = format!("Startdate {} X X X", startdate(input.start));
+    out.extend(field(if input.recording.is_empty() { &own } else { input.recording }, RECORDING_WIDTH));
     out.extend(field(&format!("{d:02}.{mo:02}.{:02}", y.rem_euclid(100)), 8));
     out.extend(field(&format!("{hh:02}.{mi:02}.{ss:02}"), 8));
     out.extend(field(&hdr_bytes.to_string(), 8));

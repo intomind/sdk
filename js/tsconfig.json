@@ -27,7 +27,8 @@
     "paths": {
       "@intomind/sdk": ["./src/index.ts"],
       "@intomind/sdk/capture": ["./src/capture/index.ts"],
-      "@intomind/sdk/capture/node": ["./src/capture/node.ts"]
+      "@intomind/sdk/capture/node": ["./src/capture/node.ts"],
+      "@intomind/sdk/model": ["./src/model.ts"]
     }
   },
   "include": [

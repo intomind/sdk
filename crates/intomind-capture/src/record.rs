@@ -27,7 +27,9 @@ use crate::recording::{check_label, error, Collection, Error};
 use crate::zip;
 
 /// The manifest version this writes. 7 is the version whose npz carries
-/// `leadoff_active`, whether lead-off detection ran at each sample.
+/// `leadoff_active`, whether lead-off detection ran at each sample, and,
+/// in a recording one of whose samples carries no lead-off verdict,
+/// `leadoff_judged`, whether each sample's lead-off bits are one.
 pub const MANIFEST_VERSION: i64 = 7;
 
 /// What one packet said about the samples it carried, as a manifest reads
@@ -59,13 +61,46 @@ pub struct Take {
     leadoff: Vec<u8>,
     gap_before: Vec<bool>,
     leadoff_active: Vec<Option<bool>>,
+    leadoff_judged: Vec<bool>,
     packets: Vec<Packet>,
+    ended_by_usb: bool,
+    stated_gain: Option<i64>,
 }
 
 impl Take {
     /// Nothing collected yet.
     pub fn new() -> Take {
         Take::default()
+    }
+
+    /// Note whether USB power ended the stream this take collects from, as
+    /// the Python library's `Device.ended_by_usb` says it: a device that
+    /// does not stream the natural signal while plugged in ends that stream
+    /// itself when USB power appears. A recording saved from this take says
+    /// so in `ended_by_usb`. A session notes `false` again when a new
+    /// stream starts.
+    pub fn set_ended_by_usb(&mut self, ended: bool) {
+        self.ended_by_usb = ended;
+    }
+
+    /// Whether USB power ended the stream this was collected from, as
+    /// `set_ended_by_usb` last said. False until it says otherwise.
+    pub fn ended_by_usb(&self) -> bool {
+        self.ended_by_usb
+    }
+
+    /// Note the gain the device last stated, as the Python library's
+    /// `Device._gain` keeps it: its last packet's, the gain last set on it,
+    /// or its Status as last read. A recording saved from this that kept no
+    /// packet carries it as its `gain`. A recording that kept a packet
+    /// carries the gain of its last packet.
+    pub fn set_stated_gain(&mut self, gain: Option<i64>) {
+        self.stated_gain = gain;
+    }
+
+    /// The gain `set_stated_gain` last noted. None until it notes one.
+    pub fn stated_gain(&self) -> Option<i64> {
+        self.stated_gain
     }
 
     /// One packet, as it arrived.
@@ -76,7 +111,9 @@ impl Take {
     /// One sample: its index and time on the device, its time on the host,
     /// its counts across the channels, the lead-off byte of its packet,
     /// whether a break comes before it, and whether lead-off detection was
-    /// running, when the source said.
+    /// running, when the source said. Its lead-off bits are taken as a
+    /// verdict on each electrode's contact, as [`Self::sample_judged`] with
+    /// `leadoff_judged` true takes them.
     #[allow(clippy::too_many_arguments)]
     pub fn sample(
         &mut self,
@@ -88,6 +125,34 @@ impl Take {
         gap_before: bool,
         leadoff_active: Option<bool>,
     ) {
+        self.sample_judged(index, device_ticks, host_time, counts, leadoff, gap_before, leadoff_active, true);
+    }
+
+    /// [`Self::sample`], saying in `leadoff_judged` whether the sample's
+    /// lead-off bits are a verdict on each electrode's contact. From
+    /// firmware 1.4.6 the IntoMind device judges each electrode over 0.512 s
+    /// of samples, and until its first judgment of a stream every bit reads
+    /// 0, which says neither that an electrode is attached nor that one is
+    /// off: such a sample is given `false`. An IntoMind device whose
+    /// firmware is older than 1.4.6 cannot check electrode contact: its
+    /// lead-off detection does not work, and every electrode reads off
+    /// whether it touches skin or not, so every sample it sends with
+    /// detection on is given `false` too. A recording one of whose samples
+    /// is given `false` holds `leadoff_judged` in its npz, one flag a
+    /// sample, as the Python library's does, and no export calls those
+    /// samples attached or off.
+    #[allow(clippy::too_many_arguments)]
+    pub fn sample_judged(
+        &mut self,
+        index: i64,
+        device_ticks: i64,
+        host_time: f64,
+        counts: &[i64],
+        leadoff: u8,
+        gap_before: bool,
+        leadoff_active: Option<bool>,
+        leadoff_judged: bool,
+    ) {
         self.index.push(index);
         self.device_ticks.push(device_ticks);
         self.host_time.push(host_time);
@@ -95,6 +160,7 @@ impl Take {
         self.leadoff.push(leadoff);
         self.gap_before.push(gap_before);
         self.leadoff_active.push(leadoff_active);
+        self.leadoff_judged.push(leadoff_judged);
     }
 
     /// How many samples were collected.
@@ -227,7 +293,7 @@ pub(crate) fn save_with(
     let mut extra = match &run.extra {
         Value::Object(_) => run.extra.clone(),
         Value::Null => Value::object(),
-        other => return Err(error(format!("the run's extra fields are a JSON object, not {}", other.py_repr()))),
+        other => return Err(error(format!("the run's extra fields are a JSON object, not {}", other.rust_repr()))),
     };
     let protocol = extra.pop("experiment");
     let regs_before = extra.pop("regs_before");
@@ -247,6 +313,7 @@ pub(crate) fn save_with(
         run.config_after.as_ref().unwrap_or(&Value::Null),
         finished,
         versions,
+        take.stated_gain,
     )
     .map_err(|f| match f {
         Fail::Montage(s) | Fail::Placement(s) | Fail::Other(s) => error(s),
@@ -258,6 +325,12 @@ pub(crate) fn save_with(
         if meta.get(k).is_none() {
             meta.set(k, v);
         }
+    }
+    // A device that ended its stream itself because USB power appeared
+    // stopped the recording there, and the manifest says so, as the Python
+    // library's does.
+    if take.ended_by_usb() {
+        meta.set("ended_by_usb", Value::Bool(true));
     }
     if let Some(why) = run.aborted.as_ref().filter(|w| !w.is_empty()) {
         meta.set("aborted", Value::str(why.clone()));
@@ -313,6 +386,14 @@ fn npz(take: &Take, finished: f64) -> Result<Vec<u8>, Error> {
             "leadoff_active",
             Array::vector(Data::Bool(take.leadoff_active.iter().map(|a| a.unwrap_or(false)).collect())),
         ));
+    }
+    // Whether each sample's lead-off bits are a verdict on contact, kept
+    // only where one is not: from firmware 1.4.6 the IntoMind device's bits
+    // read 0 until its first judgment of a stream, which says neither
+    // attached nor off, and on older firmware no bit with detection on is
+    // a verdict.
+    if !take.leadoff_judged.iter().all(|&j| j) {
+        arrays.push(("leadoff_judged", Array::vector(Data::Bool(take.leadoff_judged.clone()))));
     }
     let members: Vec<(String, Vec<u8>)> = arrays.iter().map(|(k, a)| (format!("{k}.npy"), npy::write(a))).collect();
     Ok(zip::write(&members, finished.max(0.0) as u64))
@@ -484,13 +565,38 @@ pub(crate) fn gap_ledger(index: &[i64]) -> Value {
 }
 
 /// The rate from the device's clock: samples over the span of their ticks.
-pub(crate) fn fs_from_ticks(ticks: &[i64], tick_hz: u64) -> f64 {
+/// Given each sample's `index`, the ticks are measured over the stretches
+/// where the index climbs by exactly one, as the Python library's
+/// `provenance.fs_from_ticks` measures them, so a hole, where the index
+/// skips the samples that were lost, is not read as slow sampling. For a
+/// recording without holes or breaks, and for one with no two samples in a
+/// row, where no stretch can be measured, the rate is the samples less one
+/// over the span of all their ticks.
+pub(crate) fn fs_from_ticks(ticks: &[i64], tick_hz: u64, index: Option<&[i64]>) -> f64 {
     if ticks.len() < 2 || tick_hz == 0 {
         return 0.0;
     }
-    let span = (ticks[ticks.len() - 1] as f64 - ticks[0] as f64) / tick_hz as f64;
-    if span > 0.0 {
-        (ticks.len() - 1) as f64 / span
+    let Some(index) = index.filter(|i| i.len() == ticks.len()) else {
+        let span = (ticks[ticks.len() - 1] as f64 - ticks[0] as f64) / tick_hz as f64;
+        return if span > 0.0 { (ticks.len() - 1) as f64 / span } else { 0.0 };
+    };
+    let (mut count, mut span, mut a) = (0usize, 0.0f64, 0usize);
+    let n = index.len();
+    for i in 1..=n {
+        if i == n || index[i].wrapping_sub(index[i - 1]) != 1 {
+            if i - a >= 2 {
+                count += i - a - 1;
+                span += ticks[i - 1] as f64 - ticks[a] as f64;
+            }
+            a = i;
+        }
+    }
+    if count == 0 {
+        return fs_from_ticks(ticks, tick_hz, None);
+    }
+    let seconds = span / tick_hz as f64;
+    if seconds > 0.0 {
+        count as f64 / seconds
     } else {
         0.0
     }
@@ -525,7 +631,7 @@ pub(crate) fn signal_chain(setup: &Setup) -> Result<Value, Fail> {
     // dict has.
     let f = setup.filter.clone().unwrap_or(Value::Null);
     if f.truthy() && !matches!(f, Value::Object(_)) {
-        return Err(Fail::Other(format!("AttributeError: {} has no attribute 'get'", f.py_repr())));
+        return Err(Fail::Other(format!("AttributeError: {} has no attribute 'get'", f.rust_repr())));
     }
     let on = f.field("on").truthy();
     let filters = if on {
@@ -570,7 +676,7 @@ fn py_dict(v: &Value) -> Result<Value, Fail> {
             Fail::Other(format!("ValueError: dictionary update sequence element #{i} has length {}; 2 is required", p.len()))
         })?;
         if key.json_key().is_none() {
-            return Err(Fail::Other(format!("TypeError: unhashable type: {}", key.py_repr())));
+            return Err(Fail::Other(format!("TypeError: unhashable type: {}", key.rust_repr())));
         }
         match out.iter_mut().find(|(have, _)| have.py_eq(&key)) {
             Some(slot) => slot.1 = value,
@@ -681,12 +787,19 @@ fn build(
     config_after: &Value,
     finished: f64,
     versions: Value,
+    stated_gain: Option<i64>,
 ) -> Result<Value, Fail> {
     let s = site(&setup.site);
     let layout = extra.pop("electrode_layout");
     let place = extra.pop("placement");
-    let fs =
-        if ticks.len() >= 2 { fs_from_ticks(ticks, device.tick_hz) } else { fs_from_packets(packets, device.tick_hz) };
+    // The rate from the device's clock, which a reset cannot bend, read over
+    // the stretches where the index climbs by one, so a recording missing
+    // samples reads its true rate, not one slowed by its holes.
+    let fs = if ticks.len() >= 2 {
+        fs_from_ticks(ticks, device.tick_hz, Some(index))
+    } else {
+        fs_from_packets(packets, device.tick_hz)
+    };
     let config_before = extra.field("config_before").clone();
     let changed = if regs_before.truthy() && regs_after.truthy() {
         diff(regs_before, regs_after)
@@ -732,7 +845,11 @@ fn build(
         ("regs_diff", changed.clone()),
         ("config_after", config_after.clone()),
         ("device_config_changed_by_run", Value::Bool(changed.truthy())),
-        ("gain", last.map_or(Value::Null, |p| Value::int(p.gain))),
+        // The device's gain is the one its packets carried, or where none
+        // was kept the one it last stated, and never a run's: from firmware
+        // 1.4.6 it samples at gain 1 while lead-off detection is on,
+        // whatever gain was set.
+        ("gain", last.map(|p| p.gain).or(stated_gain).map_or(Value::Null, Value::int)),
         ("rate_sps", last.and_then(|p| p.sample_rate_hz).map_or(Value::Null, Value::int)),
         ("fs_effective", Value::Float(fs)),
         ("protocol_id", protocol.clone()),
@@ -750,10 +867,14 @@ fn build(
         m.set(k, v);
     }
     // A run's fields may add to the manifest. They may not erase a
-    // measurement: a null never wins against a value the device gave.
+    // measurement: a null never wins against a value the device gave, and
+    // a recording's gain is the one the device states, never a run's.
     if let Value::Object(items) = extra {
         for (k, v) in items {
             if v.is_null() && !m.field(&k).is_null() {
+                continue;
+            }
+            if k == "gain" {
                 continue;
             }
             m.set(&k, v);
@@ -908,4 +1029,77 @@ pub fn config_after(
         c.set("composed_name", Value::str(parts.join(" ")));
     }
     c
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fs_from_ticks;
+
+    #[test]
+    fn the_rate_is_measured_over_the_stretches_where_the_index_climbs_by_one() {
+        // A thousand samples four ticks apart: with no hole, the very number
+        // the whole span gives, to the last bit.
+        let ticks: Vec<i64> = (0..1000).map(|k| 123_456 + 4 * (k + 1)).collect();
+        let whole: Vec<i64> = (0..1000).collect();
+        let span = (ticks[999] as f64 - ticks[0] as f64) / 1000.0;
+        assert_eq!(fs_from_ticks(&ticks, 1000, Some(&whole)), 999.0 / span);
+        // Ten samples lost from the five hundredth on: 250 a second over the
+        // stretches, and the rate over the whole span without the index.
+        let holed: Vec<i64> = whole.iter().map(|&k| if k >= 500 { k + 10 } else { k }).collect();
+        let later: Vec<i64> = ticks.iter().enumerate().map(|(k, &t)| if k >= 500 { t + 40 } else { t }).collect();
+        assert_eq!(fs_from_ticks(&later, 1000, Some(&holed)), 250.0);
+        assert!((fs_from_ticks(&later, 1000, None) - 250.0 * 999.0 / 1009.0).abs() < 1e-9);
+        // No two samples in a row: no stretch to measure, so the whole
+        // span.
+        let (apart, t4) = ([0, 2, 4, 6], [0, 8, 16, 24]);
+        assert_eq!(fs_from_ticks(&t4, 1000, Some(&apart)), fs_from_ticks(&t4, 1000, None));
+    }
+
+    #[test]
+    fn a_value_an_error_names_is_in_rusts_spelling() {
+        use super::{save, signal_chain, DeviceFacts, Run, Setup, Take};
+        use crate::pyjson::{loads, Value};
+        use crate::recording::Collection;
+        // A filter or an adapter of the wrong kind, as JSON a program declared.
+        let refused = |setup: Setup| match signal_chain(&setup) {
+            Err(crate::montage::Fail::Other(words)) => words,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(
+            refused(Setup { filter: Some(Value::Bool(true)), ..Default::default() }),
+            "AttributeError: true has no attribute 'get'"
+        );
+        assert_eq!(
+            refused(Setup { filter: Some(loads(r#"["on", null]"#).unwrap()), ..Default::default() }),
+            "AttributeError: [\"on\", null] has no attribute 'get'"
+        );
+        assert_eq!(
+            refused(Setup { adapter: Some(loads("[[[1], 2]]").unwrap()), ..Default::default() }),
+            "TypeError: unhashable type: [1]"
+        );
+        assert_eq!(
+            refused(Setup { adapter: Some(Value::Bool(false)), filter: Some(Value::Float(0.5)), ..Default::default() }),
+            "AttributeError: 0.5 has no attribute 'get'"
+        );
+        // A run whose own fields are not an object.
+        let dir = std::env::temp_dir().join(format!("intomind-record-words-{}", std::process::id()));
+        let device = DeviceFacts {
+            device_id: "00000000c0de0001".into(),
+            firmware: "1.4.6".into(),
+            protocol: None,
+            tick_hz: 1_000_000,
+            vref_uv: 4_500_000,
+            adc_bits: Some(24),
+            channels: Some(1),
+            clock: None,
+            gaps_in_run: 0,
+        };
+        let run = Run { extra: loads(r#"{"a": "x"}"#).map(|v| Value::Array(vec![v])).unwrap(), ..Default::default() };
+        let words = save(&Collection::open(&dir), "words", &Take::new(), &device, &Setup::default(), &run)
+            .err()
+            .expect("refused")
+            .to_string();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(words, "the run's extra fields are a JSON object, not [{\"a\": \"x\"}]");
+    }
 }

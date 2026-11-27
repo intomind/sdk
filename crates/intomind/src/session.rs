@@ -21,6 +21,22 @@ use intomind_capture::recording::{self as stored, Collection};
 use crate::timebase::{Exchange, Timebase};
 use crate::Error;
 
+/// How long the device judges each electrode's contact over, in seconds,
+/// from firmware 1.4.6, before its first verdict of a stream and between one
+/// verdict and the next. Until the first, every lead-off bit reads 0.
+const JUDGMENT_S: f64 = 0.512;
+
+/// The first firmware of the device that checks electrode contact. On an
+/// earlier one lead-off detection does not work, and every electrode reads
+/// off whether it touches skin or not, so none of its lead-off bits is a
+/// verdict and a contact check is refused. From this one the device's
+/// lead-off bits are no verdict until its first judgment of a stream.
+const JUDGES_FROM: (u8, u8, u8) = (1, 4, 6);
+
+/// The gain a session takes the device to be at before the device has
+/// stated one, as the Python library's `Device._gain` starts.
+const GAIN_BEFORE_ANY: u8 = 6;
+
 /// Bytes to write, and where to write them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Command {
@@ -84,7 +100,7 @@ pub struct Gap {
     pub last_index_before: u32,
     /// Device sample index after the gap.
     pub first_index_after: u32,
-    /// Samples missing. None for a re-base, whose extent is not a number.
+    /// Samples missing. None for a re-base, whose extent is not known.
     pub samples_lost: Option<u32>,
     /// Device time before the gap.
     pub device_time_before: u64,
@@ -191,13 +207,34 @@ pub struct Session {
     /// the next expected.
     pub gaps_announced: u32,
     /// 1.4: whether USB power ended the last stream. A device that does not
-    /// record while plugged in ends the natural signal's stream when USB
+    /// stream the natural signal while plugged in ends that stream when USB
     /// power appears, and its packets say so.
     pub ended_by_usb: bool,
     leadoff_setting: Option<bool>,
     /// What `set_leadoff` last asked for, until the device accepts it: 0
     /// nothing, 1 off, 2 on.
     leadoff_asked: AtomicU8,
+    /// The gain the device last stated, None before any packet, accepted
+    /// gain or Status has said.
+    gain: Option<u8>,
+    /// What `set_gain` last asked for, until the device accepts it: 0
+    /// nothing, otherwise the gain.
+    gain_asked: AtomicU8,
+    /// For each stream this session started, in the order they started, the
+    /// device time of its first packet, and once the device's first lead-off
+    /// verdict of it has come, the device time of the packet that carried
+    /// it: what tells, of a batch handed on earlier, whether its lead-off
+    /// bits are a verdict.
+    streams: Vec<(u64, Option<u64>)>,
+    /// Whether a stream this session started has sent no packet yet.
+    stream_pending: AtomicBool,
+    /// Until the device's first lead-off verdict of a stream this session
+    /// started, the index of the sample this session counts the device's
+    /// block from: the stream's first sample, or the first after the latest
+    /// break. None once the verdict has come, and for a stream this session
+    /// did not start. What tells the samples sent before the device's first
+    /// lead-off verdict of a stream.
+    block_from: Option<u32>,
     recorder: Option<Recorder>,
 }
 
@@ -250,9 +287,15 @@ impl Session {
         Command { characteristic: uuid_fill::CONTROL, bytes: bytes[..n].to_vec(), with_response: true }
     }
 
-    /// Ask the device to stream.
+    /// Ask the device to stream. The stream starts here, and the device's
+    /// first block of it is counted from the first sample of its first
+    /// packet, which is what tells its first samples' lead-off bits from
+    /// verdicts: marked before the command is sent, since a packet can
+    /// arrive before its answer is read.
     pub fn start_stream(&self) -> Command {
-        self.command(Opcode::StartStream, None)
+        let command = self.command(Opcode::StartStream, None);
+        self.stream_pending.store(true, Ordering::Relaxed);
+        command
     }
 
     /// Ask the device to stop streaming. From here the host treats the
@@ -280,9 +323,30 @@ impl Session {
     }
 
     /// Set the gain. The device refuses a change while it is streaming.
+    /// Once the device accepts it, it is the gain the device last stated,
+    /// see [`Session::gain`].
     pub fn set_gain(&self, gain: u8) -> Result<Command, Error> {
         let code = frame::GAIN_BY_CODE.iter().position(|&g| g == gain).ok_or(Error::Wire(WireError::Invalid))?;
+        self.gain_asked.store(gain, Ordering::Relaxed);
         Ok(self.command(Opcode::SetGain, Some(code as u8)))
+    }
+
+    /// The gain the device last stated, as the Python library's
+    /// `Device._gain` keeps it: its last data packet's, the gain last set
+    /// on it and accepted, or the gain of the last Status this session was
+    /// handed, and 6 before any of them has said. A recording that kept no
+    /// packet carries it as its `gain`.
+    pub fn gain(&self) -> u8 {
+        self.gain.unwrap_or(GAIN_BEFORE_ANY)
+    }
+
+    /// Keep `gain` as the gain the device last stated, here and on what the
+    /// recorder is collecting.
+    fn state_gain(&mut self, gain: u8) {
+        self.gain = Some(gain);
+        if let Some(r) = self.recorder.as_mut() {
+            r.take.set_stated_gain(Some(gain as i64));
+        }
     }
 
     /// 0 for the electrodes, 1 for the internal test signal, 2 for
@@ -302,8 +366,17 @@ impl Session {
 
     /// Turn lead-off detection on or off. Refused unless the device claims
     /// the capability.
+    ///
+    /// An IntoMind device whose firmware is older than 1.4.6 cannot check
+    /// electrode contact: its lead-off detection does not work, and every
+    /// electrode reads off whether it touches skin or not. Turning
+    /// detection on there is refused with `Error::NotCapable("leadoff")`
+    /// before any command is made. Turning it off is not refused.
     pub fn set_leadoff(&self, on: bool) -> Result<Command, Error> {
         if !self.can(p::device_info::capability::LEADOFF) {
+            return Err(Error::NotCapable("leadoff"));
+        }
+        if on && self.info.is_some_and(|i| i.fw_version < JUDGES_FROM) {
             return Err(Error::NotCapable("leadoff"));
         }
         self.leadoff_asked.store(if on { 2 } else { 1 }, Ordering::Relaxed);
@@ -364,16 +437,86 @@ impl Session {
         self.leadoff_setting
     }
 
+    /// The first row of `batch`, a batch this session handed on in an
+    /// [`Event::Samples`], whose lead-off bits are a verdict on each
+    /// electrode's contact, as the Python library's `Sample.leadoff_judged`
+    /// says of each sample: 0 where every row's are, and the batch's number
+    /// of rows where none are. Every row carries the bits of the packet, so
+    /// they are a verdict for every row of a batch or for none.
+    ///
+    /// An IntoMind device whose firmware is older than 1.4.6 cannot check
+    /// electrode contact: its lead-off detection does not work, and every
+    /// electrode reads off whether it touches skin or not. With detection
+    /// on, no row of such a device's batch carries a verdict, whoever
+    /// started the stream.
+    ///
+    /// From firmware 1.4.6 the device judges each electrode over a block of
+    /// round(0.512 * rate) consecutive samples, 0.512 s, starts the block
+    /// over at a sample it loses, and until its first judgment of a stream
+    /// every bit reads 0, which says neither that an electrode is attached
+    /// nor that one is off. Each packet carries the bits of its last
+    /// sample, so in a stream this session started with lead-off detection
+    /// on no row carries a verdict until a batch whose last sample is the
+    /// round(0.512 * rate)th or later, counted from the stream's first
+    /// sample, or from the first sample after a break in the sample index
+    /// before then; that batch and every one after it carry one. Detection
+    /// was running for such rows all the same. A stream this session did
+    /// not start is taken as judged throughout, since nothing here says
+    /// where it began. A batch is taken to belong to the last stream this
+    /// session started whose first packet's device time is at or before
+    /// the batch's.
+    pub fn judged_from(&self, batch: &Batch) -> usize {
+        let Some(info) = self.info else { return 0 };
+        if !batch.leadoff_active {
+            return 0;
+        }
+        if info.fw_version < JUDGES_FROM {
+            return batch.rows();
+        }
+        if batch.sample_rate_hz == 0 {
+            return 0;
+        }
+        // What `judged` decided of the batch as it arrived: no verdict from
+        // the first packet of the stream it belongs to until the packet that
+        // carried the first.
+        match self.streams.iter().rev().find(|&&(first, _)| first <= batch.device_time) {
+            Some(&(_, verdict)) if verdict.is_none_or(|at| batch.device_time < at) => batch.rows(),
+            _ => 0,
+        }
+    }
+
+    /// Whether row `row` of `batch`, a batch this session handed on in an
+    /// [`Event::Samples`], has lead-off bits that are a verdict on each
+    /// electrode's contact: false before the device's first lead-off
+    /// judgment of a stream, and false for every row with detection on from
+    /// a device whose firmware is older than 1.4.6, see
+    /// [`Session::judged_from`].
+    pub fn leadoff_judged(&self, batch: &Batch, row: usize) -> bool {
+        row >= self.judged_from(batch)
+    }
+
     /// Arm the recorder: from here every sample and packet is collected
     /// until `disarm_recorder`, with what was collected before dropped.
     ///
-    /// Arm on a count that starts again at zero, as the Python library
-    /// does. On a stream that is running, send `reset_epoch`, let the
-    /// packets numbered before it drain, about fifty milliseconds, then
+    /// Arm where the device's sample index starts again, as the Python
+    /// library does. On a stream that is running, send `reset_epoch`, let
+    /// the packets numbered before it drain, about fifty milliseconds, then
     /// arm. On one that is not, arm, then send `reset_epoch` and
     /// `start_stream`.
     pub fn arm_recorder(&mut self) {
-        self.recorder = Some(Recorder { take: Take::new(), armed: true, gaps_at_arm: self.gaps_announced });
+        let mut take = Take::new();
+        take.set_ended_by_usb(self.ended_by_usb);
+        take.set_stated_gain(Some(self.gain() as i64));
+        self.recorder = Some(Recorder { take, armed: true, gaps_at_arm: self.gaps_announced });
+    }
+
+    /// Whether USB power ended the last stream, noted here and on what the
+    /// recorder is collecting, so a recording saved from it says so.
+    fn set_ended_by_usb(&mut self, ended: bool) {
+        self.ended_by_usb = ended;
+        if let Some(r) = self.recorder.as_mut() {
+            r.take.set_ended_by_usb(ended);
+        }
     }
 
     /// Stop collecting. What was collected stays, for `save_recording`.
@@ -391,7 +534,13 @@ impl Session {
     /// Write what the recorder collected as the recording `label`, with
     /// the manifest the Python library writes: the device's own facts, its
     /// clock's record now, and the breaks announced while armed, with what
-    /// `setup` declares and `run` adds. Returns the manifest.
+    /// `setup` declares and `run` adds. Where USB power ended the stream
+    /// the recorder collected from, as `ended_by_usb` says, the recording
+    /// holds the samples sent up to that moment, and its manifest says so
+    /// in `ended_by_usb`. The
+    /// manifest's `gain` is the gain of the last packet kept, or where none
+    /// was kept the gain the device last stated, see [`Session::gain`], and
+    /// never a `gain` among `run`'s fields. Returns the manifest.
     pub fn save_recording(
         &self,
         collection: &Collection,
@@ -400,7 +549,8 @@ impl Session {
         run: &Run,
     ) -> Result<intomind_capture::json::Value, stored::Error> {
         let info = self.info.ok_or_else(|| stored::Error::new("read device info first: a recording states what the device said"))?;
-        let empty = Recorder::default();
+        let mut empty = Recorder::default();
+        empty.take.set_stated_gain(Some(self.gain() as i64));
         let r = self.recorder.as_ref().unwrap_or(&empty);
         let device = DeviceFacts {
             device_id: info.device_id.iter().map(|b| format!("{b:02x}")).collect(),
@@ -416,7 +566,10 @@ impl Session {
         record::save(collection, label, &r.take, &device, setup, run)
     }
 
-    /// Zero `sample_index` and start a fresh epoch.
+    /// Start a fresh epoch of the sample index: the device gives index 1 to
+    /// the oldest sample it has not yet sent, or with none waiting to the
+    /// next it takes, and numbers every later sample on from there. In the
+    /// synthetic signal that sample is index 0.
     pub fn reset_epoch(&mut self) -> Command {
         self.previous = None;
         self.command(Opcode::ResetEpoch, None)
@@ -679,7 +832,13 @@ impl Session {
         match characteristic {
             uuid_fill::EEG_DATA => self.on_samples(bytes),
             uuid_fill::STATUS => match StatusMsg::parse(bytes) {
-                Ok(s) => vec![Event::Status(s)],
+                Ok(s) => {
+                    // A Status states the gain in force.
+                    if let Some(&g) = frame::GAIN_BY_CODE.get(s.gain_code as usize) {
+                        self.state_gain(g);
+                    }
+                    vec![Event::Status(s)]
+                }
                 Err(_) => self.undecodable(),
             },
             uuid_fill::CONTROL_RSP => match p::control::Response::parse(bytes) {
@@ -712,8 +871,8 @@ impl Session {
     }
 
     /// What an answer changes here: a start the device accepted holds the
-    /// clock's map still under the stream, and a lead-off setting it
-    /// accepted is the setting.
+    /// clock's map still under the stream, a lead-off setting it accepted
+    /// is the setting, and a gain it accepted is the gain it last stated.
     fn on_answer(&mut self, opcode: Opcode, status: Status) {
         if status != Status::Ok {
             return;
@@ -721,7 +880,7 @@ impl Session {
         match opcode {
             Opcode::StartStream => {
                 self.streaming.store(true, Ordering::Relaxed);
-                self.ended_by_usb = false;
+                self.set_ended_by_usb(false);
                 if let Some(c) = &self.clock {
                     c.freeze();
                 }
@@ -730,6 +889,10 @@ impl Session {
                 1 => self.leadoff_setting = Some(false),
                 2 => self.leadoff_setting = Some(true),
                 _ => {}
+            },
+            Opcode::SetGain => match self.gain_asked.swap(0, Ordering::Relaxed) {
+                0 => {}
+                g => self.state_gain(g),
             },
             _ => {}
         }
@@ -753,12 +916,16 @@ impl Session {
         // A packet with the first index and the device time of one just
         // passed on is that packet again, delivered twice by the host.
         // Dropped and counted, so no sample is passed on twice and no break
-        // is announced that did not happen, after a reset of the count as
-        // much as before one. A device that restarts its count carries a
+        // is announced that did not happen, both before a reset of the count
+        // and after one. A device that restarts its count carries a
         // new device time, so a restart is never mistaken for a copy, and
         // anything else is judged by the contract's continuity rule
         // unchanged.
         let key = (h.sample_index, h.device_time);
+        // The gain from the wire, not from memory.
+        if let Some(&g) = frame::GAIN_BY_CODE.get(h.gain_code as usize) {
+            self.state_gain(g);
+        }
         if self.recent.contains(&Some(key)) {
             self.duplicates = self.duplicates.saturating_add(1);
             return vec![Event::Duplicate { index: h.sample_index }];
@@ -801,8 +968,9 @@ impl Session {
         self.recent_at = (self.recent_at + 1) % self.recent.len();
         let synthetic = bytes[0] == frame::PACKET_TYPE_SYNTHETIC;
         let leadoff_active = h.flags & frame::flags::LEADOFF_ACTIVE != 0;
-        // 1.4: a device that does not record while plugged in ends the
-        // natural signal's stream when USB power appears, and says so in
+        let judged = self.judged(&h, flagged, &info);
+        // 1.4: a device that does not stream the natural signal while
+        // plugged in ends that stream when USB power appears, and says so in
         // every packet from then on. The samples already converted are
         // still delivered.
         if h.flags & frame::flags::USB_PRESENT != 0 && !synthetic && self.streaming() && info.proto_version >= (1, 4) {
@@ -810,7 +978,7 @@ impl Session {
             if let Some(c) = &self.clock {
                 c.thaw();
             }
-            self.ended_by_usb = true;
+            self.set_ended_by_usb(true);
         }
         // The packet says whether detection was running: the one read of
         // the setting the protocol offers.
@@ -834,15 +1002,76 @@ impl Session {
             mode: (h.flags & frame::flags::MODE_MASK) >> frame::flags::MODE_SHIFT,
             synthetic,
         };
-        self.collect(&batch, h.rate_code, flagged);
+        let judged_from = if judged { 0 } else { batch.rows() };
+        self.collect(&batch, judged_from, h.rate_code, flagged);
         events.push(Event::Samples(batch));
         events
+    }
+
+    /// Whether the lead-off bits of the packet `h`, which each of its
+    /// samples carries, are a verdict on each electrode's contact, as the
+    /// Python library's `Device._judged`. `gap` is whether a break comes
+    /// before the packet: the device flagged one, or its first sample is not
+    /// the one after the last packet's. The device time of a stream's first
+    /// packet, and of the packet that carries its first verdict, are
+    /// written down for [`Session::judged_from`].
+    ///
+    /// An IntoMind device whose firmware is older than 1.4.6 cannot check
+    /// electrode contact: its lead-off detection does not work, and every
+    /// electrode reads off whether it touches skin or not. With detection
+    /// on, no packet of such a device carries a verdict, whoever started the
+    /// stream.
+    ///
+    /// From firmware 1.4.6 the IntoMind device judges each electrode over a
+    /// block of round(0.512 * rate) consecutive samples, 0.512 s, and gives
+    /// its first verdict of a stream with the last sample of a whole block.
+    /// Until then every lead-off bit reads 0, which is no verdict. A sample
+    /// it loses starts its block over, and a packet carries the bits of its
+    /// own last sample. So with detection on, the packets of a stream this
+    /// session started carry no verdict until one whose last sample is the
+    /// round(0.512 * rate)th or later, counted from the stream's first
+    /// sample, or from the first after the latest break before then: a break
+    /// the device made started its block over, and one made on the way,
+    /// which a host cannot tell from it, is taken as one that did. From the
+    /// first verdict on, every packet carries one, since the device keeps
+    /// its last verdict through a break. A stream this session did not start
+    /// is taken as judged throughout, since nothing here says where it
+    /// began.
+    fn judged(&mut self, h: &DataHeader, gap: bool, info: &DeviceInfo) -> bool {
+        if self.stream_pending.swap(false, Ordering::Relaxed) {
+            self.block_from = Some(h.sample_index);
+            self.streams.push((h.device_time, None));
+        } else if gap && self.block_from.is_some() {
+            self.block_from = Some(h.sample_index);
+        }
+        if h.flags & frame::flags::LEADOFF_ACTIVE == 0 {
+            return true;
+        }
+        if info.fw_version < JUDGES_FROM {
+            return false;
+        }
+        let (Some(from), Some(sps)) = (self.block_from, frame::sps_of_rate_code(h.rate_code).filter(|&sps| sps > 0)) else {
+            return true;
+        };
+        // Where the packet's last sample falls in the block, the block's
+        // first sample being the 1st.
+        let nth = h.sample_index.wrapping_add(h.n_samples as u32).wrapping_sub(from);
+        if (nth as f64) < (JUDGMENT_S * sps as f64).round_ties_even() {
+            return false;
+        }
+        self.block_from = None;
+        if let Some(stream) = self.streams.last_mut() {
+            stream.1 = Some(h.device_time);
+        }
+        true
     }
 
     /// Give an armed recorder the packet and its samples, each dated as the
     /// Python library dates it: the packet's device time stepped by the
     /// rate for each sample after the first, and the clock's map now.
-    fn collect(&mut self, b: &Batch, rate_code: u8, flagged: bool) {
+    /// `judged_from` is the first row whose lead-off bits are a verdict, as
+    /// [`Session::judged_from`] gives it.
+    fn collect(&mut self, b: &Batch, judged_from: usize, rate_code: u8, flagged: bool) {
         let (Some(r), Some(info)) = (self.recorder.as_mut(), self.info) else { return };
         if !r.armed {
             return;
@@ -868,7 +1097,16 @@ impl Session {
                 (b.device_time as f64 + i as f64 * tick_per) as i64
             };
             let host = self.clock.as_ref().map_or(ticks as f64 / info.time_tick_hz as f64, |c| c.host_time(ticks));
-            r.take.sample(b.index as i64 + i as i64, ticks, host, row, b.leadoff, flagged && i == 0, Some(b.leadoff_active));
+            r.take.sample_judged(
+                b.index as i64 + i as i64,
+                ticks,
+                host,
+                row,
+                b.leadoff,
+                flagged && i == 0,
+                Some(b.leadoff_active),
+                i >= judged_from,
+            );
         }
     }
 }

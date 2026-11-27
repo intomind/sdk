@@ -11,12 +11,13 @@
 //! for array what the Python library writes, with the same summary.
 //! docs.intomind.com/files.html states what both promise.
 //!
-//! The types at the top of this crate are the flat-file format it was
-//! published with in 1.4.0, kept as published: a recording is a directory,
-//! the samples one flat file of native endian integers, the events another,
-//! and a manifest in JSON. Nothing is compressed and nothing is packed into
-//! a container, so somebody can read it in fifty years with a hex editor
-//! and the manifest beside them.
+//! The types at the top of this crate describe a flat-file format, format
+//! version 1, [`FORMAT`]: a recording is a directory holding its samples in
+//! `samples.i32`, rows of little-endian signed 32-bit integers, one for
+//! each channel, its events in `events.json`, and its manifest in
+//! `capture.json`. Nothing is compressed and nothing is packed into a
+//! container, so somebody can read it in fifty years with a hex editor and
+//! the manifest beside them.
 //!
 //! Three rules hold that format together:
 //!
@@ -34,7 +35,11 @@
 pub mod clock;
 #[cfg(test)]
 mod contract_tests;
+#[cfg(test)]
+mod placement_tests;
 mod edf;
+#[cfg(test)]
+mod edf_tests;
 pub mod export;
 mod hdf5;
 mod montage;
@@ -248,7 +253,7 @@ impl Manifest {
     }
 
     /// Samples the device says never arrived. A re-base contributes
-    /// nothing, because its extent is not a number.
+    /// nothing, because its extent is not known.
     pub fn samples_lost(&self) -> u32 {
         self.gaps.iter().filter_map(|g| g.samples_lost).sum()
     }

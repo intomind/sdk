@@ -50,6 +50,11 @@ import numpy as np
 warnings.simplefilter("ignore")
 HERE = pathlib.Path(__file__).resolve().parent
 CAPTURES = HERE / "captures"
+# Made without a sound: the library's experiments speak their cues and play
+# their tones through the host's speakers, so every cue goes nowhere here,
+# before anything of the library runs.
+from intomind import audio as _audio  # noqa: E402
+_audio.play = lambda tone, text="": None
 
 import intomind  # noqa: E402
 from intomind import export as E, provenance as prov  # noqa: E402
@@ -57,6 +62,10 @@ from intomind import export as E, provenance as prov  # noqa: E402
 #: The IntoMind One's reference and converter, as its Device Info reports
 #: them.
 VREF_UV, ADC_BITS = 4_500_000, 24
+#: The firmware a recording made to show electrode contact states: 1.4.6,
+#: the first that checks it. The other recordings of the device state
+#: 1.4.5.
+CHECKS_CONTACT = dict(firmware_version="1.4.6", fw="1.4.6")
 STAMP = (2026, 1, 1, 0, 0, 0)
 
 
@@ -173,7 +182,7 @@ def make_recordings() -> None:
     lo = np.zeros(n, np.uint8); lo[120:180] |= 0x01; lo[300:330] |= 0x04
     write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4, device_name="Ada's IntoMind One",
           processing=dict(origin="default", stages=[], description="notch 60 Hz, high-pass 0.5 Hz"),
-          signal="notch 60 Hz, high-pass 0.5 Hz"),
+          signal="notch 60 Hz, high-pass 0.5 Hz", **CHECKS_CONTACT),
           leadoff=lo, leadoff_active=np.ones(n, bool),
           events=cue_events([0.0, 0.8, 1.6, 2.39], ["rest", "eyes closed", "rest", "end"]))
 
@@ -207,7 +216,8 @@ def make_recordings() -> None:
     lab = "leadoff-partly"
     lo = np.zeros(n, np.uint8); lo[50:90] = 0x03; lo[200:260] = 0x08; lo[400:450] = 0x02
     act = np.zeros(n, bool); act[:300] = True
-    write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4), leadoff=lo, leadoff_active=act)
+    write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4, **CHECKS_CONTACT), leadoff=lo,
+          leadoff_active=act)
 
     # Detection off throughout: nothing was checked, whatever the byte says.
     lab = "leadoff-off"
@@ -217,7 +227,7 @@ def make_recordings() -> None:
     # A signal the device generated.
     lab = "synthetic"
     write(lab, counts=signal(rng, n, 4, dc=0.0, amp=200.0),
-          meta=manifest(lab, n, channels=4, synthetic=True, signal_source="synthetic"),
+          meta=manifest(lab, n, channels=4, synthetic=True, signal_source="synthetic", **CHECKS_CONTACT),
           leadoff_active=np.ones(n, bool))
 
     # Eight channels, every one with its own electrode off once, and ten
@@ -226,7 +236,7 @@ def make_recordings() -> None:
         lo = np.zeros(n, np.uint8)
         for c in range(min(ch, 8)):
             lo[40 * c + 10:40 * c + 30] |= 1 << c
-        write(lab, counts=signal(rng, n, ch), meta=manifest(lab, n, channels=ch), leadoff=lo,
+        write(lab, counts=signal(rng, n, ch), meta=manifest(lab, n, channels=ch, **CHECKS_CONTACT), leadoff=lo,
               leadoff_active=np.ones(n, bool))
 
     # One channel, and counts stored channel by channel.
@@ -346,6 +356,29 @@ def make_recordings() -> None:
     (CAPTURES / "LEGACY.sha256").write_text("\n".join(sorted(lines)) + "\n")
     write("unverified", counts=signal(rng, n, 2), meta=manifest("unverified", n, channels=2), checksum=False)
 
+    # From firmware 1.4.6 the device's lead-off bits are no verdict until
+    # its first judgment of a stream, 0.512 s in: the first 128 samples at
+    # 250 a second, detection running for every one of them, with bits set
+    # among them that no export may read, and an electrode off later. And a
+    # recording none of whose samples were judged, whose contact was not
+    # checked though detection was running.
+    lab = "leadoff-not-judged"
+    lo = np.zeros(n, np.uint8); lo[40:60] = 0x02; lo[300:350] |= 0x02
+    write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4, **CHECKS_CONTACT), leadoff=lo,
+          leadoff_active=np.ones(n, bool), extra_arrays=dict(leadoff_judged=np.arange(n) >= 128))
+    lab = "leadoff-none-judged"
+    write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4), leadoff=np.zeros(n, np.uint8),
+          leadoff_active=np.ones(n, bool), extra_arrays=dict(leadoff_judged=np.zeros(n, bool)))
+
+    # A device whose firmware is older than 1.4.6 cannot check electrode
+    # contact: with detection on, every electrode reads off whether it
+    # touches skin or not. A recording that holds no leadoff_judged is read
+    # from the firmware its manifest states, every sample taken with
+    # detection on as no verdict, so no export calls an electrode off.
+    lab = "older-firmware"
+    write(lab, counts=signal(rng, n, 4), meta=manifest(lab, n, channels=4), leadoff=np.full(n, 0x0F, np.uint8),
+          leadoff_active=np.ones(n, bool))
+
 
 # ---------------------------------------------------------------- expected
 def npz_digest(path: pathlib.Path) -> list:
@@ -461,7 +494,7 @@ def unprintable() -> list[tuple[int, int]]:
 
 
 def write_tables() -> None:
-    """The table each implementation compiles in, from this Python."""
+    """The tables each implementation compiles in, from this Python."""
     runs = unprintable()
     whence = (f"Python {platform.python_version()}, whose characters are those of Unicode "
               f"{unicodedata.unidata_version}")

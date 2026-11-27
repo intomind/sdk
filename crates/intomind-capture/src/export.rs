@@ -12,6 +12,53 @@
 //! arrays and fields, and differ only in what their containers stamp: the
 //! time a member was written, and the order a library lays out its records.
 //! The fixtures in `contract/recordings` hold both claims.
+//!
+//! Lead-off is in every format, and only where the recording says detection
+//! was running and the bits are a verdict, because a lead-off bit of zero is
+//! an attached electrode there and nothing at all anywhere else. From
+//! firmware 1.4.6 the IntoMind device's bits read 0 until its first judgment
+//! of a stream, 0.512 s in or later, and a recording holds `leadoff_judged`,
+//! false for each sample whose bits came before it. Detection was running for
+//! those samples, and no format calls them attached: `csv` and `tsv` leave
+//! their lead-off columns empty there, as where nothing was checking, `edf`
+//! and `bdf` label the stretch `LEADOFF_NOT_JUDGED`, and `npz` and `mat` carry
+//! `leadoff_judged` beside the lead-off word. An IntoMind device whose
+//! firmware is older than 1.4.6 cannot check electrode contact: its lead-off
+//! detection does not work, and every electrode reads off whether it touches
+//! skin or not. A recording of one holds `leadoff_judged` false for every
+//! sample taken with detection on. One that holds no `leadoff_judged` is read
+//! the same way, from the firmware its manifest names. No format calls its
+//! electrodes off: `contact` says "not checked", `csv` and `tsv` have no
+//! lead-off column, and `edf` and `bdf` carry no lead-off label. Every
+//! summary says, in `contact`, whether contact was "checked", "partly
+//! checked", "not checked", or is "not known", a sample counting as checked
+//! where detection was running and its bits are a verdict. `csv` and `tsv`
+//! write a `chN_leadoff` column, and `edf` and `bdf` label each stretch an
+//! electrode was off, for each channel the lead-off word covers: for a
+//! recording of the IntoMind device its first eight channels, or all of them
+//! where it has fewer. `npz` and `mat` carry the lead-off word as the
+//! recording holds it.
+//!
+//! The header's recording field of an `edf` or `bdf` export begins as EDF+
+//! requires it to: Startdate, the start date, and the administration,
+//! technician and equipment codes, each an X where it is not known, the
+//! equipment being the device that made the recording, its name or id with
+//! an underscore for each run of white space. The library's own words
+//! follow: "SYNTHETIC, not measured:" for a generated signal, the width of
+//! the file's samples with "lossy" where it is narrower than the
+//! recording's, the board revision, "unknown" where the recording states
+//! none or states it as null, and the name of the raw record. The field
+//! holds 80 characters, and the device is cut to leave room for the words
+//! about a generated signal and the width, so only the revision and the raw
+//! record's name can be cut away.
+//!
+//! An `edf` or `bdf` export of a recording whose start cannot be read from
+//! its `started_utc` has a header whose recording field begins "Startdate X
+//! X X", its start date and the two subfields after it each written as EDF+
+//! writes a subfield that is not known, followed by the device as the
+//! equipment and the library's words, as for a known start, and whose start
+//! date and time fields, which must hold a date, hold 01.01.00 and
+//! 00.00.00.
 
 use std::path::{Path, PathBuf};
 
@@ -28,8 +75,9 @@ use crate::zip;
 /// then the two clinical containers, then text, then MATLAB.
 pub const FORMATS: [&str; 6] = ["npz", "edf", "bdf", "csv", "tsv", "mat"];
 
-/// Channels the lead-off status covers: one byte per packet, one bit per
-/// channel.
+/// Channels the lead-off status covers. The protocol gives the status one
+/// byte per packet, one bit per channel, so a channel past the eighth has
+/// none.
 const LEADOFF_CHANNELS: usize = 8;
 
 fn suffix(fmt: &str) -> &'static str {
@@ -51,8 +99,7 @@ pub fn export(collection: &Collection, label: &str, format: &str, path: Option<&
     let name = name.trim_start_matches('.');
     if !FORMATS.contains(&name) {
         return Err(error(format!(
-            "unknown export format {}. Known formats: {}",
-            Value::Str(format.to_string()).py_repr(),
+            "unknown export format {format:?}. Known formats: {}",
             FORMATS.join(", ")
         )));
     }
@@ -129,6 +176,9 @@ fn summary(cap: &Recording, path: &Path, fmt: &str, samples: usize, problems: &[
     m
 }
 
+/// A channel's label: `ch1_uv`, or `ch1_synthetic_uv` when the device
+/// generated the signal, so the columns that hold a generated signal say so
+/// wherever the file goes without its manifest.
 fn column(cap: &Recording, c: usize) -> String {
     if cap.synthetic() {
         format!("ch{}_synthetic_uv", c + 1)
@@ -140,21 +190,27 @@ fn column(cap: &Recording, c: usize) -> String {
 /// Every per-sample array except the microvolts, each only where it lines
 /// up with `n` samples, and a sentence for each one left out. A recording
 /// made before detection was kept has no `leadoff_active`, and `contact`
-/// says so instead of a sentence here.
+/// says so instead of a sentence here. A recording whose every sample's
+/// lead-off bits are a verdict holds no `leadoff_judged`, and nothing was
+/// left out of it. An IntoMind device whose firmware is older than 1.4.6
+/// cannot check electrode contact, and where no `leadoff_judged` is found,
+/// a recording of one has every sample taken with detection on read as no
+/// verdict, so no format calls its electrodes off.
 fn per_sample(cap: &Recording, n: usize) -> (Vec<(&'static str, Array)>, Vec<String>) {
     let mut found = Vec::new();
     let mut omitted = Vec::new();
-    let all: [(&'static str, Option<&Array>); 6] = [
+    let all: [(&'static str, Option<&Array>); 7] = [
         ("index", Some(&cap.index)),
         ("device_ticks", cap.device_ticks.as_ref()),
         ("host_time", Some(&cap.host_time)),
         ("leadoff", cap.leadoff.as_ref()),
         ("gap_before", cap.gap_before.as_ref()),
         ("leadoff_active", cap.leadoff_active.as_ref()),
+        ("leadoff_judged", cap.leadoff_judged.as_ref()),
     ];
     for (name, a) in all {
         match a {
-            None if name == "leadoff_active" => {}
+            None if name == "leadoff_active" || name == "leadoff_judged" => {}
             None => omitted.push(format!("{name}: the capture does not carry it")),
             Some(a) => {
                 let got = if a.shape.is_empty() { 0 } else { a.shape[0] };
@@ -166,6 +222,11 @@ fn per_sample(cap: &Recording, n: usize) -> (Vec<(&'static str, Array)>, Vec<Str
             }
         }
     }
+    if find(&found, "leadoff_judged").is_none() {
+        if let Some(judged) = crate::recording::judged_on_read(&cap.meta, find(&found, "leadoff_active")) {
+            found.push(("leadoff_judged", judged));
+        }
+    }
     (found, omitted)
 }
 
@@ -175,11 +236,16 @@ fn find<'a>(found: &'a [(&'static str, Array)], name: &str) -> Option<&'a Array>
 
 /// Whether electrode contact was checked: "checked", "partly checked",
 /// "not checked", or "not known" where the recording does not say whether
-/// detection was running.
-fn contact_state(leadoff: Option<&Array>, active: Option<&Array>) -> &'static str {
+/// detection was running, as the Python library's `export.contact_state`.
+/// `judged`, where a recording holds it, says which samples' bits are a
+/// verdict, and a sample counts as checked where detection was running and
+/// its bits are one, so a recording whose first samples came before the
+/// device's first judgment is "partly checked", and one none of whose
+/// samples did is "not checked", though detection was running.
+fn contact_state(leadoff: Option<&Data>, active: Option<&Data>, judged: Option<&Data>) -> &'static str {
     let (Some(_), Some(active)) = (leadoff, active) else { return "not known" };
-    let n = active.data.len();
-    let on = (0..n).filter(|&i| active.data.bool_at(i)).count();
+    let n = active.len();
+    let on = (0..n).filter(|&i| checked_at(active, judged, i)).count();
     if on == 0 {
         "not checked"
     } else if on == n {
@@ -187,6 +253,18 @@ fn contact_state(leadoff: Option<&Array>, active: Option<&Array>) -> &'static st
     } else {
         "partly checked"
     }
+}
+
+/// Whether sample `i`'s contact was checked: detection was running and,
+/// where the recording says, its lead-off bits are a verdict.
+fn checked_at(active: &Data, judged: Option<&Data>, i: usize) -> bool {
+    active.bool_at(i) && judged.is_none_or(|j| j.bool_at(i))
+}
+
+/// The contact state of what `per_sample` found.
+fn contact_of(found: &[(&'static str, Array)]) -> &'static str {
+    let data = |name: &str| find(found, name).map(|a| &a.data);
+    contact_state(data("leadoff"), data("leadoff_active"), data("leadoff_judged"))
 }
 
 /// Decimal places that carry one count with room to spare.
@@ -259,7 +337,7 @@ fn export_npz(cap: &Recording, out: &Path, problems: &[String]) -> Result<J, Err
             ("lsb_uv", f(lsb)),
             ("omitted", j(omitted)),
             ("arrays", j(names)),
-            ("contact", j(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
+            ("contact", j(contact_of(&found))),
         ],
     ))
 }
@@ -280,9 +358,14 @@ fn export_delimited(cap: &Recording, out: &Path, problems: &[String], fmt: &str,
     let (found, omitted) = per_sample(cap, n);
     let host = find(&found, "host_time");
     let ticks = find(&found, "device_ticks");
-    let byte = find(&found, "leadoff");
-    let active = find(&found, "leadoff_active");
-    let checked = contact_state(byte, active);
+    let byte = find(&found, "leadoff").map(|a| &a.data);
+    let active = find(&found, "leadoff_active").map(|a| &a.data);
+    let judged = find(&found, "leadoff_judged").map(|a| &a.data);
+    let checked = contact_state(byte, active, judged);
+    // A column for each electrode covered, and only where contact was
+    // checked somewhere in the recording: a column of zeros from a
+    // recording where nothing was checking would read as every electrode
+    // attached.
     let off = if matches!(checked, "checked" | "partly checked") { nch.min(LEADOFF_CHANNELS) } else { 0 };
 
     let mut text = String::with_capacity(n * (16 + nch * 14));
@@ -304,11 +387,13 @@ fn export_delimited(cap: &Recording, out: &Path, problems: &[String], fmt: &str,
             text.push(d);
             text.push_str(&pyfmt::fixed(u[i], dec));
         }
+        // A row is filled only where detection was running and its bits are
+        // a verdict.
+        let verdict = off > 0 && checked_at(active.expect("checked"), judged, i);
         for c in 0..off {
             text.push(d);
-            let (b, a) = (byte.expect("checked"), active.expect("checked"));
-            if a.data.bool_at(i) {
-                text.push_str(&((b.data.i64_at(i) >> c) & 1).to_string());
+            if verdict {
+                text.push_str(&((byte.expect("checked").i64_at(i) >> c) & 1).to_string());
             }
         }
         text.push('\n');
@@ -349,6 +434,26 @@ fn device_of(meta: &Value) -> String {
         }
     }
     "unknown device".into()
+}
+
+/// Whether `c` is white space as Python's `str.isspace` says, the
+/// characters `str.split` and `str.strip` take away: Unicode's own, and the
+/// separators of files, groups, records and units.
+fn py_space(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+}
+
+/// One subfield of an EDF+ recording field: the text with each run of white
+/// space, as Python's `str.split` finds it, written as an underscore, since
+/// a space separates the subfields, or X, the standard's mark of a subfield
+/// that is not known, where there is no text.
+fn code(text: &str) -> String {
+    let joined = text.split(py_space).filter(|w| !w.is_empty()).collect::<Vec<_>>().join("_");
+    if joined.is_empty() {
+        "X".into()
+    } else {
+        joined
+    }
 }
 
 fn prefilter_of(meta: &Value) -> String {
@@ -394,7 +499,12 @@ fn export_edf_family(
         )));
     }
     let meta = &cap.meta;
-    let start = edf::start_of(meta.field("started_utc").as_str());
+    let started = edf::known_start(meta.field("started_utc").as_str());
+    // EDF+ writes a subfield that is not known as X, so a start that is not
+    // known is the recording field's start date written so. The start date
+    // and time fields must hold a date, and hold this one, which that X says
+    // is not the start.
+    let start = started.unwrap_or_else(|| edf::start_of(None));
 
     // A recording that armed before its count was reset begins with
     // samples from before it, and the file starts at the reset.
@@ -430,24 +540,42 @@ fn export_edf_family(
     let signals: Vec<(String, Vec<f64>)> =
         uv.iter().enumerate().map(|(c, u)| (label_of(c), u[skip.min(u.len())..].to_vec())).collect();
 
-    // Lead-off, labeled only where detection was running.
+    // Lead-off, read as every format reads it: a stretch an electrode was
+    // off is labeled only where detection was running and the bits are a
+    // verdict, and if contact was checked for part of the recording, the
+    // rest is labeled too, so that it cannot read as contact that was
+    // checked.
     let (found, _) = per_sample(cap, index.len());
     let byte = find(&found, "leadoff").map(|a| a.data.skip(skip));
     let active = find(&found, "leadoff_active").map(|a| a.data.skip(skip));
-    let (byte_a, active_a) = (byte.clone().map(Array::vector), active.clone().map(Array::vector));
-    let checked = contact_state(byte_a.as_ref(), active_a.as_ref());
+    let judged = match (&byte, &active) {
+        (Some(_), Some(_)) => find(&found, "leadoff_judged").map(|a| a.data.skip(skip)),
+        _ => None,
+    };
+    let checked = contact_state(byte.as_ref(), active.as_ref(), judged.as_ref());
     let mut stretches: Vec<(String, Vec<bool>)> = Vec::new();
     if matches!(checked, "checked" | "partly checked") {
         let (b, a) = (byte.expect("checked"), active.expect("checked"));
+        let verdict: Vec<bool> = (0..a.len()).map(|i| checked_at(&a, judged.as_ref(), i)).collect();
         for c in 0..cap.channels().min(LEADOFF_CHANNELS) {
-            let flags = (0..a.len()).map(|i| a.bool_at(i) && (b.i64_at(i) >> c) & 1 != 0).collect();
+            let flags = (0..a.len()).map(|i| verdict[i] && (b.i64_at(i) >> c) & 1 != 0).collect();
             stretches.push((format!("{} {}", edf::LEADOFF_LABEL, label_of(c)), flags));
         }
-        if checked == "partly checked" {
-            stretches.push((edf::NOT_CHECKED_LABEL.into(), (0..a.len()).map(|i| !a.bool_at(i)).collect()));
+        let unchecked: Vec<bool> = (0..a.len()).map(|i| !a.bool_at(i)).collect();
+        if unchecked.iter().any(|&x| x) {
+            stretches.push((edf::NOT_CHECKED_LABEL.into(), unchecked));
+        }
+        let unjudged: Vec<bool> = (0..a.len()).map(|i| a.bool_at(i) && !verdict[i]).collect();
+        if unjudged.iter().any(|&x| x) {
+            stretches.push((edf::NOT_JUDGED_LABEL.into(), unjudged));
         }
     }
-    let rev = meta.get("board_revision").map(Value::py_str).unwrap_or_else(|| "unknown".into());
+    // A revision of null, or of no text, states none, as a manifest without
+    // one does.
+    let rev = match meta.get("board_revision") {
+        Some(v) if !v.is_null() && !v.py_str().trim_matches(py_space).is_empty() => v.py_str(),
+        _ => "unknown".into(),
+    };
     let rec_bits = meta.field("adc_bits");
     let bits = if w.sample_bytes == 2 { 16 } else { 24 };
     let note = if rec_bits.truthy() {
@@ -461,7 +589,21 @@ fn export_edf_family(
         ""
     };
     let generated = if synthetic { "SYNTHETIC, not measured: " } else { "" };
-    let recording = format!("{generated}{} {rev} {bits}-bit{note}; raw record is {label}.npz", device_of(meta));
+    let width = format!("{bits}-bit{note}");
+    // The device that made it, from the recording's own manifest.
+    let device = device_of(meta);
+    // The recording field begins with the five subfields EDF+ requires, the
+    // device as the equipment whether the start is known or not. What a
+    // reader must not lose comes next, where no cut of the 80 characters can
+    // take it away: that a generated signal is generated, since the file is
+    // opened by software that never reads the manifest, and the width with
+    // its lossy note. The device is cut to leave them room, so only the
+    // revision and the raw record's name can be cut away.
+    let lead = format!("Startdate {} X X ", started.map_or("X".into(), edf::startdate));
+    let room = edf::RECORDING_WIDTH - lead.len() - format!(" {generated}{width}").len();
+    let equipment: String =
+        code(if device != "unknown device" { &device } else { "" }).chars().take(room).collect();
+    let recording = format!("{lead}{equipment} {generated}{width}, {rev}; raw record is {label}.npz");
     let prefilter = prefilter_of(meta);
     let transducer = transducer_of(meta)?;
     let idx = &index[skip.min(index.len())..];
@@ -626,7 +768,17 @@ fn export_mat(cap: &Recording, out: &Path, problems: &[String]) -> Result<J, Err
             ("stored_dtype", j("float64")),
             ("omitted", j(omitted)),
             ("variables", j(names)),
-            ("contact", j(contact_state(find(&found, "leadoff"), find(&found, "leadoff_active")))),
+            ("contact", j(contact_of(&found))),
         ],
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_format_an_error_names_is_in_rusts_spelling() {
+        let dir = std::env::temp_dir().join(format!("intomind-export-words-{}", std::process::id()));
+        let refused = super::export(&crate::recording::Collection::open(&dir), "x", "xls", None).err().expect("refused");
+        assert_eq!(refused.to_string(), "unknown export format \"xls\". Known formats: npz, edf, bdf, csv, tsv, mat");
+    }
 }

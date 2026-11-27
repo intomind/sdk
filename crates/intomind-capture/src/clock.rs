@@ -5,7 +5,7 @@
 //! fitted against the monotonic one, which cannot step, and the wall clock
 //! read beside it is the anchor that carries the fit back into the time a
 //! recording is written in. While a stream runs the fit that dates its
-//! samples is held still, so a recording is on one ruler from its first
+//! samples is held still, so a recording is on one timeline from its first
 //! sample to its last. Exchanges keep arriving and what they say is
 //! reported beside it. A step of the wall clock is found between anchors
 //! and written down, never smoothed into the samples.
@@ -162,7 +162,7 @@ impl Clock {
     }
 
     /// Device ticks on the wall clock of the first exchange: one continuous
-    /// ruler, whatever the wall clock did afterwards.
+    /// timeline, whatever the wall clock did afterwards.
     pub fn host_time(&self, device_ticks: i64) -> f64 {
         self.mono_time(device_ticks) + self.frame_offset
     }

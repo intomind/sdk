@@ -1,9 +1,10 @@
 //! The IntoMind instrument client.
 //!
-//! This crate does no input and no output. It is handed bytes that
+//! Its `Session` does no Bluetooth input or output. It is handed bytes that
 //! arrived and it hands back bytes to send, which means it works over
 //! whatever Bluetooth stack you already have, on whatever runtime you
-//! already use, and can be tested without either.
+//! already use, and can be tested without either. Saving a recording and
+//! exporting one are the only places it writes files.
 //!
 //! ```
 //! use intomind::{protocol::uuid_fill, Event, Session};

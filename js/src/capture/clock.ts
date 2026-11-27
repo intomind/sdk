@@ -6,7 +6,7 @@
  * fitted against the monotonic one, which cannot step, and the wall clock
  * read beside it is the anchor that carries the fit back into the time a
  * recording is written in. While a stream runs the fit that dates its
- * samples is held still, so a recording is on one ruler from its first
+ * samples is held still, so a recording is on one timeline from its first
  * sample to its last. Exchanges keep arriving and what they say is reported
  * beside it. A step of the wall clock is found between anchors and written
  * down, never smoothed into the samples.
@@ -65,6 +65,38 @@ interface Learned {
   readonly pinned: string | null;
 }
 
+/**
+ * The one reference point that every device of a daisy chain places its
+ * host times on: the first clock anchor any of them took, as (wall clock,
+ * monotonic), as the Python library's `_SharedFrame` holds it for a
+ * multi-device `Session`. Null until one has.
+ *
+ * Internal: a daisy chain joins each device's clock to its own with
+ * `joinFrame`, before the device takes its first anchor.
+ */
+export interface SharedFrame {
+  /** The first anchor any device of the chain took, or null before one has. */
+  anchor: readonly [number, number] | null;
+}
+
+/** Which reference point each clock of a daisy chain shares, kept beside the clocks rather than on them, so a clock's surface stays the library's. */
+const FRAMES = new WeakMap<Clock, SharedFrame>();
+
+/** A reference point no device has anchored yet. Internal. */
+export function newFrame(): SharedFrame {
+  return { anchor: null };
+}
+
+/** Place `clock`'s host times on `frame` from its next fit on, as the library's `Session` places a device it connects. Internal. */
+export function joinFrame(clock: Clock, frame: SharedFrame): void {
+  FRAMES.set(clock, frame);
+}
+
+/** The reference point `clock` shares, if it was joined to one. Internal. */
+export function frameOf(clock: Clock): SharedFrame | undefined {
+  return FRAMES.get(clock);
+}
+
 /** The map from device time to host time: the exchanges, the fit, and whether the fit is being held still under a running stream. */
 export class Clock {
   readonly #tickHz: number;
@@ -74,6 +106,8 @@ export class Clock {
   #pinned: string | null = null;
   #frameOffset = 0.0;
   #frameMono: number | null = null;
+  /** The anchor the frame was taken from: this clock's first, or its daisy chain's. */
+  #frameAnchor: readonly [number, number] | null = null;
   #learned: Learned | null = null;
   #frozen = false;
 
@@ -118,14 +152,31 @@ export class Clock {
     return (Number(deviceTicks) / this.#tickHz) * this.#skew + this.#offset;
   }
 
-  /** Device ticks on the wall clock of the first exchange: one continuous ruler, whatever the wall clock did afterwards. */
+  /**
+   * Device ticks on the wall clock of the first exchange, the daisy chain's
+   * first for a device connected through one: one continuous timeline,
+   * whatever the wall clock did afterwards, and every device of one chain
+   * on the same one.
+   */
   hostTime(deviceTicks: bigint): number {
     return this.monoTime(deviceTicks) + this.#frameOffset;
   }
 
-  /** (wall clock, monotonic) for every exchange. */
+  /**
+   * (wall clock, monotonic) for every exchange. A device connected through
+   * a daisy chain places its samples on the chain's first anchor, which
+   * another device of the chain may have taken, and then that anchor is listed
+   * too, in monotonic order, so a recording's anchors always hold the one
+   * its samples were placed on.
+   */
   anchors(): [number, number][] {
-    return this.#syncs.map((s) => [s.host, s.mono]);
+    let out: [number, number][] = this.#syncs.map((s) => [s.host, s.mono]);
+    const frame = this.#frameAnchor;
+    if (frame !== null && !out.some(([t, m]) => t === frame[0] && m === frame[1])) {
+      out = [...out, [frame[0], frame[1]]];
+      out.sort((x, y) => (x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0));
+    }
+    return out;
   }
 
   #fit(): void {
@@ -160,8 +211,19 @@ export class Clock {
     // while no stream is running.
     this.#learned = { skew, offset, pinned };
     if (this.#frozen) return;
-    this.#frameMono = first.mono;
-    this.#frameOffset = first.host - first.mono;
+    // The frame is this clock's first anchor, or its daisy chain's. Each
+    // device of a chain on its own first anchor put two devices on two
+    // timelines, apart by however far the wall clock moved between their
+    // connections.
+    let frame: readonly [number, number] = [first.host, first.mono];
+    const shared = FRAMES.get(this);
+    if (shared !== undefined) {
+      if (shared.anchor === null) shared.anchor = frame;
+      frame = shared.anchor;
+    }
+    this.#frameAnchor = frame;
+    this.#frameMono = frame[1];
+    this.#frameOffset = frame[0] - frame[1];
     this.#skew = skew;
     this.#offset = offset;
     this.#pinned = pinned;

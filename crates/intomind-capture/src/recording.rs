@@ -9,10 +9,12 @@
 //! write this format, and docs.intomind.com/files.html states its promises.
 //!
 //! Reading follows the Python library's `analysis.load` exactly, including
-//! the two corrections it makes in memory and never on disk: samples
-//! delivered twice by two Bluetooth subscriptions, and sample times
-//! stretched by an impossible clock fit. Each correction says what it did in
-//! [`Recording::repairs`].
+//! the three corrections it makes in memory and never on disk: samples
+//! delivered twice by two Bluetooth subscriptions, sample times stretched by
+//! an impossible clock fit, and the lead-off bits of an IntoMind device
+//! whose firmware is older than 1.4.6, which cannot check electrode
+//! contact, held without `leadoff_judged`. Each correction says what it did
+//! in [`Recording::repairs`].
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -58,13 +60,12 @@ pub fn check_label(label: &str) -> Result<&str, Error> {
         && b.iter().all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'-'));
     if !ok {
         return Err(error(format!(
-            "{} is not a capture label. A label is letters, digits, dots, dashes and underscores, \
-             starts with a letter or a digit, and is at most 128 characters.",
-            pyjson::repr_str(label)
+            "{label:?} is not a capture label. A label is letters, digits, dots, dashes and underscores, \
+             starts with a letter or a digit, and is at most 128 characters."
         )));
     }
     if label.contains("..") {
-        return Err(error(format!("{} is not a capture label: it walks up a directory", pyjson::repr_str(label))));
+        return Err(error(format!("{label:?} is not a capture label: it walks up a directory")));
     }
     Ok(label)
 }
@@ -208,9 +209,13 @@ impl Collection {
         })
     }
 
-    /// `label`, verified, read, and corrected in memory where it was
-    /// recorded by code with a defect since fixed. A recording that fails
-    /// verification is refused.
+    /// `label`, verified, read, and corrected in memory: samples two
+    /// subscriptions delivered twice, sample times stretched by an
+    /// impossible clock fit, and the lead-off bits of an IntoMind device
+    /// whose firmware is older than 1.4.6, which cannot check electrode
+    /// contact, held without `leadoff_judged`, each listed in
+    /// [`Recording::repairs`]. A recording that fails verification is
+    /// refused.
     pub fn load(&self, label: &str) -> Result<Recording, Error> {
         self.load_with(label, true, true)
     }
@@ -225,7 +230,7 @@ impl Collection {
             let v = self.verify(label)?;
             if !v.ok {
                 let list = Value::Array(v.problems.iter().map(|p| Value::Str(p.clone())).collect());
-                return Err(error(format!("{label}: integrity check FAILED: {}", list.py_repr())));
+                return Err(error(format!("{label}: integrity check FAILED: {}", list.rust_repr())));
             }
         }
         let npz_path = self.path(label, ".npz")?;
@@ -244,6 +249,7 @@ impl Collection {
         let leadoff = take("leadoff");
         let gap_before = take("gap_before");
         let leadoff_active = take("leadoff_active");
+        let leadoff_judged = take("leadoff_judged");
         // A recorder armed and stopped before a packet came keeps its counts
         // as one empty list, which the library reads as no channels.
         let counts = if counts.shape.len() == 1 && counts.data.len() == 0 {
@@ -263,6 +269,7 @@ impl Collection {
             leadoff,
             gap_before,
             leadoff_active,
+            leadoff_judged,
             meta,
             manifest_text,
             repairs: Vec::new(),
@@ -270,9 +277,86 @@ impl Collection {
         if repair {
             r.dedupe_delivery()?;
             r.repin_clock();
+            r.no_contact_check();
         }
         Ok(r)
     }
+}
+
+/// The first firmware of the IntoMind device that checks electrode contact.
+/// On an earlier one lead-off detection does not work, and every electrode
+/// reads off whether it touches skin or not.
+const JUDGES_FROM: [&str; 3] = ["1", "4", "6"];
+
+/// The code point of each zero of the Unicode decimal digits, which with
+/// the nine after it are what Python's `\d` reads as the digits 0 to 9.
+const DIGIT_ZEROS: [u32; 68] = [
+    0x30, 0x660, 0x6F0, 0x7C0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66, 0xDE6, 0xE50, 0xED0,
+    0xF20, 0x1040, 0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90, 0x1B50, 0x1BB0, 0x1C40, 0x1C50, 0xA620,
+    0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0, 0xFF10, 0x104A0, 0x10D30, 0x11066, 0x110F0, 0x11136, 0x111D0,
+    0x112F0, 0x11450, 0x114D0, 0x11650, 0x116C0, 0x11730, 0x118E0, 0x11950, 0x11C50, 0x11D50, 0x11DA0, 0x11F50,
+    0x16A60, 0x16AC0, 0x16B50, 0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6, 0x1E140, 0x1E2F0, 0x1E4F0, 0x1E950,
+    0x1FBF0,
+];
+
+/// A part of a version, whole number by whole number as Python's `int`
+/// reads it from the digits `\d` matches, without leading zeros: None for
+/// a part that is empty or holds anything else.
+fn whole_part(part: &str) -> Option<String> {
+    let digits: Option<String> = part
+        .chars()
+        .map(|c| {
+            let cp = c as u32;
+            DIGIT_ZEROS.iter().find(|&&z| (z..z + 10).contains(&cp)).map(|&z| char::from(b'0' + (cp - z) as u8))
+        })
+        .collect();
+    let digits = digits.filter(|d| !d.is_empty())?;
+    let trimmed = digits.trim_start_matches('0');
+    Some(if trimmed.is_empty() { "0".to_string() } else { trimmed.to_string() })
+}
+
+/// The firmware version, as "major.minor.patch", of the IntoMind device a
+/// recording was made of, where that firmware is older than 1.4.6 and so
+/// cannot check electrode contact, or None, as the Python library reads it.
+/// The device's own recording says its firmware in `firmware_version`, or
+/// `fw` in an older manifest. A version that is not three whole numbers is
+/// not known to be older.
+pub(crate) fn firmware_cannot_check(meta: &Value) -> Option<String> {
+    let given = meta.field("firmware_version");
+    let version = if given.truthy() { given } else { meta.field("fw") };
+    let Value::Str(version) = version else { return None };
+    // Python's `\s`: the whitespace Rust knows and the four separators
+    // from U+001C to U+001F.
+    let space = |c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c);
+    let parts: Vec<String> = version.trim_matches(space).split('.').map(whole_part).collect::<Option<_>>()?;
+    if parts.len() != 3 {
+        return None;
+    }
+    let older = parts
+        .iter()
+        .zip(JUDGES_FROM)
+        .map(|(part, from)| (part.len(), part.as_str()).cmp(&(from.len(), from)))
+        .find(|o| o.is_ne())
+        .is_some_and(|o| o.is_lt());
+    older.then(|| parts.join("."))
+}
+
+/// Whether each sample's lead-off bits are a verdict on contact, for a
+/// recording that holds no `leadoff_judged`, as the Python library reads it:
+/// for a recording of an IntoMind device whose firmware is older than 1.4.6,
+/// which cannot check electrode contact, false for every sample with
+/// detection on and true for the rest. None for any other recording, or where
+/// `leadoff_active`, whether detection was on at each sample, is None or was
+/// on for no sample.
+pub(crate) fn judged_on_read(meta: &Value, leadoff_active: Option<&Array>) -> Option<Array> {
+    let active = leadoff_active?;
+    firmware_cannot_check(meta)?;
+    let on: Vec<bool> = (0..active.data.len()).map(|i| active.data.bool_at(i)).collect();
+    if !on.iter().any(|&a| a) {
+        return None;
+    }
+    let data = Data::Bool(on.iter().map(|a| !a).collect());
+    Some(Array { shape: active.shape.clone(), fortran: active.fortran, data })
 }
 
 /// The sha256 of a file's bytes, in lowercase hex.
@@ -347,6 +431,7 @@ pub struct Recording {
     pub(crate) leadoff: Option<Array>,
     pub(crate) gap_before: Option<Array>,
     pub(crate) leadoff_active: Option<Array>,
+    pub(crate) leadoff_judged: Option<Array>,
     pub(crate) meta: Value,
     manifest_text: String,
     repairs: Vec<String>,
@@ -390,8 +475,10 @@ impl Recording {
         self.device_ticks.as_ref().map(|a| (0..a.data.len()).map(|i| a.data.i64_at(i)).collect())
     }
 
-    /// The lead-off byte that arrived with each sample, one bit per
-    /// electrode, when the recording kept it.
+    /// The lead-off byte recorded with each sample, one bit per electrode,
+    /// when the recording kept it: for the IntoMind device, the byte of the
+    /// packet that carried the sample. None when the recording carries no
+    /// lead-off.
     pub fn leadoff(&self) -> Option<Vec<u8>> {
         self.leadoff.as_ref().map(|a| (0..a.data.len()).map(|i| a.data.i64_at(i) as u8).collect())
     }
@@ -408,13 +495,31 @@ impl Recording {
         self.leadoff_active.as_ref().map(|a| (0..a.data.len()).map(|i| a.data.bool_at(i)).collect())
     }
 
+    /// Whether each sample's lead-off bits are a verdict on each
+    /// electrode's contact, held by a recording one of whose samples
+    /// carries none, as the first samples of an IntoMind device's stream
+    /// with detection on carry none from firmware 1.4.6: a false sample's
+    /// bits say neither that an electrode was attached nor that one was
+    /// off. An IntoMind device whose firmware is older than 1.4.6 cannot
+    /// check electrode contact, and a recording of one that holds no such
+    /// flags is read, by [`Collection::load`], with every sample taken with
+    /// detection on false and the rest true. None for any other recording
+    /// that holds no such flags, whose every sample's bits are what
+    /// [`Self::leadoff_active`] makes them.
+    pub fn leadoff_judged(&self) -> Option<Vec<bool>> {
+        self.leadoff_judged.as_ref().map(|a| (0..a.data.len()).map(|i| a.data.bool_at(i)).collect())
+    }
+
     /// The manifest, as its file holds it.
     pub fn manifest_json(&self) -> &str {
         &self.manifest_text
     }
 
-    /// What reading had to correct, in sentences. Empty for every recording
-    /// made by code with the fixes in it.
+    /// What reading corrected, in sentences: copies of samples that two
+    /// subscriptions delivered twice, times stretched by a clock fitted at a
+    /// skew no pair of oscillators can have, and the lead-off bits of an
+    /// IntoMind device whose firmware is older than 1.4.6, read as no
+    /// verdict on contact. Empty for a recording that needed none of them.
     pub fn repairs(&self) -> &[String] {
         &self.repairs
     }
@@ -424,22 +529,18 @@ impl Recording {
         self.meta.field("synthetic").truthy()
     }
 
-    /// The effective sample rate. The manifest's `fs_effective`, unless it
-    /// disagrees with the host clock by more than five percent, which a
-    /// recording whose index reset before the fix did, and then the host
-    /// clock's.
+    /// The effective sample rate: the manifest's `fs_effective`, or the
+    /// rate measured on the host clock where the manifest states none or
+    /// the two differ by more than five percent of the host clock's. The
+    /// host clock's rate is measured over the stretches where the index
+    /// climbs by one, so a hole, where the index skips the samples that
+    /// were lost, is not counted as time spent sampling slowly.
     pub fn fs(&self) -> f64 {
         let stored = self.meta.field("fs_effective");
         let fs = if stored.truthy() { stored.as_f64().unwrap_or(0.0) } else { 0.0 };
-        let n = self.host_time.data.len();
-        if n > 1 {
-            let (first, last) = (self.host_time.data.f64_at(0), self.host_time.data.f64_at(n - 1));
-            if last > first {
-                let fs_ht = (n - 1) as f64 / (last - first);
-                if fs <= 0.0 || (fs - fs_ht).abs() / fs_ht > 0.05 {
-                    return fs_ht;
-                }
-            }
+        let fs_ht = rate_over_runs(&self.index(), &self.host_time());
+        if fs_ht > 0.0 && (fs <= 0.0 || (fs - fs_ht).abs() / fs_ht > 0.05) {
+            return fs_ht;
         }
         fs
     }
@@ -451,7 +552,7 @@ impl Recording {
         let bits = self.meta.field("adc_bits");
         if !bits.truthy() {
             let who = match self.meta.get("label") {
-                Some(v) => v.py_str(),
+                Some(v) => v.rust_str(),
                 None => "this capture".into(),
             };
             return Err(error(format!(
@@ -556,6 +657,7 @@ impl Recording {
             (self.leadoff.as_ref(), "leadoff"),
             (self.gap_before.as_ref(), "gap_before"),
             (self.leadoff_active.as_ref(), "leadoff_active"),
+            (self.leadoff_judged.as_ref(), "leadoff_judged"),
         ] {
             if let Some(a) = a {
                 check(a, what)?;
@@ -587,6 +689,7 @@ impl Recording {
         self.leadoff = self.leadoff.as_ref().map(take);
         self.gap_before = self.gap_before.as_ref().map(take);
         self.leadoff_active = self.leadoff_active.as_ref().map(take);
+        self.leadoff_judged = self.leadoff_judged.as_ref().map(take);
         self.repairs.push(format!(
             "every packet was delivered {} times over, so {} of {} samples were copies. Removed: {} samples remain. \
              (Two BLE subscriptions were open on the instrument at once.)",
@@ -596,6 +699,31 @@ impl Recording {
             pyfmt::grouped(cols as i64)
         ));
         Ok(())
+    }
+
+    /// The lead-off bits of a recording of an IntoMind device whose
+    /// firmware is older than 1.4.6, read as no verdict on contact. That
+    /// firmware cannot check electrode contact: its lead-off detection does
+    /// not work, and every electrode reads off whether it touches skin or
+    /// not. In a recording of it that holds no `leadoff_judged`, its
+    /// lead-off bits would read as electrodes off, so every sample taken
+    /// with detection on is marked not judged, as a recording that holds the
+    /// flags marks it. A recording that holds its own `leadoff_judged`, or
+    /// of any other device, is left as it is.
+    fn no_contact_check(&mut self) {
+        if self.leadoff_judged.is_some() {
+            return;
+        }
+        let Some(judged) = judged_on_read(&self.meta, self.leadoff_active.as_ref()) else { return };
+        let n = (0..judged.data.len()).filter(|&i| !judged.data.bool_at(i)).count();
+        let firmware = firmware_cannot_check(&self.meta).unwrap_or_default();
+        self.leadoff_judged = Some(judged);
+        self.repairs.push(format!(
+            "the device ran firmware {firmware}, which cannot check electrode contact: its lead-off detection does \
+             not work, and every electrode reads off whether it touches skin or not. The lead-off bits of the {} \
+             samples taken with detection on are read as no verdict on contact.",
+            pyfmt::grouped(n as i64)
+        ));
     }
 
     /// A clock fitted at a skew no pair of oscillators can have stretched
@@ -670,5 +798,110 @@ impl Recording {
             pyfmt::fixed(baseline, 2),
             pyfmt::grouped_fixed(span, 0)
         ));
+    }
+}
+
+/// The rate `time` measures, in samples a second, over the stretches where
+/// `index` climbs by exactly one: the samples in them less one each, over
+/// the time they span, as the Python library's `provenance.rate_over_runs`
+/// measures it. A hole, where the index skips the samples that were lost,
+/// adds nothing to either, so it is not read as slow sampling. 0 where
+/// nothing can be measured.
+pub(crate) fn rate_over_runs(index: &[i64], time: &[f64]) -> f64 {
+    if time.len() < 2 || index.len() != time.len() {
+        return 0.0;
+    }
+    let (mut count, mut span, mut a) = (0usize, 0.0f64, 0usize);
+    let n = index.len();
+    for i in 1..=n {
+        if i == n || index[i].wrapping_sub(index[i - 1]) != 1 {
+            if i - a >= 2 {
+                count += i - a - 1;
+                span += time[i - 1] - time[a];
+            }
+            a = i;
+        }
+    }
+    if span > 0.0 { count as f64 / span } else { 0.0 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{firmware_cannot_check, judged_on_read};
+    use crate::npy::{Array, Data};
+    use crate::pyjson::loads;
+
+    #[test]
+    fn the_firmware_that_cannot_check_contact_is_read_from_the_manifest_as_the_library_reads_it() {
+        let older = |text: &str| firmware_cannot_check(&loads(text).expect("JSON"));
+        assert_eq!(older(r#"{"firmware_version": "1.4.5"}"#).as_deref(), Some("1.4.5"));
+        assert_eq!(older(r#"{"firmware_version": " 01.004.005\n"}"#).as_deref(), Some("1.4.5"));
+        assert_eq!(older(r#"{"firmware_version": "1.4.6"}"#), None);
+        assert_eq!(older(r#"{"firmware_version": "1.10.0"}"#), None, "whole numbers, not text");
+        let long = r#"{"firmware_version": "0.99999999999999999999.0"}"#;
+        assert_eq!(older(long).as_deref(), Some("0.99999999999999999999.0"), "whole numbers of any length");
+        assert_eq!(older(r#"{"firmware_version": "1.4"}"#), None, "not three whole numbers");
+        assert_eq!(older(r#"{"firmware_version": "1.4.5-rc1"}"#), None);
+        assert_eq!(older(r#"{"firmware_version": "1. 4.5"}"#), None);
+        assert_eq!(older(r#"{"firmware_version": "\u0661.\u0664.\u0665"}"#).as_deref(), Some("1.4.5"));
+        assert_eq!(older(r#"{"firmware_version": "", "fw": "1.3.0"}"#).as_deref(), Some("1.3.0"), "an older manifest");
+        assert_eq!(older(r#"{"firmware_version": 145, "fw": "1.3.0"}"#), None);
+    }
+
+    #[test]
+    fn a_recording_of_firmware_that_cannot_check_contact_is_read_with_no_verdict_where_detection_was_on() {
+        let old = loads(r#"{"firmware_version": "1.4.5"}"#).expect("JSON");
+        let new = loads(r#"{"firmware_version": "1.4.6"}"#).expect("JSON");
+        let active = |on: &[bool]| Array::vector(Data::Bool(on.to_vec()));
+        let judged = judged_on_read(&old, Some(&active(&[false, true, true]))).expect("read as not judged");
+        assert_eq!(judged.data, Data::Bool(vec![true, false, false]));
+        assert_eq!(judged_on_read(&old, Some(&active(&[false, false]))), None, "detection on for no sample");
+        assert_eq!(judged_on_read(&old, None), None, "a recording that does not say");
+        assert_eq!(judged_on_read(&new, Some(&active(&[true]))), None, "firmware that checks contact");
+    }
+
+    #[test]
+    fn counts_of_three_dimensions_or_more_are_refused_as_not_channels_by_samples() {
+        use crate::npy;
+        let n = 600;
+        let dir = std::env::temp_dir().join(format!("intomind-counts-dims-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let shapes: [(&str, Vec<usize>); 3] =
+            [("t_counts_three_dims", vec![2, 3, n]), ("t_counts_thin_dim", vec![2, 1, n]), ("t_counts_four_dims", vec![1, 2, 3, n])];
+        for (label, shape) in &shapes {
+            let size = shape.iter().product::<usize>();
+            let counts: Vec<i64> = (0..size).map(|k| 50_000 + ((k * 37) % 2000) as i64 - 1000).collect();
+            let index: Vec<i64> = (0..n as i64).collect();
+            let members = [
+                ("counts", Array { shape: shape.clone(), fortran: false, data: Data::I64(counts) }),
+                ("index", Array::vector(Data::I64(index.clone()))),
+                ("device_ticks", Array::vector(Data::I64(index.iter().map(|k| k * 2000).collect()))),
+                ("host_time", Array::vector(Data::F64(index.iter().map(|&k| k as f64 / 500.0).collect()))),
+                ("leadoff", Array::vector(Data::U8(vec![0; n]))),
+                ("gap_before", Array::vector(Data::Bool(vec![false; n]))),
+                ("leadoff_active", Array::vector(Data::Bool(vec![true; n]))),
+            ];
+            let members: Vec<(String, Vec<u8>)> = members.iter().map(|(k, a)| (format!("{k}.npy"), npy::write(a))).collect();
+            std::fs::write(dir.join(format!("{label}.npz")), crate::zip::write(&members, 1_767_225_600)).unwrap();
+            let meta = format!(
+                r#"{{"label": "{label}", "n": {n}, "fs_effective": 500.0, "vref_uv": 2400000, "gain": 12, "adc_bits": 24, "tick_hz": 1000000}}"#
+            );
+            std::fs::write(dir.join(format!("{label}.meta.json")), meta).unwrap();
+            let refused = super::Collection::open(&dir).load(label).err().expect("refused");
+            assert_eq!(refused.to_string(), format!("{label}: the counts are not channels by samples"));
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_label_an_error_names_is_in_rusts_spelling() {
+        let said = |label: &str| super::check_label(label).err().expect("refused").to_string();
+        assert_eq!(
+            said("it's a label"),
+            "\"it's a label\" is not a capture label. A label is letters, digits, dots, dashes and underscores, \
+             starts with a letter or a digit, and is at most 128 characters."
+        );
+        assert_eq!(said("a..b"), "\"a..b\" is not a capture label: it walks up a directory");
     }
 }

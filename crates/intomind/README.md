@@ -1,9 +1,11 @@
 # intomind
 
-The IntoMind instrument client: one device as a state machine. It does no
-input and no output. It is handed the bytes that arrived and hands back the
-bytes to send, so it works over whatever Bluetooth stack and runtime you
-already have, and can be tested without either.
+The IntoMind instrument client: one device as a state machine, its
+`Session`, which does no Bluetooth input or output. The session is handed
+the bytes that arrived and hands back the bytes to send, so it works over
+whatever Bluetooth stack and runtime you already have, and can be tested
+without either. Saving a recording and exporting one are the only places
+it writes files.
 
 The guide is at [docs.intomind.com/rust.html](https://docs.intomind.com/rust.html).
 

@@ -1,0 +1,86 @@
+[
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262831.0,
+    "mono": 4503696.6,
+    "rep": 0
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262839.0,
+    "mono": 4503704.6,
+    "rep": 0
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262847.0,
+    "mono": 4503712.6,
+    "rep": 1
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262855.0,
+    "mono": 4503720.6,
+    "rep": 1
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262863.0,
+    "mono": 4503728.6,
+    "rep": 2
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262871.0,
+    "mono": 4503736.6,
+    "rep": 2
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262879.0,
+    "mono": 4503744.6,
+    "rep": 3
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262887.0,
+    "mono": 4503752.6,
+    "rep": 3
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262895.0,
+    "mono": 4503760.6,
+    "rep": 4
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262903.0,
+    "mono": 4503768.6,
+    "rep": 4
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262911.0,
+    "mono": 4503776.6,
+    "rep": 5
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262919.0,
+    "mono": 4503784.6,
+    "rep": 5
+  }
+]

@@ -1,0 +1,3699 @@
+{
+ "library": "1.4.4",
+ "profiles": [
+  {
+   "name": "no device info",
+   "info": null,
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": null,
+    "controls": {}
+   }
+  },
+  {
+   "name": "nothing declared",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only battery_voltage",
+   "info": "0104010402041840420f0020aa440001000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only battery_low_flag",
+   "info": "0104010402041840420f0020aa440002000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only leadoff",
+   "info": "0104010402041840420f0020aa440004000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     }
+    }
+   }
+  },
+  {
+   "name": "only test_signal",
+   "info": "0104010402041840420f0020aa440008000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only dcdc_mode",
+   "info": "0104010402041840420f0020aa440010000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only input_short",
+   "info": "0104010402041840420f0020aa440020000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "short"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only update",
+   "info": "0104010402041840420f0020aa440040000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only model",
+   "info": "0104010402041840420f0020aa440080000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "predictions": {
+      "supported": true,
+      "ready": false,
+      "head_slots": 4,
+      "embedding": 96
+     }
+    }
+   }
+  },
+  {
+   "name": "only model_ready",
+   "info": "0104010402041840420f0020aa440000010700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only heads",
+   "info": "0104010402041840420f0020aa440000020700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only pipeline",
+   "info": "0104010402041840420f0020aa440000040700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     }
+    }
+   }
+  },
+  {
+   "name": "only bias_drive",
+   "info": "0104010402041840420f0020aa440000080700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "bias": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "off",
+       "on",
+       "loop_open"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only embeddings",
+   "info": "0104010402041840420f0020aa440000100700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only indicator",
+   "info": "0104010402041840420f0020aa440000200700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     }
+    }
+   }
+  },
+  {
+   "name": "only converter_registers",
+   "info": "0104010402041840420f0020aa440000400700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     }
+    }
+   }
+  },
+  {
+   "name": "only model_cadence",
+   "info": "0104010402041840420f0020aa440000800700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     }
+    }
+   }
+  },
+  {
+   "name": "only synthetic",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000001000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "synthetic"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "only device_name",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000002000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 0, short 0, synthetic 0",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 0, short 0, synthetic 1",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000001000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "synthetic"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 0, short 1, synthetic 0",
+   "info": "0104010402041840420f0020aa440020000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "short"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 0, short 1, synthetic 1",
+   "info": "0104010402041840420f0020aa440020000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000001000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "short",
+       "synthetic"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 1, short 0, synthetic 0",
+   "info": "0104010402041840420f0020aa440008000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 1, short 0, synthetic 1",
+   "info": "0104010402041840420f0020aa440008000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000001000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "synthetic"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 1, short 1, synthetic 0",
+   "info": "0104010402041840420f0020aa440028000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "signal sources: test 1, short 1, synthetic 1",
+   "info": "0104010402041840420f0020aa440028000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000001000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "a model, ready",
+   "info": "0104010402041840420f0020aa440080010700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     }
+    }
+   }
+  },
+  {
+   "name": "a model, not ready",
+   "info": "0104010402041840420f0020aa440080000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "predictions": {
+      "supported": true,
+      "ready": false,
+      "head_slots": 4,
+      "embedding": 96
+     }
+    }
+   }
+  },
+  {
+   "name": "a model with no slots and no width",
+   "info": "0104010402041840420f0020aa440080000700a0a1a2a3a4a5a6a7500908070001020304050607080000f401d00700200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "predictions": {
+      "supported": true,
+      "ready": false,
+      "head_slots": 0,
+      "embedding": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "ready without a model",
+   "info": "0104010402041840420f0020aa440000010700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 0",
+   "info": "0104010402041840420f0020aa440000000000a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": []
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 1",
+   "info": "0104010402041840420f0020aa440000000100a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 2",
+   "info": "0104010402041840420f0020aa440000000200a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       500
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 3",
+   "info": "0104010402041840420f0020aa440000000300a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 4",
+   "info": "0104010402041840420f0020aa440000000400a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 5",
+   "info": "0104010402041840420f0020aa440000000500a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 6",
+   "info": "0104010402041840420f0020aa440000000600a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 7",
+   "info": "0104010402041840420f0020aa440000000700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "rate mask 255",
+   "info": "0104010402041840420f0020aa44000000ff00a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "everything",
+   "info": "0104010402041840420f0020aa4400ffff0700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "bias": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "off",
+       "on",
+       "loop_open"
+      ]
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's own declaration",
+   "info": "0104010402041840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500908070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    }
+   }
+  },
+  {
+   "name": "everything, on a device whose info ends at 76 bytes",
+   "info": "0102010402041840420f0020aa4400ffff0700a0a1a2a3a4a5a6a74c0908070001020304050607086000f401d00704200010f400007004000020060000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "9.8.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "bias": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "off",
+       "on",
+       "loop_open"
+      ]
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     }
+    }
+   }
+  },
+  {
+   "name": "the original 27 bytes, which report no hardware",
+   "info": "0104010402041840420f0020aa4400ffff0700a0a1a2a3a4a5a6a7",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": null,
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 0,
+      "embedding": 0
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "bias": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "off",
+       "on",
+       "loop_open"
+      ]
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     }
+    }
+   }
+  },
+  {
+   "name": "a hardware version of zeros",
+   "info": "0104010402041840420f0020aa440004000700a0a1a2a3a4a5a6a7500000000001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000000000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "0.0.0",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     }
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's hardware, which has a wiring preset",
+   "info": "0104010402041840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.1.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    },
+    "wiring": {
+     "layout": {
+      "key": "one-locus-4",
+      "human": "4 channels at one locus around a reference at its center",
+      "slots": [
+       {
+        "key": "1",
+        "human": "channel 1",
+        "role": "recording",
+        "name": "ch1",
+        "angle_deg": null
+       },
+       {
+        "key": "2",
+        "human": "channel 2",
+        "role": "recording",
+        "name": "ch2",
+        "angle_deg": null
+       },
+       {
+        "key": "3",
+        "human": "channel 3",
+        "role": "recording",
+        "name": "ch3",
+        "angle_deg": null
+       },
+       {
+        "key": "4",
+        "human": "channel 4",
+        "role": "recording",
+        "name": "ch4",
+        "angle_deg": null
+       },
+       {
+        "key": "ref",
+        "human": "reference electrode, center",
+        "role": "reference",
+        "name": "ref",
+        "angle_deg": null
+       }
+      ],
+      "channels": [
+       {
+        "index": 1,
+        "derivation": "referential",
+        "positive": "1",
+        "negative": "ref",
+        "label": "Channel 1"
+       },
+       {
+        "index": 2,
+        "derivation": "referential",
+        "positive": "2",
+        "negative": "ref",
+        "label": "Channel 2"
+       },
+       {
+        "index": 3,
+        "derivation": "referential",
+        "positive": "3",
+        "negative": "ref",
+        "label": "Channel 3"
+       },
+       {
+        "index": 4,
+        "derivation": "referential",
+        "positive": "4",
+        "negative": "ref",
+        "label": "Channel 4"
+       }
+      ],
+      "rotatable": false,
+      "presets": [],
+      "electrode": null,
+      "notes": null
+     },
+     "one_locus": true
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's hardware, no bias drive",
+   "info": "0104010402041840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.1.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    },
+    "wiring": {
+     "layout": {
+      "key": "one-locus-4",
+      "human": "4 channels at one locus around a reference at its center",
+      "slots": [
+       {
+        "key": "1",
+        "human": "channel 1",
+        "role": "recording",
+        "name": "ch1",
+        "angle_deg": null
+       },
+       {
+        "key": "2",
+        "human": "channel 2",
+        "role": "recording",
+        "name": "ch2",
+        "angle_deg": null
+       },
+       {
+        "key": "3",
+        "human": "channel 3",
+        "role": "recording",
+        "name": "ch3",
+        "angle_deg": null
+       },
+       {
+        "key": "4",
+        "human": "channel 4",
+        "role": "recording",
+        "name": "ch4",
+        "angle_deg": null
+       },
+       {
+        "key": "ref",
+        "human": "reference electrode, center",
+        "role": "reference",
+        "name": "ref",
+        "angle_deg": null
+       }
+      ],
+      "channels": [
+       {
+        "index": 1,
+        "derivation": "referential",
+        "positive": "1",
+        "negative": "ref",
+        "label": "Channel 1"
+       },
+       {
+        "index": 2,
+        "derivation": "referential",
+        "positive": "2",
+        "negative": "ref",
+        "label": "Channel 2"
+       },
+       {
+        "index": 3,
+        "derivation": "referential",
+        "positive": "3",
+        "negative": "ref",
+        "label": "Channel 3"
+       },
+       {
+        "index": 4,
+        "derivation": "referential",
+        "positive": "4",
+        "negative": "ref",
+        "label": "Channel 4"
+       }
+      ],
+      "rotatable": false,
+      "presets": [],
+      "electrode": null,
+      "notes": null
+     },
+     "one_locus": true
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's hardware, everything declared",
+   "info": "0104010402041840420f0020aa4400ffff0700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.1.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "bias": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "off",
+       "on",
+       "loop_open"
+      ]
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    },
+    "wiring": {
+     "layout": {
+      "key": "one-locus-4-bias",
+      "human": "4 channels at one locus around a reference at its center, and a bias electrode",
+      "slots": [
+       {
+        "key": "1",
+        "human": "channel 1",
+        "role": "recording",
+        "name": "ch1",
+        "angle_deg": null
+       },
+       {
+        "key": "2",
+        "human": "channel 2",
+        "role": "recording",
+        "name": "ch2",
+        "angle_deg": null
+       },
+       {
+        "key": "3",
+        "human": "channel 3",
+        "role": "recording",
+        "name": "ch3",
+        "angle_deg": null
+       },
+       {
+        "key": "4",
+        "human": "channel 4",
+        "role": "recording",
+        "name": "ch4",
+        "angle_deg": null
+       },
+       {
+        "key": "ref",
+        "human": "reference electrode, center",
+        "role": "reference",
+        "name": "ref",
+        "angle_deg": null
+       },
+       {
+        "key": "bias",
+        "human": "bias electrode",
+        "role": "bias",
+        "name": "bias",
+        "angle_deg": null
+       }
+      ],
+      "channels": [
+       {
+        "index": 1,
+        "derivation": "referential",
+        "positive": "1",
+        "negative": "ref",
+        "label": "Channel 1"
+       },
+       {
+        "index": 2,
+        "derivation": "referential",
+        "positive": "2",
+        "negative": "ref",
+        "label": "Channel 2"
+       },
+       {
+        "index": 3,
+        "derivation": "referential",
+        "positive": "3",
+        "negative": "ref",
+        "label": "Channel 3"
+       },
+       {
+        "index": 4,
+        "derivation": "referential",
+        "positive": "4",
+        "negative": "ref",
+        "label": "Channel 4"
+       }
+      ],
+      "rotatable": false,
+      "presets": [],
+      "electrode": null,
+      "notes": null
+     },
+     "one_locus": true
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's hardware, one channel",
+   "info": "0104010402011840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.1.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    },
+    "wiring": {
+     "layout": {
+      "key": "one-locus-1",
+      "human": "1 channel at one locus around a reference at its center",
+      "slots": [
+       {
+        "key": "1",
+        "human": "channel 1",
+        "role": "recording",
+        "name": "ch1",
+        "angle_deg": null
+       },
+       {
+        "key": "ref",
+        "human": "reference electrode, center",
+        "role": "reference",
+        "name": "ref",
+        "angle_deg": null
+       }
+      ],
+      "channels": [
+       {
+        "index": 1,
+        "derivation": "referential",
+        "positive": "1",
+        "negative": "ref",
+        "label": "Channel 1"
+       }
+      ],
+      "rotatable": false,
+      "presets": [],
+      "electrode": null,
+      "notes": null
+     },
+     "one_locus": true
+    }
+   }
+  },
+  {
+   "name": "the IntoMind One's hardware, eight channels",
+   "info": "0104010402081840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.1.7",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    },
+    "wiring": {
+     "layout": {
+      "key": "one-locus-8",
+      "human": "8 channels at one locus around a reference at its center",
+      "slots": [
+       {
+        "key": "1",
+        "human": "channel 1",
+        "role": "recording",
+        "name": "ch1",
+        "angle_deg": null
+       },
+       {
+        "key": "2",
+        "human": "channel 2",
+        "role": "recording",
+        "name": "ch2",
+        "angle_deg": null
+       },
+       {
+        "key": "3",
+        "human": "channel 3",
+        "role": "recording",
+        "name": "ch3",
+        "angle_deg": null
+       },
+       {
+        "key": "4",
+        "human": "channel 4",
+        "role": "recording",
+        "name": "ch4",
+        "angle_deg": null
+       },
+       {
+        "key": "5",
+        "human": "channel 5",
+        "role": "recording",
+        "name": "ch5",
+        "angle_deg": null
+       },
+       {
+        "key": "6",
+        "human": "channel 6",
+        "role": "recording",
+        "name": "ch6",
+        "angle_deg": null
+       },
+       {
+        "key": "7",
+        "human": "channel 7",
+        "role": "recording",
+        "name": "ch7",
+        "angle_deg": null
+       },
+       {
+        "key": "8",
+        "human": "channel 8",
+        "role": "recording",
+        "name": "ch8",
+        "angle_deg": null
+       },
+       {
+        "key": "ref",
+        "human": "reference electrode, center",
+        "role": "reference",
+        "name": "ref",
+        "angle_deg": null
+       }
+      ],
+      "channels": [
+       {
+        "index": 1,
+        "derivation": "referential",
+        "positive": "1",
+        "negative": "ref",
+        "label": "Channel 1"
+       },
+       {
+        "index": 2,
+        "derivation": "referential",
+        "positive": "2",
+        "negative": "ref",
+        "label": "Channel 2"
+       },
+       {
+        "index": 3,
+        "derivation": "referential",
+        "positive": "3",
+        "negative": "ref",
+        "label": "Channel 3"
+       },
+       {
+        "index": 4,
+        "derivation": "referential",
+        "positive": "4",
+        "negative": "ref",
+        "label": "Channel 4"
+       },
+       {
+        "index": 5,
+        "derivation": "referential",
+        "positive": "5",
+        "negative": "ref",
+        "label": "Channel 5"
+       },
+       {
+        "index": 6,
+        "derivation": "referential",
+        "positive": "6",
+        "negative": "ref",
+        "label": "Channel 6"
+       },
+       {
+        "index": 7,
+        "derivation": "referential",
+        "positive": "7",
+        "negative": "ref",
+        "label": "Channel 7"
+       },
+       {
+        "index": 8,
+        "derivation": "referential",
+        "positive": "8",
+        "negative": "ref",
+        "label": "Channel 8"
+       }
+      ],
+      "rotatable": false,
+      "presets": [],
+      "electrode": null,
+      "notes": null
+     },
+     "one_locus": true
+    }
+   }
+  },
+  {
+   "name": "other hardware, 1.0.0, which has no preset",
+   "info": "0104010402041840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500100000001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+   "profile": {
+    "vendor": "IntoMind",
+    "hardware": "1.0.0",
+    "controls": {
+     "gain": {
+      "supported": true,
+      "options": [
+       1,
+       2,
+       4,
+       6,
+       8,
+       12,
+       24
+      ]
+     },
+     "sample_rate": {
+      "supported": true,
+      "options": [
+       250,
+       500,
+       1000
+      ]
+     },
+     "signal_source": {
+      "supported": true,
+      "tier": "advanced",
+      "options": [
+       "normal",
+       "test",
+       "short",
+       "synthetic"
+      ]
+     },
+     "leadoff": {
+      "supported": false,
+      "options": [
+       false
+      ],
+      "why": "This device's firmware (1.4.2) cannot check electrode contact. Update it to 1.4.6 or later."
+     },
+     "predictions": {
+      "supported": true,
+      "ready": true,
+      "head_slots": 4,
+      "embedding": 96
+     },
+     "processing": {
+      "supported": true,
+      "tier": "basic",
+      "catalog": "pipeline_catalog()"
+     },
+     "indicator": {
+      "supported": true,
+      "options": [
+       "silent",
+       "reserved",
+       "verbose"
+      ],
+      "identify": true
+     },
+     "converter_registers": {
+      "supported": true,
+      "tier": "advanced",
+      "read_only": true
+     },
+     "embeddings": {
+      "supported": true,
+      "forms": [
+       "window",
+       "tokens",
+       "both"
+      ]
+     },
+     "model_cadence": {
+      "supported": true,
+      "unit": "seconds",
+      "minimum": "model_interval()"
+     },
+     "name": {
+      "supported": true,
+      "parts": [
+       "name",
+       "adjective"
+      ],
+      "product": "IntoMind One",
+      "max_bytes": 29
+     }
+    }
+   }
+  }
+ ],
+ "contact": [
+  {
+   "loff": 0,
+   "n_channels": 2,
+   "result": [
+    true,
+    true
+   ]
+  },
+  {
+   "loff": 1,
+   "n_channels": 2,
+   "result": [
+    false,
+    true
+   ]
+  },
+  {
+   "loff": 2,
+   "n_channels": 2,
+   "result": [
+    true,
+    false
+   ]
+  },
+  {
+   "loff": 3,
+   "n_channels": 2,
+   "result": [
+    false,
+    false
+   ]
+  },
+  {
+   "loff": 5,
+   "n_channels": 3,
+   "result": [
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "loff": 255,
+   "n_channels": 8,
+   "result": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "loff": 0,
+   "n_channels": 8,
+   "result": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "loff": 170,
+   "n_channels": 8,
+   "result": [
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "loff": 0,
+   "n_channels": 9,
+   "raises": "OverflowError",
+   "message": "Python integer 256 out of bounds for uint8"
+  },
+  {
+   "loff": 0,
+   "n_channels": 1,
+   "result": [
+    true
+   ]
+  },
+  {
+   "loff": 0,
+   "n_channels": 0,
+   "result": []
+  },
+  {
+   "loff": [],
+   "n_channels": 2,
+   "result": [
+    false,
+    false
+   ]
+  },
+  {
+   "loff": [],
+   "n_channels": 4,
+   "result": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "loff": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 4,
+   "result": [
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    1,
+    1,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    false,
+    true
+   ]
+  },
+  {
+   "loff": [
+    1,
+    1,
+    1,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    false,
+    true
+   ]
+  },
+  {
+   "loff": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "n_channels": 4,
+   "result": [
+    false,
+    false,
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    3,
+    3,
+    3,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    false,
+    false
+   ]
+  },
+  {
+   "loff": [
+    3,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    true,
+    false
+   ]
+  },
+  {
+   "loff": [
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 2,
+   "result": [
+    true,
+    true
+   ]
+  },
+  {
+   "loff": [
+    true,
+    false
+   ],
+   "n_channels": 2,
+   "result": [
+    false,
+    true
+   ]
+  },
+  {
+   "loff": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "n_channels": 1,
+   "result": [
+    false
+   ]
+  },
+  {
+   "loff": [
+    1.5
+   ],
+   "n_channels": 2,
+   "result": [
+    false,
+    true
+   ]
+  },
+  {
+   "loff": [
+    255.9,
+    0.25
+   ],
+   "n_channels": 8,
+   "result": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "loff": [
+    0,
+    300
+   ],
+   "n_channels": 2,
+   "raises": "OverflowError",
+   "message": "Python integer 300 out of bounds for uint8"
+  },
+  {
+   "loff": [
+    -1
+   ],
+   "n_channels": 2,
+   "raises": "OverflowError",
+   "message": "Python integer -1 out of bounds for uint8"
+  },
+  {
+   "loff": 300,
+   "n_channels": 2,
+   "raises": "OverflowError",
+   "message": "Python integer 300 out of bounds for uint8"
+  },
+  {
+   "loff": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "n_channels": 9,
+   "raises": "OverflowError",
+   "message": "Python integer 256 out of bounds for uint8"
+  },
+  {
+   "loff": [
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7
+   ],
+   "n_channels": 3,
+   "result": [
+    false,
+    false,
+    false
+   ]
+  }
+ ],
+ "contact_channels": [
+  {
+   "channels": 4,
+   "default": 2,
+   "result": 4
+  },
+  {
+   "channels": 2,
+   "default": 2,
+   "result": 2
+  },
+  {
+   "channels": 0,
+   "default": 2,
+   "result": 2
+  },
+  {
+   "channels": null,
+   "default": 2,
+   "result": 2
+  },
+  {
+   "channels": null,
+   "default": 3,
+   "result": 3
+  },
+  {
+   "channels": 8,
+   "default": 5,
+   "result": 8
+  },
+  {
+   "channels": "no device",
+   "default": 2,
+   "result": 2
+  }
+ ],
+ "min_fraction": 0.75,
+ "tiers": [
+  "basic",
+  "intermediate",
+  "advanced"
+ ],
+ "enforced": [
+  {
+   "name": "nothing declared",
+   "spec": {
+    "name": "baseline",
+    "enforced": {}
+   },
+   "params": {
+    "seconds": 30
+   },
+   "result": null
+  },
+  {
+   "name": "enforced of null",
+   "spec": {
+    "name": "baseline",
+    "enforced": null
+   },
+   "params": {},
+   "result": null
+  },
+  {
+   "name": "no enforced key",
+   "spec": {
+    "name": "baseline"
+   },
+   "params": {},
+   "result": null
+  },
+  {
+   "name": "required and given",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "consent": "required"
+    }
+   },
+   "params": {
+    "consent": true
+   },
+   "result": null
+  },
+  {
+   "name": "required and missing",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "consent": "required"
+    }
+   },
+   "params": {},
+   "raises": "EnforcedViolation",
+   "message": "'consent' is required for 'x' and cannot be overridden at any tier"
+  },
+  {
+   "name": "required and empty",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "consent": "required"
+    }
+   },
+   "params": {
+    "consent": ""
+   },
+   "raises": "EnforcedViolation",
+   "message": "'consent' is required for 'x' and cannot be overridden at any tier"
+  },
+  {
+   "name": "required and zero",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "consent": "required"
+    }
+   },
+   "params": {
+    "consent": 0
+   },
+   "raises": "EnforcedViolation",
+   "message": "'consent' is required for 'x' and cannot be overridden at any tier"
+  },
+  {
+   "name": "a value met",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "mode": "normal"
+    }
+   },
+   "params": {
+    "mode": "normal"
+   },
+   "result": null
+  },
+  {
+   "name": "a value not met",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "mode": "normal"
+    }
+   },
+   "params": {
+    "mode": "test"
+   },
+   "raises": "EnforcedViolation",
+   "message": "'mode' must be 'normal' for 'x'"
+  },
+  {
+   "name": "a value missing",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "mode": "normal"
+    }
+   },
+   "params": {},
+   "raises": "EnforcedViolation",
+   "message": "'mode' must be 'normal' for 'x'"
+  },
+  {
+   "name": "a number met by a float",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "n": 5
+    }
+   },
+   "params": {
+    "n": 5.0
+   },
+   "result": null
+  },
+  {
+   "name": "a number not met by text",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "n": 5
+    }
+   },
+   "params": {
+    "n": "5"
+   },
+   "raises": "EnforcedViolation",
+   "message": "'n' must be 5 for 'x'"
+  },
+  {
+   "name": "a float required",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "n": 2.5
+    }
+   },
+   "params": {
+    "n": 2
+   },
+   "raises": "EnforcedViolation",
+   "message": "'n' must be 2.5 for 'x'"
+  },
+  {
+   "name": "true met by one",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "flag": true
+    }
+   },
+   "params": {
+    "flag": 1
+   },
+   "result": null
+  },
+  {
+   "name": "null required",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "z": null
+    }
+   },
+   "params": {
+    "z": 0
+   },
+   "raises": "EnforcedViolation",
+   "message": "'z' must be None for 'x'"
+  },
+  {
+   "name": "a list required",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "z": [
+      1,
+      2
+     ]
+    }
+   },
+   "params": {
+    "z": [
+     1,
+     2
+    ]
+   },
+   "result": null
+  },
+  {
+   "name": "two keys, the second broken",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "a": "required",
+     "b": "on"
+    }
+   },
+   "params": {
+    "a": 1,
+    "b": "off"
+   },
+   "raises": "EnforcedViolation",
+   "message": "'b' must be 'on' for 'x'"
+  },
+  {
+   "name": "enforced as a list",
+   "spec": {
+    "name": "x",
+    "enforced": [
+     1
+    ]
+   },
+   "params": {},
+   "raises": "AttributeError",
+   "message": "'list' object has no attribute 'items'"
+  },
+  {
+   "name": "parameters of null",
+   "spec": {
+    "name": "x",
+    "enforced": {
+     "a": "required"
+    }
+   },
+   "params": null,
+   "raises": "AttributeError",
+   "message": "'NoneType' object has no attribute 'get'"
+  }
+ ],
+ "effective": [
+  {
+   "actual": {
+    "gain": 24,
+    "rate_sps": 500,
+    "mode": "normal",
+    "leadoff": null
+   },
+   "applied": {
+    "gain": 12,
+    "bias": "on"
+   },
+   "params": {
+    "seconds": 30,
+    "note": "desk",
+    "gain": 1.5
+   },
+   "result": {
+    "gain": 12,
+    "rate_sps": 500,
+    "mode": "normal",
+    "leadoff": null,
+    "bias": "on",
+    "param.seconds": 30,
+    "param.note": "desk",
+    "param.gain": 1.5
+   }
+  },
+  {
+   "actual": {},
+   "applied": {},
+   "params": {},
+   "result": {}
+  },
+  {
+   "actual": {
+    "a": 1
+   },
+   "applied": {},
+   "params": {
+    "a": 2
+   },
+   "result": {
+    "a": 1,
+    "param.a": 2
+   }
+  },
+  {
+   "actual": {
+    "rate_sps": 500.0
+   },
+   "applied": {
+    "rate_sps": 250
+   },
+   "params": {
+    "steps": [
+     [
+      "Close your eyes",
+      20.0
+     ]
+    ]
+   },
+   "result": {
+    "rate_sps": 250,
+    "param.steps": [
+     [
+      "Close your eyes",
+      20.0
+     ]
+    ]
+   }
+  }
+ ]
+}

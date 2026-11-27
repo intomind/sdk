@@ -6,14 +6,14 @@
 //! and every stage belongs to a class that says what it does to the
 //! signal. Map stages keep the sample rate and the kind of signal;
 //! representation changes and detectors are classes the contract
-//! defines and this firmware does not yet implement, so the catalog does
-//! not list them and a chain that names one is refused.
+//! defines and the IntoMind One's firmware does not implement, so the
+//! catalog does not list them and a chain that names one is refused.
 //!
 //! The rules are pure functions over a chain and a rate, so the device
-//! and a host can both say in advance whether a chain runs. The design is
-//! the same arithmetic as the proven earlier firmware: cookbook biquads at
-//! Butterworth Q, a notch given by its band's two edges, float carried
-//! across the whole cascade and quantized once at the end.
+//! and a host can both say in advance whether a chain runs. The filters
+//! are cookbook biquads at Butterworth Q and a notch given by its band's
+//! two edges, with float carried across the whole cascade and quantized
+//! once at the end.
 
 #![cfg_attr(not(test), no_std)]
 #![deny(unsafe_code)]

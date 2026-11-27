@@ -190,8 +190,7 @@ pub enum Continuity {
 
 /// Judge continuity from the previous packet's first index and sample count
 /// and the new packet's first index and discontinuity flag. The subtraction
-/// is done signed so the index's own 2^32 wrap stays exact, per the spec
-/// (this arithmetic was a v0.1 firmware defect, fixed 2026-08-31).
+/// is done signed so the index's own 2^32 wrap stays exact, per the spec.
 pub fn continuity(
     prev_index: u32,
     prev_n_samples: u8,
@@ -207,10 +206,10 @@ pub fn continuity(
     if step > 0 {
         return Continuity::Gap { lost: step as u32 };
     }
-    // step <= 0: backwards or same index with the flag. A re-base.
-    // step == 0 with the flag set is the documented "break of no meaningful
-    // extent".
-    let _ = flagged;
+    // Here the step is zero or less: the index stepped back, or it arrived
+    // where it was expected with the flag set. The timeline re-based, and
+    // that is a break and never a loss. When the index arrived where it was
+    // expected, the break spans no samples.
     Continuity::Break
 }
 
@@ -295,10 +294,11 @@ mod tests {
 
     #[test]
     fn rebase_is_a_break_never_a_loss_count() {
-        // Backwards index: epoch re-base. The spec's v0.1 defect read this
-        // as a saturated loss of 65535. It is a break.
+        // An index that steps back, as it does when the epoch is re-based,
+        // is a break and never a count of lost samples.
         assert_eq!(continuity(1000, 5, 0, flags::DISCONTINUITY), Continuity::Break);
-        // Zero step with the flag set: break of no meaningful extent.
+        // An index that arrives where it was expected is a break too when
+        // the flag is set, one that spans no samples.
         assert_eq!(continuity(1000, 5, 1005, flags::DISCONTINUITY), Continuity::Break);
     }
 }

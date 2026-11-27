@@ -1,9 +1,9 @@
 {
- "library": "1.4.3",
+ "library": "1.4.4",
  "recordings": {
   "a.label-with_marks": {
    "bdf": {
-    "sha256": "2fafbe30f492263522c0cd24a2ab78c02088e28ffbed5e7de7c3ad029cc79dc8",
+    "sha256": "56c4f75201b146c604e0025687bd259d8dd608fc9cae2b56fe9f7eb9144cf784",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -49,7 +49,7 @@
     }
    },
    "edf": {
-    "sha256": "ec05303e89270e4b3c6777911694eb05002f5fc9c6ee04ae45ea70c220929da8",
+    "sha256": "cd3ee6cd20f00a46cc15dbfeb0f29bf6cd47f5c9a45d798b244f06745e8fd7e7",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -360,7 +360,7 @@
   },
   "bad-skew": {
    "bdf": {
-    "sha256": "b15cd8a0a5c053957bae9ee7b9cb87b05857e347b5a91e8e23e217073da56428",
+    "sha256": "b6242a3f0730078dabbd290745608a3cc24be083ab43d9e8d8db28f4ae5190b5",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -406,7 +406,7 @@
     }
    },
    "edf": {
-    "sha256": "4e4eacd1d23de3abe5c00d0b031554f910c2e05747737b86fc5a1646ab647e7d",
+    "sha256": "e8d218b51b7f666e471b5ab2656fb297a08b06fca4563d601ba77d925d2e6096",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -697,7 +697,7 @@
   },
   "bad-skew-no-anchors": {
    "bdf": {
-    "sha256": "b37e06a9ce0392384bfe95094fbfcd93496cbff3fb910693960536f9711c1416",
+    "sha256": "d09818a26b51c18f889fe3584035186f12fb84d6739c650f440e3f7affe5ca45",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -743,7 +743,7 @@
     }
    },
    "edf": {
-    "sha256": "36c28a61228b9550ff071b37e3c06fa28f5eb0b222d256cfa6f112a6a9b2a113",
+    "sha256": "9b52035f700fab1b489fd4f1efe3aec4b0758644a10413696180a8f011df9c1d",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -1034,7 +1034,7 @@
   },
   "big-gap": {
    "bdf": {
-    "sha256": "5cb44d45194bc3742673a0716d81cbdd5329ad9790acbb4a1fbb2df41f7855ac",
+    "sha256": "a63cac60ea636f0666d6a996ae98768b1ed898a55c0bb6a1057e7fb42dea8311",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -1052,12 +1052,12 @@
      "n_annotations": 0,
      "provenance_problems": [],
      "quantum_uv": 4.482269554273503e-06,
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500,
      "samples_before_restart": 0,
      "samples_dropped": 0,
      "samples_filled": 850,
-     "tail_filled": 30
+     "tail_filled": 150
     }
    },
    "csv": {
@@ -1075,12 +1075,12 @@
      "omitted": [],
      "provenance_problems": [],
      "resolution_uv": 0.0001,
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500
     }
    },
    "edf": {
-    "sha256": "622e20570baacf91a821d37d2bf396b972a5bcd3fd4abaf4626c29e7f41c587e",
+    "sha256": "c59e5413ab408f64692043e6ceb1466f5ef1aac67bb115fa496f404c7d10d131",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -1098,12 +1098,12 @@
      "n_annotations": 0,
      "provenance_problems": [],
      "quantum_uv": 0.001147478446631582,
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500,
      "samples_before_restart": 0,
      "samples_dropped": 0,
      "samples_filled": 850,
-     "tail_filled": 30
+     "tail_filled": 150
     }
    },
    "mat": {
@@ -1245,7 +1245,7 @@
      "max_error_uv": 0.0,
      "omitted": [],
      "provenance_problems": [],
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500,
      "stored_dtype": "float64",
      "variables": [
@@ -1345,7 +1345,7 @@
      "max_error_uv": 0.000244140625,
      "omitted": [],
      "provenance_problems": [],
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500
     }
    },
@@ -1364,14 +1364,14 @@
      "omitted": [],
      "provenance_problems": [],
      "resolution_uv": 0.0001,
-     "sample_rate_hz": 92.47590964907754,
+     "sample_rate_hz": 250.0,
      "samples": 500
     }
    }
   },
   "c-order": {
    "bdf": {
-    "sha256": "eb85b6b8bbf9e988a7e1d8d8eed54b8f8864a5a198049697eb43e603e2759fb7",
+    "sha256": "39125095b586dd3350fb07fda900a2b3c7bbe92971c418548a3cfaf89360bcff",
     "summary": {
      "bits": 24,
      "channels": 3,
@@ -1417,7 +1417,7 @@
     }
    },
    "edf": {
-    "sha256": "f25b3fab328c48c5d4ee5dca4048c1eab2a7720c64c82a5b501a797ab28550ad",
+    "sha256": "5d2a87f958febea00cf1362ac0a00ac1fb7bd354a1ba385c5414ab804881cac1",
     "summary": {
      "bits": 16,
      "channels": 3,
@@ -1717,7 +1717,7 @@
   },
   "clean-v7": {
    "bdf": {
-    "sha256": "86d3a63ec3772005a486bd5ac6798d05a88336fb8103c3e2a7ef4ed8d24b04b4",
+    "sha256": "ee33289bec7eee1ab5759662ea8c2e0dc1d5191944f257f4bcddd34a7dc70b68",
     "summary": {
      "bits": 24,
      "channels": 4,
@@ -1763,7 +1763,7 @@
     }
    },
    "edf": {
-    "sha256": "a0540d6949fddd592c891fe828cbf95da41434a6226bd8b0af58321cf37c6600",
+    "sha256": "5db4d254cfbe6adb4f3ddf09b918c87fb414a8709c9c006fac6d666c847efb76",
     "summary": {
      "bits": 16,
      "channels": 4,
@@ -1906,7 +1906,7 @@
         2111,
         1
        ],
-       "020d8c6ad9ec652d81b1f3bfbd33afe2c81c341acdbe6745fdd616fb08ec271a",
+       "8468371b5d5d3801104f8a894d14e2f1b9a89134f8f3b9b3312f7c20f97efbce",
        [
         [
          "MATLAB_class",
@@ -2050,7 +2050,7 @@
       "manifest_json",
       "<U2111",
       [],
-      "8e2045f0543fb0501e46bc340ab75b60f3d6bd2b01a60badd0ddd1d66250edcf"
+      "5c84909383d960260b44661d09d33614b004b3b0ebe73db79781c781848c9ea5"
      ]
     ],
     "summary": {
@@ -2123,7 +2123,7 @@
   },
   "dup-different": {
    "bdf": {
-    "sha256": "b08c92a09c740f802c9b41421cad30ac1ed09ebc83cb3c63b6c1163f580e5fcf",
+    "sha256": "be626a05784755141a35791057c3c014e11f362267becd019a5da1584553b6b5",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -2169,7 +2169,7 @@
     }
    },
    "edf": {
-    "sha256": "d8daa65278fbfe363da1ddec5487feefaeeb4b7bf4b4d92c22e9cb59726c5cb1",
+    "sha256": "f2235a79df4311dc6fdb9c1a4fff44d1bdeb801dbc9974cf5f1db3b75860f1c9",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -2460,7 +2460,7 @@
   },
   "duplicated": {
    "bdf": {
-    "sha256": "a4096a91709adce7517cfd1164ddb4547e13ddf68c9ffbe286dbc213177f62e9",
+    "sha256": "99d525a9336f1518672f5325aab6c7ae1a6853bfd2b1154861fee528b41b2d0b",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -2506,7 +2506,7 @@
     }
    },
    "edf": {
-    "sha256": "df60be4fb8b244240654048ad303aaae5b9a00f207d729f85092e36a68215de0",
+    "sha256": "8ac27e921fb4ebf34845741d87ffa6ffa4fdd479f278351fc947f5d0b283af92",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -2797,7 +2797,7 @@
   },
   "eight-channels": {
    "bdf": {
-    "sha256": "861d0ff51b4bd7b30d7aabaebbf8d5d81e6160fc7439fc7b8bda1b832df75fd6",
+    "sha256": "819b428ea76fcb56b3077ed1c13e694ce403265c8c0913fee4209748bcdbf19b",
     "summary": {
      "bits": 24,
      "channels": 8,
@@ -2843,7 +2843,7 @@
     }
    },
    "edf": {
-    "sha256": "29a816ef9349b64c013c21805036b9f5438df21c06d034b9773e87cec11c955a",
+    "sha256": "5381de6bef59ff75fa6546d585104a421dbe212067d584ed83c8a360c6f6b9f4",
     "summary": {
      "bits": 16,
      "channels": 8,
@@ -2986,7 +2986,7 @@
         1938,
         1
        ],
-       "378dd6dd80d74ad4d2fc2beac126d93bb9ce6bf7d52fbd0865207c9e27d1fd3f",
+       "1c4009c8187dc47b13cea613762b5a18ac64a651c1df79ccaa4f09b6be485bfd",
        [
         [
          "MATLAB_class",
@@ -3162,7 +3162,7 @@
       "manifest_json",
       "<U1938",
       [],
-      "5b20b9c28df251d81c790a27b36fea32abbe121581ed9f87c5447c8638d06503"
+      "f6b6211834eb72a9ca665db909d90cee5907962b4c2650c968f857bbf311de20"
      ]
     ],
     "summary": {
@@ -3219,7 +3219,7 @@
   },
   "events-odd": {
    "bdf": {
-    "sha256": "2dcaec2f470b05837c764d97820586fee45a17ba7f520fed3a32c42a5b41ead5",
+    "sha256": "68e23e9abfec21a4d30a2af7065aed6b33ba79fd4f2fc02993071df96cd5e48b",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -3265,7 +3265,7 @@
     }
    },
    "edf": {
-    "sha256": "c052a1c565f168a12a8e38e7ee1bf3d22ed08f1ec02fe6b6e82f4786ae378f5d",
+    "sha256": "47f163bdee43803b851dd8e3ff58a9f190de1b3d8a8f4d3156f62115b2f56c76",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -3556,7 +3556,7 @@
   },
   "exact-halves": {
    "bdf": {
-    "sha256": "c4f81cc3af6426a01d2522f2e5c581cea7a3c8386016feb4bf848679fb34f438",
+    "sha256": "4300af96ce073b3d8dc2ce4413244452a4c893c11518d72f7886a5d45bc7c029",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -3602,7 +3602,7 @@
     }
    },
    "edf": {
-    "sha256": "64a8311abefe9870530c34271c77dafdb6d15a923ea9fa28ff8e1da97ae0752a",
+    "sha256": "3e664b40f46097450ed69bae21fa1edc943a73f0beb04f588c2bf42f15c06aa2",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -3893,7 +3893,7 @@
   },
   "far-below-zero": {
    "bdf": {
-    "sha256": "b669eabe633b3668c354a485ef30cc699baa46ea443fb08b7faeecea034d6c31",
+    "sha256": "44248145d0c39d582c1d8b05d194e308e9b5c75b9e7d48e2f1f5e1fafb6cc2f8",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -3939,7 +3939,7 @@
     }
    },
    "edf": {
-    "sha256": "45589f7e67e8dbf8a13964109969db902ca9e663bacd75c14d596d721e05993c",
+    "sha256": "72eeda6a3c8b132c545f6d896dbf35dca398340398add807a6bd5ddba108a298",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -4230,7 +4230,7 @@
   },
   "flat": {
    "bdf": {
-    "sha256": "2a7330154a2bd3255d88fabe4d2bda176bf6c0c7fed99d509392dfa56fa80d4b",
+    "sha256": "b0a7c25858942af15434f350b34caa857e7b055fbc853eab71a36b529e8f19af",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -4276,7 +4276,7 @@
     }
    },
    "edf": {
-    "sha256": "a9493613bdb8597f5aad8db429c0d42fba8bcb3b60174fcd50e4f53296c4f823",
+    "sha256": "e1fd25766807aca22c9781f6f1307db1a8124a4c29915b265ca6775b9c72349e",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -4567,7 +4567,7 @@
   },
   "hole-and-tail": {
    "bdf": {
-    "sha256": "833381ae3ad56fe82c2dc5ccb683cc3a404e694aa5a52e18162e47d2063f2e1a",
+    "sha256": "31e06905a41ed0ef3dea7934aa8ca9153b18adac05c411062fddc38ecf4124a5",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -4585,12 +4585,12 @@
      "n_annotations": 0,
      "provenance_problems": [],
      "quantum_uv": 4.542470249084847e-06,
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523,
      "samples_before_restart": 0,
      "samples_dropped": 0,
      "samples_filled": 37,
-     "tail_filled": 139
+     "tail_filled": 190
     }
    },
    "csv": {
@@ -4608,12 +4608,12 @@
      "omitted": [],
      "provenance_problems": [],
      "resolution_uv": 0.0001,
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523
     }
    },
    "edf": {
-    "sha256": "e748a553a5e19078b9306d2dd95321635680eb5bcb7ae9534f01f9db975e8374",
+    "sha256": "1412e978d99d45361ca11ddde0483caded216efedf7c92ae4a9eb9db75c8f8a1",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -4631,12 +4631,12 @@
      "n_annotations": 0,
      "provenance_problems": [],
      "quantum_uv": 0.001162890058747235,
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523,
      "samples_before_restart": 0,
      "samples_dropped": 0,
      "samples_filled": 37,
-     "tail_filled": 139
+     "tail_filled": 190
     }
    },
    "mat": {
@@ -4778,7 +4778,7 @@
      "max_error_uv": 0.0,
      "omitted": [],
      "provenance_problems": [],
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523,
      "stored_dtype": "float64",
      "variables": [
@@ -4878,7 +4878,7 @@
      "max_error_uv": 0.000244140625,
      "omitted": [],
      "provenance_problems": [],
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523
     }
    },
@@ -4897,14 +4897,14 @@
      "omitted": [],
      "provenance_problems": [],
      "resolution_uv": 0.0001,
-     "sample_rate_hz": 233.40589872008903,
+     "sample_rate_hz": 249.95,
      "samples": 523
     }
    }
   },
   "int-fields": {
    "bdf": {
-    "sha256": "d118364be5c358c122727c36c70f901259748500574580182f670f6fe1f4f9b9",
+    "sha256": "5e6635f31a207073aa07d05e52be6f464d7b8577f3715bed040112c148382873",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -4950,7 +4950,7 @@
     }
    },
    "edf": {
-    "sha256": "d88552b38d63d0c049d6f2aafd80a2dc91b443601709d718e46d8db85d97ab0a",
+    "sha256": "f708c6634b8bf380b9aed4cb9aa2cc947166e7873118e5aac5369e142b58d72e",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -5239,9 +5239,843 @@
     }
    }
   },
+  "leadoff-none-judged": {
+   "bdf": {
+    "sha256": "f09f4dbbad311fd995de490298adecdb9f3fea3ff41484540352574db292dc09",
+    "summary": {
+     "bits": 24,
+     "channels": 4,
+     "contact": "not checked",
+     "continuity": "BDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 0,
+     "family": "BDF+",
+     "format": "bdf",
+     "gaps": 0,
+     "label": "leadoff-none-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 2.2927624740987085e-06,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 4.5895579212640475e-06,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "csv": {
+    "sha256": "51095b2eef6a6c6ee0d450a37d7de97394e3fd8118dc01097ac1f5347c17d967",
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": ",",
+     "format": "csv",
+     "label": "leadoff-none-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "edf": {
+    "sha256": "b08f80ff19e5a8a21b4a8710651110cd41e9d38368e6123984cfe07343cbd9dd",
+    "summary": {
+     "bits": 16,
+     "channels": 4,
+     "contact": "not checked",
+     "continuity": "EDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 0,
+     "family": "EDF+",
+     "format": "edf",
+     "gaps": 0,
+     "label": "leadoff-none-judged",
+     "lossy": true,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0005869480464752996,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 0.0011749446860456244,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "mat": {
+    "mat": {
+     "header_tail": "00000000000000000002494d",
+     "variables": [
+      [
+       "device_ticks",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "gap_before",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "host_time",
+       "<f8",
+       [
+        1,
+        600
+       ],
+       "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ],
+      [
+       "index",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "leadoff",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'uint8'"
+        ]
+       ]
+      ],
+      [
+       "leadoff_active",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "leadoff_judged",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "manifest_json",
+       "<u2",
+       [
+        1943,
+        1
+       ],
+       "56ba1e6744cde1522b71f15cf66d06763808d29374d6ab0c7537e96762de80ce",
+       [
+        [
+         "MATLAB_class",
+         "|S4",
+         "b'char'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "2"
+        ]
+       ]
+      ],
+      [
+       "uv",
+       "<f8",
+       [
+        4,
+        600
+       ],
+       "75cb5a4dce1f1604f5d8fa0bcb9ab5570674c41b9c55d6a489bff280cbf6fe2a",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ]
+     ]
+    },
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "format": "mat",
+     "label": "leadoff-none-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "stored_dtype": "float64",
+     "variables": [
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json",
+      "uv"
+     ]
+    }
+   },
+   "npz": {
+    "arrays": [
+     [
+      "ch1_uv",
+      "<f4",
+      [
+       600
+      ],
+      "feea57455810606efcf5ed138802d6066e959379d181bb0333c596729df37618"
+     ],
+     [
+      "ch2_uv",
+      "<f4",
+      [
+       600
+      ],
+      "dbd0b07bcc8791474bb524a0440fa0b5dc72b2048f1433d5a0e25827ed7dfa8f"
+     ],
+     [
+      "ch3_uv",
+      "<f4",
+      [
+       600
+      ],
+      "2848cafd6bd0c6e39d113e88a5d5802c6f13921890e848facdf3dffc90c465ee"
+     ],
+     [
+      "ch4_uv",
+      "<f4",
+      [
+       600
+      ],
+      "64e77624c8641eeea4ec2e7ad13392fd413ac2fa7031f9774f5eb365cc088f56"
+     ],
+     [
+      "index",
+      "<i8",
+      [
+       600
+      ],
+      "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685"
+     ],
+     [
+      "device_ticks",
+      "<i8",
+      [
+       600
+      ],
+      "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25"
+     ],
+     [
+      "host_time",
+      "<f8",
+      [
+       600
+      ],
+      "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346"
+     ],
+     [
+      "leadoff",
+      "|u1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "gap_before",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "leadoff_active",
+      "|b1",
+      [
+       600
+      ],
+      "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f"
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "manifest_json",
+      "<U1943",
+      [],
+      "c696d0b0c5ecca9ed126eac45eb1a3cad7fd68ca614a964b3476d81aa592efa1"
+     ]
+    ],
+    "summary": {
+     "arrays": [
+      "ch1_uv",
+      "ch2_uv",
+      "ch3_uv",
+      "ch4_uv",
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json"
+     ],
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "format": "npz",
+     "label": "leadoff-none-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.00024366378784179688,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "tsv": {
+    "sha256": "c155c0dfc7b61e0d1392410f54f7122365ee1ebb31260fdb94cce284cc322765",
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": "\t",
+     "format": "tsv",
+     "label": "leadoff-none-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   }
+  },
+  "leadoff-not-judged": {
+   "bdf": {
+    "sha256": "e07dded9f072304d7c051cad471220c9ae319556d30e6fdca9824dd048409864",
+    "summary": {
+     "bits": 24,
+     "channels": 4,
+     "contact": "partly checked",
+     "continuity": "BDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 1,
+     "family": "BDF+",
+     "format": "bdf",
+     "gaps": 0,
+     "label": "leadoff-not-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 2.2735339371138252e-06,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 4.5716765267656055e-06,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "csv": {
+    "sha256": "96f6a092f0f43ba584c862fec2b921a0f1798c88478e0707a3d05647adc2e8ef",
+    "summary": {
+     "channels": 4,
+     "contact": "partly checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": ",",
+     "format": "csv",
+     "label": "leadoff-not-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "edf": {
+    "sha256": "01ccb2b386437f30834bc31b8b3b4e2df46dbf37c20e5ea0cfeec172a63caa53",
+    "summary": {
+     "bits": 16,
+     "channels": 4,
+     "contact": "partly checked",
+     "continuity": "EDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 1,
+     "family": "EDF+",
+     "format": "edf",
+     "gaps": 0,
+     "label": "leadoff-not-judged",
+     "lossy": true,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0005838151319039753,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 0.0011703669794766128,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "mat": {
+    "mat": {
+     "header_tail": "00000000000000000002494d",
+     "variables": [
+      [
+       "device_ticks",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "gap_before",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "host_time",
+       "<f8",
+       [
+        1,
+        600
+       ],
+       "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ],
+      [
+       "index",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "leadoff",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "1a2a98de8006c77f4b73e470495a80f07dd7bb90f57be297aede54c1253827e1",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'uint8'"
+        ]
+       ]
+      ],
+      [
+       "leadoff_active",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "leadoff_judged",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "f6ec66b40c384b25fa45f389e80f0aff7f489ff07fdd5c5c6238a8b086ba5099",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "manifest_json",
+       "<u2",
+       [
+        1942,
+        1
+       ],
+       "76c447d8253997184e9bb9b1e2ea2ef3d9516506a74b0f4655c494b938dcb08f",
+       [
+        [
+         "MATLAB_class",
+         "|S4",
+         "b'char'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "2"
+        ]
+       ]
+      ],
+      [
+       "uv",
+       "<f8",
+       [
+        4,
+        600
+       ],
+       "89cc95477674b3d2073ff3121ae52ef6d60f893d9661b2e3441b0db0f28acdef",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ]
+     ]
+    },
+    "summary": {
+     "channels": 4,
+     "contact": "partly checked",
+     "counts_recovered": true,
+     "format": "mat",
+     "label": "leadoff-not-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "stored_dtype": "float64",
+     "variables": [
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json",
+      "uv"
+     ]
+    }
+   },
+   "npz": {
+    "arrays": [
+     [
+      "ch1_uv",
+      "<f4",
+      [
+       600
+      ],
+      "0d03f1ed710398f402d6720ab3ea4c0f9d5135ad2e7fed8db94bd9e0ca675bf5"
+     ],
+     [
+      "ch2_uv",
+      "<f4",
+      [
+       600
+      ],
+      "dc363a6f329bffacaf7af68304c70f896c6d48fc78a76069e6e96f48dcc71e32"
+     ],
+     [
+      "ch3_uv",
+      "<f4",
+      [
+       600
+      ],
+      "d379a33b95662220ed151efeb53d5ac5f9302e45aa5a5be10908f08aeacb0ce3"
+     ],
+     [
+      "ch4_uv",
+      "<f4",
+      [
+       600
+      ],
+      "5bada94acf0f82b800b0f7ff0d59bd55301ec7f560c0662bab438ff559dc0a2e"
+     ],
+     [
+      "index",
+      "<i8",
+      [
+       600
+      ],
+      "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685"
+     ],
+     [
+      "device_ticks",
+      "<i8",
+      [
+       600
+      ],
+      "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25"
+     ],
+     [
+      "host_time",
+      "<f8",
+      [
+       600
+      ],
+      "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346"
+     ],
+     [
+      "leadoff",
+      "|u1",
+      [
+       600
+      ],
+      "1a2a98de8006c77f4b73e470495a80f07dd7bb90f57be297aede54c1253827e1"
+     ],
+     [
+      "gap_before",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "leadoff_active",
+      "|b1",
+      [
+       600
+      ],
+      "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f"
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       600
+      ],
+      "f6ec66b40c384b25fa45f389e80f0aff7f489ff07fdd5c5c6238a8b086ba5099"
+     ],
+     [
+      "manifest_json",
+      "<U1942",
+      [],
+      "bdabfc901088b1563ceabcc52f0c628d4aa0cb1ce57206bf2a781fe395adc1e1"
+     ]
+    ],
+    "summary": {
+     "arrays": [
+      "ch1_uv",
+      "ch2_uv",
+      "ch3_uv",
+      "ch4_uv",
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json"
+     ],
+     "channels": 4,
+     "contact": "partly checked",
+     "counts_recovered": true,
+     "format": "npz",
+     "label": "leadoff-not-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.000244140625,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "tsv": {
+    "sha256": "d63e51b6cc3574bb6c1b3f77d49a9aea85da30340762dd78f2ee0237315c3009",
+    "summary": {
+     "channels": 4,
+     "contact": "partly checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": "\t",
+     "format": "tsv",
+     "label": "leadoff-not-judged",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   }
+  },
   "leadoff-off": {
    "bdf": {
-    "sha256": "043c912ac626853654d5e1c9ece595a8f5ad11e8744c982a48d4d503bb9badda",
+    "sha256": "7c3bf129852a5da5655aa79d4476e5659472301bea77c61416f2ec75651e56b5",
     "summary": {
      "bits": 24,
      "channels": 4,
@@ -5287,7 +6121,7 @@
     }
    },
    "edf": {
-    "sha256": "9a97f5ddd9aebdbdbd1ecdaff81b063fd13b67030f4d56aeeffb93f35c0f4f1c",
+    "sha256": "90b64107620fbd5cc61db35ae149480571b54742328e61c30e03a2cfddaba6f7",
     "summary": {
      "bits": 16,
      "channels": 4,
@@ -5627,7 +6461,7 @@
   },
   "leadoff-partly": {
    "bdf": {
-    "sha256": "1967a350a8f0addc753455942eec1ee8c74177851c4c35b8a13674b67bc7f1f0",
+    "sha256": "7c74fd98600551c0969b7b69081b4e65daecee2ade5b160b280901ca1f6098e5",
     "summary": {
      "bits": 24,
      "channels": 4,
@@ -5673,7 +6507,7 @@
     }
    },
    "edf": {
-    "sha256": "5defc53866c42da9303e92c1350e63cc399f57a52602a0f2a7a889f5fd695e3b",
+    "sha256": "82dac6d4b0db25e5f211234e9b422c7384fc36121c82502d7a8a36fb7a7c6df6",
     "summary": {
      "bits": 16,
      "channels": 4,
@@ -5816,7 +6650,7 @@
         1938,
         1
        ],
-       "cba700658db571b4c27c4aefc932cbe43b4b655c0c2a6055b19ebca0aae49121",
+       "41761284f2b8a81962c3b4169b14fe8d51a63982bfe5068b85e4ef016f79fc46",
        [
         [
          "MATLAB_class",
@@ -5960,7 +6794,7 @@
       "manifest_json",
       "<U1938",
       [],
-      "d7ee1ae194d4cb5ded979c543cf2e96aa2587f30c5565a3a63445ec92e1f1355"
+      "b8700ef152a22cd5301f365a33868ebbd22d3b107ddd448e525b726bf6a39608"
      ]
     ],
     "summary": {
@@ -6013,7 +6847,7 @@
   },
   "legacy": {
    "bdf": {
-    "sha256": "9d4de5b74b9c9247014bff934e9fbf1868cebcd85b1ec1260fda194557d7bded",
+    "sha256": "74731b2eba45d1ddb2344a01dda30471f8bb590fe1734dca201882d620f2f9e5",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -6063,7 +6897,7 @@
     }
    },
    "edf": {
-    "sha256": "b8d22ca0009a9ff92b61d330ce3c8b3b21b253b1d5dd9b6347cd67b3f4de6e2e",
+    "sha256": "f916c7395d05df2875bfa309ee1951e1debb9b5c6f74eac7248e7bddf756c375",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -6362,7 +7196,7 @@
   },
   "misaligned-leadoff": {
    "bdf": {
-    "sha256": "fc25ef31ad78ab9408c467039969bc17c92aef4af20c1bec15a27a52336c591d",
+    "sha256": "828811cd556b7ebfd3d1055077bc71d9e76cb0b07b31bb4bd7f51db234f7aeb7",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -6408,7 +7242,7 @@
     }
    },
    "edf": {
-    "sha256": "8f76f3ce780d293d0070500ee9f8b9fcf4f8a1d03828aeb74a709ae45c2a1d61",
+    "sha256": "3b7215046db3ee601a64165f8b3c43455604bef0a8fe2e9f67df178e3ddc1b89",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -6529,6 +7363,27 @@
        ]
       ],
       [
+       "leadoff_judged",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
        "manifest_json",
        "<u2",
        [
@@ -6589,6 +7444,7 @@
       "host_time",
       "index",
       "leadoff_active",
+      "leadoff_judged",
       "manifest_json",
       "uv"
      ]
@@ -6653,6 +7509,14 @@
       "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f"
      ],
      [
+      "leadoff_judged",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
       "manifest_json",
       "<U1942",
       [],
@@ -6668,6 +7532,7 @@
       "host_time",
       "index",
       "leadoff_active",
+      "leadoff_judged",
       "manifest_json"
      ],
      "channels": 2,
@@ -7017,7 +7882,7 @@
   },
   "no-ticks": {
    "bdf": {
-    "sha256": "224a4b3008f4d0a84f16f0fd2c08bf94a9844cdc4decf4966f1027efca5bce3a",
+    "sha256": "94e56639c858c4f36b624f054fcac6e4e639ad2af66272dbab43e0969e211261",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -7065,7 +7930,7 @@
     }
    },
    "edf": {
-    "sha256": "850dd7a4057cdc86ca98522f3dddac20a7dc015e7f7e113866b06499532cf193",
+    "sha256": "28af5b9d365aaf8ed7064cfe279cb1ae6b7f3b01c665f020ddc5196842a9609e",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -7336,7 +8201,7 @@
   },
   "non-ascii": {
    "bdf": {
-    "sha256": "693b2c86d65fb0ea207d087282ff7c44ddd9057d0f59d84f24b1f7feed7ed5a5",
+    "sha256": "ae492123e79b667ca71b501d32f2568ce1e77d731f0b6a56ff3ff61e8b7b64d4",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -7382,7 +8247,7 @@
     }
    },
    "edf": {
-    "sha256": "c8b980d403faa60c8cbe7078168e5781844240205655d7b71d3d14037599e782",
+    "sha256": "a649b65b958d89feb9ab16fa09765db0b535b3a48459b9bd14eef2ee82861ae8",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -7671,9 +8536,426 @@
     }
    }
   },
+  "older-firmware": {
+   "bdf": {
+    "sha256": "e46a50488b043b8bc7f8d7ecdec7ee3d9d23d9a7ad3d39a884d26e379df2780b",
+    "summary": {
+     "bits": 24,
+     "channels": 4,
+     "contact": "not checked",
+     "continuity": "BDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 0,
+     "family": "BDF+",
+     "format": "bdf",
+     "gaps": 0,
+     "label": "older-firmware",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 2.301372205693042e-06,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 4.612803734112001e-06,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "csv": {
+    "sha256": "6fcb2edb17e78090538fb247368e988ccf42ff421ada53c3a0603e2d0c874705",
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": ",",
+     "format": "csv",
+     "label": "older-firmware",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "edf": {
+    "sha256": "4c41e2ab0f997846c423a15f264c0971456c96f468112e5a9aec8756e091e84f",
+    "summary": {
+     "bits": 16,
+     "channels": 4,
+     "contact": "not checked",
+     "continuity": "EDF+C",
+     "counts_recovered": true,
+     "electrode_off_stretches": 0,
+     "family": "EDF+",
+     "format": "edf",
+     "gaps": 0,
+     "label": "older-firmware",
+     "lossy": true,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0005897768655813707,
+     "n_annotations": 0,
+     "provenance_problems": [],
+     "quantum_uv": 0.001180895704585334,
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "samples_before_restart": 0,
+     "samples_dropped": 0,
+     "samples_filled": 0,
+     "tail_filled": 150
+    }
+   },
+   "mat": {
+    "mat": {
+     "header_tail": "00000000000000000002494d",
+     "variables": [
+      [
+       "device_ticks",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "gap_before",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "host_time",
+       "<f8",
+       [
+        1,
+        600
+       ],
+       "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ],
+      [
+       "index",
+       "<i8",
+       [
+        1,
+        600
+       ],
+       "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'int64'"
+        ]
+       ]
+      ],
+      [
+       "leadoff",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "1882cfd7f8f24d01ee09f911b3d998e9ef6405233e2bcfffe83f2005ca04c571",
+       [
+        [
+         "MATLAB_class",
+         "|S5",
+         "b'uint8'"
+        ]
+       ]
+      ],
+      [
+       "leadoff_active",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "leadoff_judged",
+       "|u1",
+       [
+        1,
+        600
+       ],
+       "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea",
+       [
+        [
+         "MATLAB_class",
+         "|S7",
+         "b'logical'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "1"
+        ]
+       ]
+      ],
+      [
+       "manifest_json",
+       "<u2",
+       [
+        1938,
+        1
+       ],
+       "b5765a0465fa7e90d33070cccd4f02d292aa37c58c02d34dcab2c75e21c4e0f3",
+       [
+        [
+         "MATLAB_class",
+         "|S4",
+         "b'char'"
+        ],
+        [
+         "MATLAB_int_decode",
+         "<i8",
+         "2"
+        ]
+       ]
+      ],
+      [
+       "uv",
+       "<f8",
+       [
+        4,
+        600
+       ],
+       "6c33768a4eafa780a266aa32f07a9793d65711dc4756766d60d5a65a2a686226",
+       [
+        [
+         "MATLAB_class",
+         "|S6",
+         "b'double'"
+        ]
+       ]
+      ]
+     ]
+    },
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "format": "mat",
+     "label": "older-firmware",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.0,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600,
+     "stored_dtype": "float64",
+     "variables": [
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json",
+      "uv"
+     ]
+    }
+   },
+   "npz": {
+    "arrays": [
+     [
+      "ch1_uv",
+      "<f4",
+      [
+       600
+      ],
+      "555c7ec022caa43dc735403b37bf8d4b3bc022d4dfa2012b96b63aae07587afa"
+     ],
+     [
+      "ch2_uv",
+      "<f4",
+      [
+       600
+      ],
+      "3f22d6d8e305af03ea258da701b28bb0ef85c3d22e88182c90af90a1b29de951"
+     ],
+     [
+      "ch3_uv",
+      "<f4",
+      [
+       600
+      ],
+      "26ea9ac20791e4fcc3a30b0616a1fc8ddc97b21f65923d24586895711d9af659"
+     ],
+     [
+      "ch4_uv",
+      "<f4",
+      [
+       600
+      ],
+      "87637decd3028a9917ac1263b9c7abecdfe07db31477776b5d5f666cfdb1aad7"
+     ],
+     [
+      "index",
+      "<i8",
+      [
+       600
+      ],
+      "c6f1a209e5af3dc3be5de07aa2e684c160f501ac00abb1f5d679e842afc16685"
+     ],
+     [
+      "device_ticks",
+      "<i8",
+      [
+       600
+      ],
+      "27d74377575cbc2bda90d86470c8a1b80258f838114180ed8dc0f20cd1a36c25"
+     ],
+     [
+      "host_time",
+      "<f8",
+      [
+       600
+      ],
+      "347f0a960acbd0b91c81784bb2c0bfee18151083cd70bfd770912e10234b8346"
+     ],
+     [
+      "leadoff",
+      "|u1",
+      [
+       600
+      ],
+      "1882cfd7f8f24d01ee09f911b3d998e9ef6405233e2bcfffe83f2005ca04c571"
+     ],
+     [
+      "gap_before",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "leadoff_active",
+      "|b1",
+      [
+       600
+      ],
+      "14cd7fd4d8cd6e881bf19625926391688f1ebc0e56ec32dfaa292e9413fc523f"
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       600
+      ],
+      "bd50e12c55dda3ee443c1cb6d71c7bcf6351c4ec96f7bc8d6adec015d1192eea"
+     ],
+     [
+      "manifest_json",
+      "<U1938",
+      [],
+      "011abd476421b1f49c53ab06438184829e00452674c8c414ab692449a87f0cc8"
+     ]
+    ],
+    "summary": {
+     "arrays": [
+      "ch1_uv",
+      "ch2_uv",
+      "ch3_uv",
+      "ch4_uv",
+      "device_ticks",
+      "gap_before",
+      "host_time",
+      "index",
+      "leadoff",
+      "leadoff_active",
+      "leadoff_judged",
+      "manifest_json"
+     ],
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "format": "npz",
+     "label": "older-firmware",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "max_error_uv": 0.00024318695068359375,
+     "omitted": [],
+     "provenance_problems": [],
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   },
+   "tsv": {
+    "sha256": "e56a144852e81b808a0aeec09634cf71c1ba82be4c7d9355baf5e348ea116c9a",
+    "summary": {
+     "channels": 4,
+     "contact": "not checked",
+     "counts_recovered": true,
+     "decimals": 4,
+     "delimiter": "\t",
+     "format": "tsv",
+     "label": "older-firmware",
+     "lossy": false,
+     "lsb_uv": 0.022351741790771484,
+     "omitted": [],
+     "provenance_problems": [],
+     "resolution_uv": 0.0001,
+     "sample_rate_hz": 249.95,
+     "samples": 600
+    }
+   }
+  },
   "one-channel": {
    "bdf": {
-    "sha256": "017ae18a49f18abca4c6cd9cc394a5234c0143de04f51591088ad7201bf539c1",
+    "sha256": "215d3e522d2214baa487fdee75d33b44d0cfbc6004b9abf0b73056f6db888d84",
     "summary": {
      "bits": 24,
      "channels": 1,
@@ -7719,7 +9001,7 @@
     }
    },
    "edf": {
-    "sha256": "3292609a5618790098ec6e3e88a99f2ae8d638696d2bbe09049499b0a89e69fd",
+    "sha256": "79ccfde902021706addb51b61b9be0be5f2857d0ad51de1ef6c846568a5a7e2d",
     "summary": {
      "bits": 16,
      "channels": 1,
@@ -8001,7 +9283,7 @@
   },
   "one-sample": {
    "bdf": {
-    "sha256": "929e10f4a2e6e26d3a8c7e34952e727ab67919724bcb559fc11975802286f8a2",
+    "sha256": "dbf3710c1bd49a602aa676aecc55ac492a846546bb4483857e3bb6d13100a9af",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -8047,7 +9329,7 @@
     }
    },
    "edf": {
-    "sha256": "7083f26a0ed61c3e5a120bd2e0f60cddd3a9a7c259c8777591b757712b6e463b",
+    "sha256": "bdd9ec79efc9fcaada6837f007bee03f9533d60d2ee889cfa4e3a83a0e5c04cd",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -8338,7 +9620,7 @@
   },
   "poisoned-rate": {
    "bdf": {
-    "sha256": "50b27caa5bc1fc7240303a184afee83690b711c51c8355f5cee225de31f4bee1",
+    "sha256": "13116cfb6f5e4f368fb29b107dd25c74ab4e9e02f8fb31fc04477ddef7cdafb8",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -8384,7 +9666,7 @@
     }
    },
    "edf": {
-    "sha256": "e42645b395eaaab8eb7e40daa222edd9c25a69b9f04df6ff0114341d031be1d8",
+    "sha256": "960ace2a9e12b0ddfe05c673006ecb5a4502e22b1aa87948a4a689824eb86842",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -8675,7 +9957,7 @@
   },
   "restart-stub": {
    "bdf": {
-    "sha256": "588c403bae1bbda49ba43d1ebc1f48e4039399bb327db235e14be1cf5f101de8",
+    "sha256": "e271d6e37306b161b500f6c1c384e82293138b81fa1398e1820020f5718849eb",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -8721,7 +10003,7 @@
     }
    },
    "edf": {
-    "sha256": "62a5d70bb4e0284fa7b96ded9855d94b836ec8f37e8d592c8fbe62176373750f",
+    "sha256": "68d6552d0bc4ff0abb3482b8f6d17a55de9a437a2a726b801aa2cae00efc1430",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -9012,7 +10294,7 @@
   },
   "start-invalid": {
    "bdf": {
-    "sha256": "1d85c8bb70a2955f4a2f090a875635994bda94dee24fb636fd51584e56519d7b",
+    "sha256": "5dad77a019d2853eccb042605e8717c7efec48027a057cdb33342542b252e023",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -9058,7 +10340,7 @@
     }
    },
    "edf": {
-    "sha256": "3b78440d24160e76a027fa4c1c0eef9de3fbeab29677514771c2c66d1b149808",
+    "sha256": "8f8610600cc1d619bd6ac35324ce61a03c4beb74acb4ae4a612befeb17b84c1d",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -9349,7 +10631,7 @@
   },
   "start-lenient": {
    "bdf": {
-    "sha256": "1cc1717b0bf0a66bd4f79eafca5a51bd488d8117033baae5cb25fca6d32f021a",
+    "sha256": "e7bcb945c0b74908d4eb1c6e0e6c62eb61559dd66246e2d134c4494196f15cae",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -9395,7 +10677,7 @@
     }
    },
    "edf": {
-    "sha256": "08d3ed47608eb3456a10723bd4122904b72fab88a84206da07e98ea4f26f822e",
+    "sha256": "e8cd52950079ac64dc7f403616a168752819d7210e3f216918bb71cd99b0d900",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -9975,7 +11257,7 @@
   },
   "synthetic": {
    "bdf": {
-    "sha256": "0e86ff96331dd8b5869bccb845080b12d05eab4bd8b6c5de3f7980c8eb083f96",
+    "sha256": "68a9ddce3be009f866f4b3a79e8c3f90216e8150ab5406cc8fb2991e323347cc",
     "summary": {
      "bits": 24,
      "channels": 4,
@@ -10021,7 +11303,7 @@
     }
    },
    "edf": {
-    "sha256": "c2a537c31a1e1460fee2f63026d9eaaa555b5a4505817f8976b18c2bf9b78229",
+    "sha256": "5121daa835a8534f8c208fae6b8784bc45d5b2af640c392e7797674f1501280f",
     "summary": {
      "bits": 16,
      "channels": 4,
@@ -10164,7 +11446,7 @@
         1935,
         1
        ],
-       "35cb7b01f607a49e15e4cfc92dbcaa8175f104f043462c486c8f3198637e4925",
+       "bc33eb47f9aca398f16bd6d5d5621c3b9abc11248bb525d8680c751b6f6dbe01",
        [
         [
          "MATLAB_class",
@@ -10308,7 +11590,7 @@
       "manifest_json",
       "<U1935",
       [],
-      "956cbdc5c2d217d2a4a319deb99f9fd18894d7d9dde935188935b2751dbc868a"
+      "2f2f16de970f72f936607cc32850ce42fc5ce584788de54abcb2cc4e6b3265de"
      ]
     ],
     "summary": {
@@ -10361,7 +11643,7 @@
   },
   "ten-channels": {
    "bdf": {
-    "sha256": "44e458131ba7fd9cb64e97a25de06993c4821ea536b2e0546f6345e4158b8a0e",
+    "sha256": "0b6978fe7519c445258d7b556687c6493e87ddbec86c240a2ad16acde02a6c6f",
     "summary": {
      "bits": 24,
      "channels": 10,
@@ -10407,7 +11689,7 @@
     }
    },
    "edf": {
-    "sha256": "e3b1ed9296c99d90503b9ebeb6613c4bc6b998af19ae0c9345ee81bb67b90d8e",
+    "sha256": "93d2cc0cdc614e3e0101ade7c6ae26ec33f713ed001506d4fc01bd3670d28d64",
     "summary": {
      "bits": 16,
      "channels": 10,
@@ -10550,7 +11832,7 @@
         1937,
         1
        ],
-       "207efb3129d3f717922955c8cd7c84aae9bfb09519d9d8e13cd9b729bdee5d66",
+       "2839d3580fdd4698d70e291606babbdb3957bc1c1d8139772592c586b8194b95",
        [
         [
          "MATLAB_class",
@@ -10742,7 +12024,7 @@
       "manifest_json",
       "<U1937",
       [],
-      "fef5a1903af7ee6fd43493a0634d67f58f28af4df02cd93b240e702d9d6bdcf1"
+      "a88e0816979307bf1d9d2230cd70904e3681b1c93362651a3a17733e74ae9215"
      ]
     ],
     "summary": {
@@ -10801,7 +12083,7 @@
   },
   "unverified": {
    "bdf": {
-    "sha256": "fb6e52d31428c0f8b533ed30e3547369a2e58fba4ba5055e6e24779c7b05a915",
+    "sha256": "7726bb0056514175c69e975b28c92387b17f6c1b8fb439828848095bb2acaa62",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -10851,7 +12133,7 @@
     }
    },
    "edf": {
-    "sha256": "4ed02ebb8f460e11a000b50900e6abe571bfd166c9b6feea9f0b703b378bdaa7",
+    "sha256": "0beb8939350b386107928a7145c7cb3d63c846b5d4cc8ea8408e16cafc836133",
     "summary": {
      "bits": 16,
      "channels": 2,
@@ -11170,7 +12452,7 @@
   },
   "wide-range": {
    "bdf": {
-    "sha256": "132d221f594a303df7d6cb54f65f544760092cfa06fa14d0a158403e19e2482b",
+    "sha256": "2729878148dc301db31432598a5bdada3b450072e55231d6434877e581accda4",
     "summary": {
      "bits": 24,
      "channels": 2,
@@ -11216,7 +12498,7 @@
     }
    },
    "edf": {
-    "sha256": "4383ef5c4648a9e2975cb5525794f404c87b5238cceba9004034061ddb2b0e59",
+    "sha256": "d37bee594049fa8f425a841f89879e862e701b2eaa8fd9b9062b0aab0101e7cd",
     "summary": {
      "bits": 16,
      "channels": 2,

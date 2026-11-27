@@ -6,16 +6,32 @@
  * last recorded value, under a `BAD_ACQ_SKIP` annotation over exactly the
  * hole. The file is whole records, and the last one is completed after the
  * last sample the same way. A stretch where an electrode was off is a
- * `BAD_LEADOFF` annotation, and the part of a recording where detection was
- * off is `LEADOFF_NOT_CHECKED`, written only when it ran for the rest. The
- * record duration carries the measured rate, and each signal's range is
- * rounded outward so no sample is clipped. docs.intomind.com/files.html
- * states these rules, and this module follows the Python library's `edf.py`
- * line by line.
+ * `BAD_LEADOFF` annotation, the part of a recording where detection was off
+ * is `LEADOFF_NOT_CHECKED`, and the part where detection was on and the
+ * device had not yet judged contact, as before an IntoMind device's first
+ * judgment of a stream from firmware 1.4.6, 0.512 s in or later, is
+ * `LEADOFF_NOT_JUDGED`, each written
+ * only when contact was checked for the rest. An IntoMind device whose
+ * firmware is older than 1.4.6 cannot check electrode contact: its lead-off
+ * detection does not work, and every electrode reads off whether it touches
+ * skin or not. No status of its recording is a verdict, so its file carries
+ * no lead-off label at all. The record duration carries the measured rate,
+ * and each signal's range is rounded outward so no sample is clipped. A file
+ * is refused where its samples and placeholders together would take more
+ * than 2^28 sample positions, or more than a thousand for each recorded
+ * sample where that is more. The header holds the record duration in eight
+ * characters, and each data record's onset is that duration, as written,
+ * after the onset of the record before it, as EDF+C requires. Every text
+ * the file holds, in its header and in its annotations, has each control
+ * character written as a question mark, as a character the format cannot
+ * hold is written, since EDFlib refuses a file that holds one.
+ * docs.intomind.com/files.html states these rules, and this module follows
+ * the Python library's `edf.py` line by line.
  */
 
 import { fixed, general, quantize } from "./pyfmt.ts";
 import { CaptureError } from "./errors.ts";
+import * as J from "./pyjson.ts";
 
 /** The annotation over each hole where samples were lost. */
 export const SKIP_LABEL = "BAD_ACQ_SKIP";
@@ -23,6 +39,14 @@ export const SKIP_LABEL = "BAD_ACQ_SKIP";
 export const LEADOFF_LABEL = "BAD_LEADOFF";
 /** The annotation over the part of a recording where detection was off, written only when it ran for the rest. */
 export const NOT_CHECKED_LABEL = "LEADOFF_NOT_CHECKED";
+/**
+ * The annotation over the part of a recording where lead-off detection was
+ * on and the device had not yet judged contact, as before an IntoMind
+ * device's first judgment of a stream from firmware 1.4.6, 0.512 s in or
+ * later, whose lead-off bits read 0 until then, so that part does not read
+ * as electrodes attached.
+ */
+export const NOT_JUDGED_LABEL = "LEADOFF_NOT_JUDGED";
 
 /** What differs between the two widths of the one container. */
 export interface Width {
@@ -60,16 +84,50 @@ export const BDF: Width = {
   family: "BDF+",
 };
 
-/** ASCII, left-justified, exactly `width` bytes: the first `width` characters, each outside ASCII written as `?`, padded with spaces. */
+/** A file is refused when its samples and placeholders together would take more than this many sample positions, 2^28, or a thousand for each recorded sample where that is more. */
+const MOST_PLACES = 2 ** 28;
+
+/** The months as EDF+ writes them in a date, in English capitals whatever language the host is set to. */
+const MONTH_NAMES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
+
+/** How many characters the header's recording field holds. */
+export const RECORDING_WIDTH = 80;
+
+/** A start date as EDF+ writes it in the recording field, DD-MMM-YYYY. */
+export function startdate(start: Start): string {
+  const [y, m, d] = start;
+  return `${String(d).padStart(2, "0")}-${MONTH_NAMES[m - 1]}-${String(y).padStart(4, "0")}`;
+}
+
+/** Whether `code` is a control character, of Unicode's category Cc. */
+function isControl(code: number): boolean {
+  return code < 0x20 || (code >= 0x7f && code <= 0x9f);
+}
+
+/**
+ * ASCII, left-justified, exactly `width` bytes: the first `width`
+ * characters, each outside ASCII, and each control character, written as
+ * `?`, padded with spaces.
+ */
 export function field(s: string, width: number): Uint8Array {
   const b = new Uint8Array(width).fill(0x20);
   let k = 0;
   for (const c of s) {
     if (k >= width) break;
     const code = c.codePointAt(0)!;
-    b[k++] = code < 0x80 ? code : 0x3f;
+    b[k++] = code < 0x80 && !isControl(code) ? code : 0x3f;
   }
   return b;
+}
+
+/** An annotation's text as `_tal` writes it in UTF-8: each control character, and each character UTF-8 cannot hold, a lone surrogate, written as `?`. */
+function annotationText(text: string): Uint8Array {
+  let s = "";
+  for (const c of text) {
+    const code = c.codePointAt(0)!;
+    s += isControl(code) || (code >= 0xd800 && code <= 0xdfff) ? "?" : c;
+  }
+  return new TextEncoder().encode(s);
 }
 
 /** A number in eight characters, losing no more than it must: `.8g`, and failing that the most fixed places that fit, and failing that cut. */
@@ -158,12 +216,44 @@ function digitize(x: number, pmin: number, pmax: number, dmin: number, dmax: num
   return Math.min(Math.max(d, dmin), dmax);
 }
 
-/** One time-stamped annotation list. */
+/** One time-stamped annotation list, its text written as `annotationText` writes it. */
 function tal(onset: number, duration: number | null, text: string): Uint8Array {
-  let s = (onset >= 0 ? "+" : "-") + fixed(Math.abs(onset), 6);
+  return talAt((onset >= 0 ? "+" : "-") + fixed(Math.abs(onset), 6), duration, text);
+}
+
+/** One time-stamped annotation list whose onset is already written, its sign first. */
+function talAt(onset: string, duration: number | null, text: string): Uint8Array {
+  let s = onset;
   if (duration !== null) s += "\x15" + fixed(duration, 6);
-  s += "\x14" + text + "\x14\x00";
-  return new TextEncoder().encode(s);
+  const head = new TextEncoder().encode(s + "\x14");
+  return concat([head, annotationText(text), new Uint8Array([0x14, 0x00])]);
+}
+
+/**
+ * The onset of data record `r`, its sign first, as Python writes
+ * `r * Decimal(stated)` to six places: the record duration as the header's
+ * eight characters hold it, `stated`, counted exactly `r` times, a tie
+ * rounded to the even digit. Null where `stated` is not a finite number.
+ */
+function recordOnset(stated: string, r: number): string | null {
+  const m = /^([+-]?)([0-9]*)(?:\.([0-9]*))?(?:[eE]([+-]?[0-9]+))?$/.exec(stated);
+  if (m === null) return null;
+  const [, sign, whole = "", frac = "", e = "0"] = m;
+  if (whole === "" && frac === "") return null;
+  // The value is `digits` times ten to `exp`.
+  const digits = BigInt(whole + frac) * BigInt(r);
+  const exp = Number(e) - frac.length;
+  let millionths: bigint;
+  if (exp >= -6) {
+    millionths = digits * 10n ** BigInt(exp + 6);
+  } else {
+    const div = 10n ** BigInt(-6 - exp);
+    millionths = digits / div;
+    const twice = 2n * (digits % div);
+    if (twice > div || (twice === div && millionths % 2n === 1n)) millionths += 1n;
+  }
+  const text = millionths.toString().padStart(7, "0");
+  return `${sign === "-" && digits !== 0n ? "-" : "+"}${text.slice(0, -6)}.${text.slice(-6)}`;
 }
 
 /** One event: its onset from the start of the file, in seconds, and its text. */
@@ -181,8 +271,12 @@ const DEFAULT_START: Start = [2000, 1, 1, 0, 0, 0];
 
 /** The start of a recording, as Python's `strptime(started, "%Y-%m-%dT%H:%M:%SZ")` reads it, or 2000-01-01 where it cannot. */
 export function startOf(started: string | null): Start {
-  if (started === null) return DEFAULT_START;
-  return parseStart(started) ?? DEFAULT_START;
+  return knownStart(started) ?? DEFAULT_START;
+}
+
+/** The start of a recording, as Python's `strptime(started, "%Y-%m-%dT%H:%M:%SZ")` reads it, or null where it cannot. */
+export function knownStart(started: string | null): Start | null {
+  return started === null ? null : parseStart(started);
 }
 
 function parseStart(s: string): Start | null {
@@ -284,7 +378,7 @@ export interface Input {
   readonly events: Event[];
   /** The patient field. */
   readonly patient: string;
-  /** The recording field. */
+  /** The recording field, written as it is given, cut to its 80 characters, or with nothing in it, "Startdate DD-MMM-YYYY X X X" on the start's date. */
   readonly recording: string;
   /** Each signal's prefiltering field. */
   readonly prefilter: string;
@@ -330,7 +424,17 @@ export function write(input: Input, w: Width): [Uint8Array, Written] {
       );
     }
   }
-  // Where each sample belongs, counted in samples from the first.
+  // Where each sample belongs, counted in samples from the first. A hole is
+  // a run of places no sample holds, and each place gets a placeholder, so
+  // every sample after a hole keeps its time in any reader.
+  const placed = idx[n - 1]! - idx[0]! + 1n;
+  const most = Math.max(MOST_PLACES, 1000 * n);
+  if (placed > BigInt(most)) {
+    throw error(
+      `refusing to write ${w.family}: ${n} samples, with a placeholder for every lost sample, would take ${placed} ` +
+        `sample positions, more than the ${most} this writer writes for ${n} samples`,
+    );
+  }
   const pos = new Float64Array(n);
   for (let k = 0; k < n; k++) pos[k] = Number(idx[k]! - idx[0]!);
   const span = pos[n - 1]! + 1;
@@ -338,6 +442,11 @@ export function write(input: Input, w: Width): [Uint8Array, Written] {
   if (!Number.isFinite(fs)) throw error("the sample rate is not a number");
   const nsr = Math.max(1, roundHalfEven(fs));
   const dur = nsr / fs;
+  // The duration as the header's eight characters hold it. A reader puts
+  // each record that long after the one before it, and EDF+C requires each
+  // record's onset to be exactly the end of the record before, so the
+  // onsets are counted in it, to the digit.
+  const stated = num(dur);
   const nRec = Math.ceil(span / nsr);
   const used = nRec * nsr;
   const tail = used - span;
@@ -351,7 +460,7 @@ export function write(input: Input, w: Width): [Uint8Array, Written] {
   const runs: [number, number, string][] = [];
   const stretchCounts: [string, number][] = [];
   for (const [text, flags] of input.stretches) {
-    if (flags.length !== n) throw error(`stretch '${text}' has ${flags.length} flags for ${n} samples`);
+    if (flags.length !== n) throw error(`stretch ${J.quoted(text)} has ${flags.length} flags for ${n} samples`);
     const on = new Uint8Array(used + 1);
     for (let k = 0; k < n; k++) if (flags[k]) on[pos[k]!] = 1;
     let count = 0;
@@ -384,7 +493,8 @@ export function write(input: Input, w: Width): [Uint8Array, Written] {
   for (const [first, length, text] of runs) ann[Math.floor(first / nsr)]!.push([first / fs, length / fs, text]);
   const annotBytes: Uint8Array[] = [];
   for (let r = 0; r < nRec; r++) {
-    const parts = [tal((r * nsr) / fs, null, "")];
+    const onset = recordOnset(stated, r);
+    const parts = [onset === null ? tal((r * nsr) / fs, null, "") : talAt(onset, null, "")];
     for (const [t, d, label] of ann[r]!) parts.push(tal(t, d, label));
     annotBytes.push(concat(parts));
   }
@@ -411,7 +521,9 @@ export function write(input: Input, w: Width): [Uint8Array, Written] {
   const parts: Uint8Array[] = [];
   parts.push(w.version);
   parts.push(field(input.patient, 80));
-  parts.push(field(input.recording, 80));
+  // Without a recording field, the form EDF+ gives a start date with nothing
+  // else known.
+  parts.push(field(input.recording || `Startdate ${startdate(input.start)} X X X`, RECORDING_WIDTH));
   parts.push(field(`${two(d)}.${two(mo)}.${two(((y % 100) + 100) % 100)}`, 8));
   parts.push(field(`${two(hh)}.${two(mi)}.${two(ss)}`, 8));
   parts.push(field(String(hdrBytes), 8));

@@ -1,0 +1,44 @@
+[
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262831.0,
+    "mono": 4503696.6
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262832.0,
+    "mono": 4503697.6
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262833.0,
+    "mono": 4503698.6
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262834.0,
+    "mono": 4503699.6
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262835.0,
+    "mono": 4503700.6
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262836.0,
+    "mono": 4503701.6
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262837.0,
+    "mono": 4503702.6
+  }
+]

@@ -22,13 +22,21 @@
  * await device.send(device.session.startStream());
  * ```
  *
- * What a device can do is what the device says it can do. Nothing here
- * holds a table of hardware, and a capability is a bit the device reports
- * rather than a version number this package compares against.
+ * What a device can do is what the device says it can do. A capability is
+ * a bit the device reports rather than a version number this package
+ * compares against. The one table of hardware here is a wiring preset for
+ * IntoMind hardware version 1.1.7, because the protocol gives a device no
+ * way to report how its electrodes are wired.
  */
 
 export * as protocol from "./protocol.ts";
 export * as capture from "./capture/index.ts";
+export * as instrument from "./instrument.ts";
+export * as experiments from "./experiments.ts";
+export * as audio from "./audio.ts";
+export * as analysis from "./analysis.ts";
+export * as model from "./model.ts";
+export * as placement from "./placement.ts";
 
 export {
   CAPABILITIES,
@@ -84,7 +92,7 @@ export type {
   UpdateResponse,
 } from "./protocol.ts";
 
-export { Batch, NoDeviceInfo, NotCapable, Session, SessionError } from "./session.ts";
+export { Batch, NoDeviceInfo, NotCapable, Session, SessionError, Unanswered } from "./session.ts";
 export type { Command, Event, Gap } from "./session.ts";
 
 export { Exchange, MAX_SKEW_PPM, MAX_SKEW_STDERR_PPM, Timebase } from "./timebase.ts";
@@ -103,4 +111,5 @@ export {
 export type { Step } from "./transfer.ts";
 
 export { Connection, NoBluetooth, connect, hostClock, requestAndConnect, requestDevice } from "./web-bluetooth.ts";
+export { DaisyChain } from "./daisy-chain.ts";
 export type { ConnectOptions, RequestOptions } from "./web-bluetooth.ts";

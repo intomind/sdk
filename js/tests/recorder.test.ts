@@ -26,7 +26,18 @@ import { groupedFixed } from "../src/capture/pyfmt.ts";
 import * as npy from "../src/capture/npy.ts";
 import * as J from "../src/capture/pyjson.ts";
 import type { Value } from "../src/capture/pyjson.ts";
-import { configAfter, describeChain, hostVersions, montageFields, processing, signalChain } from "../src/capture/record.ts";
+import {
+  Take,
+  configAfter,
+  describeChain,
+  fsFromTicks,
+  hostVersions,
+  montageFields,
+  processing,
+  save,
+  signalChain,
+  type DeviceFacts,
+} from "../src/capture/record.ts";
 import { readNpz } from "../src/capture/recording.ts";
 import { PACKAGE_VERSION } from "../src/capture/version.ts";
 import { FILL, decodeModelInterval, decodeNameParts, decodePipelineState, decodeStatus } from "../src/protocol.ts";
@@ -314,6 +325,24 @@ test("every session records what the Python library records", () => {
   assert.ok(exchanges >= 40, String(exchanges));
 });
 
+test("a recording's rate is measured by its ticks over the stretches where its index climbs by one, as the library's fs_from_ticks measures it", () => {
+  // A thousand samples four ticks apart: with no hole, the very number the
+  // whole span gives, to the last bit.
+  const ticks = BigInt64Array.from({ length: 1000 }, (_, k) => BigInt(123_456 + 4 * (k + 1)));
+  const whole = BigInt64Array.from({ length: 1000 }, (_, k) => BigInt(k));
+  assert.equal(fsFromTicks(ticks, 1000, whole), 999 / ((Number(ticks[999]!) - Number(ticks[0]!)) / 1000));
+  // Ten samples lost from the five hundredth on: 250 a second over the
+  // stretches, and the rate over the whole span without the index.
+  const holed = whole.map((k) => (k >= 500n ? k + 10n : k));
+  const later = ticks.map((t, k) => (k >= 500 ? t + 40n : t));
+  assert.equal(fsFromTicks(later, 1000, holed), 250);
+  assert.ok(Math.abs(fsFromTicks(later, 1000) - (250 * 999) / 1009) < 1e-9);
+  // No two samples in a row: no stretch to measure, so the rate over the whole span.
+  const apart = BigInt64Array.from([0n, 2n, 4n, 6n]);
+  const t4 = BigInt64Array.from([0n, 8n, 16n, 24n]);
+  assert.equal(fsFromTicks(t4, 1000, apart), fsFromTicks(t4, 1000));
+});
+
 test("where the electrodes went is recorded as the library records it", () => {
   const cases = items(J.get(fixture, "montage"));
   assert.ok(cases.length >= 30, String(cases.length));
@@ -410,4 +439,40 @@ test("both host clocks are read, and a recording names this package", () => {
   assert.ok(after.monotonic >= before.monotonic);
   assert.ok(Math.abs(before.realtime - Date.now() / 1000) < 60);
   assert.equal(J.dumps(hostVersions()), `{"intomind_js": "${PACKAGE_VERSION}", "platform": "${process.platform}-${process.arch}"}`);
+});
+
+test("a value of the wrong kind a program declares for its adapter or its filter is named as JavaScript writes it", () => {
+  const refused = (setup: Parameters<typeof signalChain>[0]): string => {
+    try {
+      signalChain(setup);
+    } catch (e) {
+      return (e as Error).message;
+    }
+    return "not refused";
+  };
+  assert.equal(refused({ adapter: null, filter: true as never, filtersIn: null }), "AttributeError: true has no attribute 'get'");
+  assert.equal(refused({ adapter: null, filter: ["on", null] as never, filtersIn: null }), "AttributeError: [\"on\", null] has no attribute 'get'");
+  assert.equal(refused({ adapter: [[[1], 2]] as never, filter: null, filtersIn: null }), "TypeError: unhashable type: [1]");
+});
+
+test("a recording's manifest carries only what the device facts name and takes no gain from anything else, as the published 1.4.3 package's manifest does", () => {
+  // Facts that carry a property named other anyway write the manifest the device's facts alone write.
+  const device: DeviceFacts = {
+    deviceId: "0102030405060708",
+    firmware: "1.4.6",
+    protocol: "1.4",
+    tickHz: 1_000_000,
+    vrefUv: 4_500_000,
+    adcBits: 24,
+    channels: 4,
+    clock: null,
+    gapsInRun: 0,
+  };
+  const run = { finishedUnix: 1_700_000_000 };
+  const plain = save("plain", new Take(), device, {}, run);
+  const told = { ...device, other: J.fromPlain({ name: "elsewhere", gain: 12 }) } as DeviceFacts;
+  const saved = save("plain", new Take(), told, {}, run);
+  assert.equal(J.get(saved.manifest, "other"), undefined, "the manifest has no field named other");
+  assert.equal(J.field(saved.manifest, "gain").kind, "null", "the manifest took no gain from anything else");
+  assert.equal(saved.manifestJson, plain.manifestJson);
 });

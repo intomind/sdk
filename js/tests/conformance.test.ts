@@ -5,7 +5,7 @@
  * device runs. Every message in it decodes here to the fields it states,
  * and every malformed one is refused for the reason it states. A drift
  * between this implementation and the device shows up here rather than on a
- * bench.
+ * device.
  */
 
 import { readFileSync } from "node:fs";
@@ -767,4 +767,13 @@ test("the IntoMind One's longest head list fits one answer, and the encoders com
   const ids = VECTORS.decode.find((v: { kind: string }) => v.kind === "list_head_encoders")!;
   const merged = P.withEncoders(P.decodeHeads(bytesOf(three.bytes)), P.decodeHeadEncoders(bytesOf(ids.bytes)));
   assert.deepEqual(merged.heads.map((h) => h.encoderId), ["0000000000000000", "a7c61680d9a202db", "0000000000000000"]);
+});
+
+test("a head names its encoder as the library's Head.trained_beside answers: null when it does not say", () => {
+  const three = VECTORS.decode.find((v: { kind: string }) => v.kind === "list_heads")!;
+  const ids = VECTORS.decode.find((v: { kind: string }) => v.kind === "list_head_encoders")!;
+  const [silent, named] = P.withEncoders(P.decodeHeads(bytesOf(three.bytes)), P.decodeHeadEncoders(bytesOf(ids.bytes))).heads;
+  assert.equal(P.trainedBeside(silent!, "a7c61680d9a202db"), null);
+  assert.equal(P.trainedBeside(named!, "a7c61680d9a202db"), true);
+  assert.equal(P.trainedBeside(named!, "0123456789abcdef"), false);
 });

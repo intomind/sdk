@@ -10,9 +10,11 @@
  * read this format, and docs.intomind.com/files.html states its promises.
  *
  * Reading follows the Python library's `analysis.load` exactly, including
- * the two corrections it makes in memory and never on disk: samples
- * delivered twice by two Bluetooth subscriptions, and sample times stretched
- * by an impossible clock fit. Each correction says what it did in
+ * the three corrections it makes in memory and never on disk: samples
+ * delivered twice by two Bluetooth subscriptions, sample times stretched by
+ * an impossible clock fit, and the lead-off bits of an IntoMind device
+ * whose firmware is older than 1.4.6, which cannot check electrode contact,
+ * held without `leadoff_judged`. Each correction says what it did in
  * `Recording.repairs`.
  *
  * Nothing here reads a disk. A collection is handed the bytes of its files,
@@ -21,6 +23,7 @@
  */
 
 import { sha256 } from "../digest.ts";
+import { JUDGES_FROM as FIRST_JUDGING } from "../firmware.ts";
 import { CaptureError } from "./errors.ts";
 import * as npy from "./npy.ts";
 import type { NpyArray } from "./npy.ts";
@@ -45,11 +48,11 @@ export function checkLabel(label: string): string {
   }
   if (!ok) {
     throw new CaptureError(
-      `${J.reprStr(label)} is not a capture label. A label is letters, digits, dots, dashes and underscores, ` +
+      `${J.quoted(label)} is not a capture label. A label is letters, digits, dots, dashes and underscores, ` +
         "starts with a letter or a digit, and is at most 128 characters.",
     );
   }
-  if (label.includes("..")) throw new CaptureError(`${J.reprStr(label)} is not a capture label: it walks up a directory`);
+  if (label.includes("..")) throw new CaptureError(`${J.quoted(label)} is not a capture label: it walks up a directory`);
   return label;
 }
 
@@ -73,6 +76,32 @@ export interface CollectionOptions {
 }
 
 const UTF8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/**
+ * The rate `time` measures, in samples a second, over the stretches where
+ * `index` climbs by exactly one: the samples in them less one each, over the
+ * time they span, as the Python library's `provenance.rate_over_runs`
+ * measures it. A hole, where the index skips the samples that were lost,
+ * adds nothing to either, so it is not read as slow sampling. 0 where
+ * nothing can be measured.
+ */
+export function rateOverRuns(index: ArrayLike<bigint> | null, time: ArrayLike<number> | null): number {
+  if (index === null || time === null || time.length < 2 || index.length !== time.length) return 0;
+  let count = 0;
+  let span = 0;
+  let a = 0;
+  const n = index.length;
+  for (let i = 1; i <= n; i++) {
+    if (i === n || index[i]! - index[i - 1]! !== 1n) {
+      if (i - a >= 2) {
+        count += i - a - 1;
+        span += time[i - 1]! - time[a]!;
+      }
+      a = i;
+    }
+  }
+  return span > 0 ? count / span : 0;
+}
 
 /** The hex sha256 of some bytes. */
 function hexSha256(b: Uint8Array): string {
@@ -221,7 +250,14 @@ export class Collection {
     return why !== undefined && J.truthy(why) ? J.pyStr(why) : null;
   }
 
-  /** `label`, verified, read, and corrected in memory where it was recorded by code with a defect since fixed. A recording that fails verification is refused. */
+  /**
+   * `label`, verified, read, and corrected in memory: samples two
+   * subscriptions delivered twice, sample times stretched by an impossible
+   * clock fit, and the lead-off bits of an IntoMind device whose firmware is
+   * older than 1.4.6, which cannot check electrode contact, held without
+   * `leadoff_judged`, each listed in `Recording.repairs`. A recording that
+   * fails verification is refused.
+   */
   load(label: string): Recording {
     return this.loadWith(label, true, true);
   }
@@ -236,7 +272,7 @@ export class Collection {
       const v = this.verify(label);
       if (!v.ok) {
         const list = J.array(v.problems.map(J.str));
-        throw new CaptureError(`${label}: integrity check FAILED: ${J.pyRepr(list)}`);
+        throw new CaptureError(`${label}: integrity check FAILED: ${J.jsRepr(list)}`);
       }
     }
     const npzName = `${checkLabel(label)}.npz`;
@@ -273,15 +309,17 @@ export class Collection {
     const leadoff = take("leadoff");
     const gapBefore = take("gap_before");
     const leadoffActive = take("leadoff_active");
+    const leadoffJudged = take("leadoff_judged");
     // A recorder armed and stopped before a packet came keeps its counts as
     // one empty list, which the library reads as no channels.
     if (counts.shape.length === 1 && counts.shape[0] === 0) counts = { shape: [0, 0], fortran: false, data: counts.data };
     if (counts.shape.length !== 2) throw new CaptureError(`${label}: the counts are not channels by samples`);
-    const parts: Parts = { counts, index, hostTime, deviceTicks, leadoff, gapBefore, leadoffActive, meta, manifestText };
+    const parts: Parts = { counts, index, hostTime, deviceTicks, leadoff, gapBefore, leadoffActive, leadoffJudged, meta, manifestText };
     const repairs: string[] = [];
     if (repair) {
       dedupeDelivery(label, parts, repairs);
       repinClock(parts, repairs);
+      noContactCheck(parts, repairs);
     }
     return new Recording(label, parts, repairs);
   }
@@ -314,12 +352,14 @@ export interface Parts {
   hostTime: NpyArray;
   /** Each sample's device time, when kept. */
   deviceTicks: NpyArray | null;
-  /** The lead-off byte, when kept. */
+  /** The lead-off word, when kept: the device's byte. */
   leadoff: NpyArray | null;
   /** Whether a sample follows a break, when kept. */
   gapBefore: NpyArray | null;
   /** Whether lead-off detection ran, when kept. */
   leadoffActive: NpyArray | null;
+  /** Whether each sample's lead-off bits are a verdict on contact, held only by a recording one of whose samples carries none. */
+  leadoffJudged: NpyArray | null;
   /** The manifest. */
   meta: Value;
   /** The manifest, as its file holds it. */
@@ -383,12 +423,33 @@ export class Recording {
     return this.parts.deviceTicks === null ? null : i64s(this.parts.deviceTicks);
   }
 
-  /** The lead-off byte that arrived with each sample, one bit per electrode, when the recording kept it. */
+  /**
+   * The lead-off byte that arrived with each sample, one bit per electrode,
+   * when the recording kept it. Null when the recording carries no lead-off,
+   * or when any of its words holds a value a byte cannot. `leadoffWords`
+   * gives them for every recording. A word is never cut down to a byte.
+   */
   get leadoff(): Uint8Array | null {
     const a = this.parts.leadoff;
     if (a === null) return null;
     const out = new Uint8Array(npy.len(a.data));
-    for (let k = 0; k < out.length; k++) out[k] = Number(BigInt.asUintN(8, npy.i64At(a.data, k)));
+    // Kept as bytes, as every recording of the device keeps them: a byte
+    // only where every word is one.
+    const bytes = a.data.kind === "u1" || a.data.kind === "i1" || a.data.kind === "b1";
+    for (let k = 0; k < out.length; k++) {
+      const w = npy.i64At(a.data, k);
+      if (!bytes && (w < 0n || w > 255n)) return null;
+      out[k] = Number(BigInt.asUintN(8, w));
+    }
+    return out;
+  }
+
+  /** The lead-off word that arrived with each sample, one bit per electrode, at its full width, when the recording kept it: the device's byte. */
+  get leadoffWords(): BigUint64Array | null {
+    const a = this.parts.leadoff;
+    if (a === null) return null;
+    const out = new BigUint64Array(npy.len(a.data));
+    for (let k = 0; k < out.length; k++) out[k] = a.data.kind === "u8" ? a.data.values[k]! : BigInt.asUintN(64, npy.i64At(a.data, k));
     return out;
   }
 
@@ -402,6 +463,22 @@ export class Recording {
     return this.parts.leadoffActive === null ? null : bools(this.parts.leadoffActive);
   }
 
+  /**
+   * Whether each sample's lead-off bits are a verdict on each electrode's
+   * contact, held by a recording one of whose samples carries none, as the
+   * first samples of an IntoMind device's stream with detection on carry
+   * none from firmware 1.4.6: a false sample's bits say neither that an
+   * electrode was attached nor that one was off. An IntoMind device whose
+   * firmware is older than 1.4.6 cannot check electrode contact, and a
+   * recording of one that holds no such flags is read, by `Collection.load`,
+   * with every sample taken with detection on false and the rest true. Null
+   * for any other recording that holds no such flags, whose every sample's
+   * bits are what `leadoffActive` makes them.
+   */
+  get leadoffJudged(): boolean[] | null {
+    return this.parts.leadoffJudged === null ? null : bools(this.parts.leadoffJudged);
+  }
+
   /** The manifest, as its file holds it. */
   get manifestJson(): string {
     return this.parts.manifestText;
@@ -412,7 +489,7 @@ export class Recording {
     return this.parts.meta;
   }
 
-  /** What reading had to correct, in sentences. Empty for every recording made by code with the fixes in it. */
+  /** What reading corrected, in sentences: copies of samples that two subscriptions delivered twice, times stretched by a clock fitted at a skew no pair of oscillators can have, and the lead-off bits of an IntoMind device whose firmware is older than 1.4.6 read as no verdict on contact. Empty for a recording that needed none of these. */
   get repairs(): string[] {
     return [...this.fixes];
   }
@@ -423,24 +500,18 @@ export class Recording {
   }
 
   /**
-   * The effective sample rate. The manifest's `fs_effective`, unless it
-   * disagrees with the host clock by more than five percent, which a
-   * recording whose index reset before the fix did, and then the host
-   * clock's.
+   * The effective sample rate: the manifest's `fs_effective`, or the rate
+   * measured on the host clock where the manifest states none or the two
+   * differ by more than five percent of the host clock's. The host clock's
+   * rate is measured over the stretches where the index climbs by one, so a
+   * hole, where the index skips the samples that were lost, is not counted
+   * as time spent sampling slowly.
    */
   get fs(): number {
     const stored = J.field(this.parts.meta, "fs_effective");
     const fs = J.truthy(stored) ? (J.asF64(stored) ?? 0) : 0;
-    const ht = this.parts.hostTime.data;
-    const n = npy.len(ht);
-    if (n > 1) {
-      const first = npy.f64At(ht, 0);
-      const last = npy.f64At(ht, n - 1);
-      if (last > first) {
-        const fsHt = (n - 1) / (last - first);
-        if (fs <= 0 || Math.abs(fs - fsHt) / fsHt > 0.05) return fsHt;
-      }
-    }
+    const fsHt = rateOverRuns(this.index, this.hostTime);
+    if (fsHt > 0 && (fs <= 0 || Math.abs(fs - fsHt) / fsHt > 0.05)) return fsHt;
     return fs;
   }
 
@@ -481,9 +552,15 @@ export class Recording {
     return (2 * vref) / denom;
   }
 
-  /** Channel `c` in microvolts: its counts times `lsbUv`. */
+  /**
+   * Channel `c` in microvolts: its counts times `lsbUv`, or for a channel the
+   * recording states a scale of its own for under `scales`, its counts times
+   * that scale, in its own unit, which `units` names.
+   */
   uv(c: number): Float64Array {
-    const lsb = this.lsbUv;
+    const scales = J.field(this.parts.meta, "scales");
+    const own = scales.kind === "array" && scales.items.length === this.channels ? scales.items[c] : undefined;
+    const lsb = own !== undefined && own.kind !== "null" ? (J.asF64(own) ?? NaN) : this.lsbUv;
     const rows = npy.rowIndices(this.parts.counts, c);
     const d = this.parts.counts.data;
     const out = new Float64Array(rows.length);
@@ -505,7 +582,7 @@ function dedupeDelivery(label: string, p: Parts, fixes: string[]): void {
   if (n < 2) return;
   const t = new BigInt64Array(n);
   for (let k = 0; k < n; k++) t[k] = npy.i64At(ticks.data, k);
-  // Increasing throughout, the case of every recording since the fix: nothing repeats.
+  // Increasing throughout: nothing repeats.
   let increasing = true;
   for (let k = 1; k < n && increasing; k++) increasing = t[k]! > t[k - 1]!;
   if (increasing) return;
@@ -561,6 +638,7 @@ function dedupeDelivery(label: string, p: Parts, fixes: string[]): void {
     [p.leadoff, "leadoff"],
     [p.gapBefore, "gap_before"],
     [p.leadoffActive, "leadoff_active"],
+    [p.leadoffJudged, "leadoff_judged"],
   ];
   for (const [a, what] of lists) {
     if (a !== null && npy.len(a.data) < n) {
@@ -584,6 +662,7 @@ function dedupeDelivery(label: string, p: Parts, fixes: string[]): void {
   p.leadoff = p.leadoff === null ? null : takeKept(p.leadoff);
   p.gapBefore = p.gapBefore === null ? null : takeKept(p.gapBefore);
   p.leadoffActive = p.leadoffActive === null ? null : takeKept(p.leadoffActive);
+  p.leadoffJudged = p.leadoffJudged === null ? null : takeKept(p.leadoffJudged);
   fixes.push(
     `every packet was delivered ${general(dupes, 6)} times over, so ${grouped(nExtra)} of ${grouped(n)} samples ` +
       `were copies. Removed: ${grouped(cols)} samples remain. (Two BLE subscriptions were open on the instrument ` +
@@ -651,6 +730,108 @@ function repinClock(p: Parts, fixes: string[]): void {
     `the clock was fitted at skew ${fixed(skew, 4)} (${groupedFixed(ppm, 0)} ppm) over a ${fixed(baseline, 2)} s ` +
       "baseline, stretching every sample time by that factor. Restamped from the device clock with the skew " +
       `pinned at 1.0; the samples now span ${groupedFixed(span, 0)} s.`,
+  );
+}
+
+/** The first firmware of the IntoMind device that checks electrode contact, see `firmware.ts`, as whole numbers of any size, as a manifest's version is read. */
+const JUDGES_FROM: readonly bigint[] = FIRST_JUDGING.map(BigInt);
+
+/** Whether `c` is a decimal digit of any script, Unicode's category Nd, as Python's `\d` matches one. */
+const DIGIT = /^\p{Nd}$/u;
+
+/** A whole number written in decimal digits of any script, as Python's `int` reads it: each digit's value is its place in its run of ten. */
+function digitsValue(text: string): bigint {
+  let v = 0n;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!;
+    let start = cp;
+    while (start > 0 && DIGIT.test(String.fromCodePoint(start - 1))) start--;
+    v = v * 10n + BigInt((cp - start) % 10);
+  }
+  return v;
+}
+
+/** Whether `c` is white space as Python's `\s` matches it in text: Unicode's own, and the four separators of files, groups, records and units. */
+function pySpace(c: number): boolean {
+  return J.isWhitespace(c) || (c >= 0x1c && c <= 0x1f);
+}
+
+/**
+ * The firmware version, as "major.minor.patch", of the IntoMind device a
+ * recording was made of, where that firmware is older than 1.4.6 and so
+ * cannot check electrode contact, or null, as the Python library decides it.
+ * The device's own recording says its firmware in
+ * `firmware_version`, or `fw` in an older manifest. A version that is not three whole
+ * numbers is not known to be older. Internal: the package's exports and
+ * analyses read it.
+ */
+export function firmwareCannotCheck(meta: Value): string | null {
+  const m = meta.kind === "object" ? meta : J.object([]);
+  let version: Value | undefined;
+  const stated = J.get(m, "firmware_version");
+  version = stated !== undefined && J.truthy(stated) ? stated : J.get(m, "fw");
+  if (version === undefined || version.kind !== "str") return null;
+  let a = 0;
+  let b = version.value.length;
+  while (a < b && pySpace(version.value.charCodeAt(a))) a++;
+  while (b > a && pySpace(version.value.charCodeAt(b - 1))) b--;
+  const parts = /^(\p{Nd}+)\.(\p{Nd}+)\.(\p{Nd}+)$/u.exec(version.value.slice(a, b));
+  if (parts === null) return null;
+  const firmware = [parts[1]!, parts[2]!, parts[3]!].map(digitsValue);
+  let older = false;
+  for (let k = 0; k < JUDGES_FROM.length; k++) {
+    if (firmware[k]! !== JUDGES_FROM[k]!) {
+      older = firmware[k]! < JUDGES_FROM[k]!;
+      break;
+    }
+  }
+  return older ? firmware.join(".") : null;
+}
+
+/**
+ * Whether each sample's lead-off bits are a verdict on contact, as a reader
+ * of a recording takes them, as the Python library decides it: the
+ * recording's own `leadoff_judged` where it holds one, and for a recording
+ * that holds none of an IntoMind device whose firmware is older than 1.4.6,
+ * which cannot check electrode contact, false for every sample with detection
+ * on and true for the rest. Null where neither applies, or where the
+ * recording does not say whether detection was on or it was on for no sample.
+ * Internal: the package's exports read it.
+ */
+export function judgedOnRead(meta: Value, active: NpyArray | null, judged: NpyArray | null = null): NpyArray | null {
+  if (judged !== null || active === null) return judged;
+  if (firmwareCannotCheck(meta) === null) return null;
+  const n = npy.len(active.data);
+  const values = new Uint8Array(n);
+  let on = false;
+  for (let k = 0; k < n; k++) {
+    const detecting = npy.boolAt(active.data, k);
+    values[k] = detecting ? 0 : 1;
+    on ||= detecting;
+  }
+  return on ? { shape: [...active.shape], fortran: active.fortran, data: { kind: "b1", values } } : null;
+}
+
+/**
+ * An IntoMind device whose firmware is older than 1.4.6 cannot check
+ * electrode contact: its lead-off detection does not work, and every
+ * electrode reads off whether it touches skin or not. In a recording of it
+ * that holds no `leadoff_judged`, its lead-off bits would read as electrodes
+ * off, so every sample taken with detection on is marked not judged, as a
+ * recording that holds the flags marks it. A recording that holds its own
+ * `leadoff_judged`, or of any other device, is left as it is.
+ */
+function noContactCheck(p: Parts, fixes: string[]): void {
+  if (p.leadoffJudged !== null) return;
+  const judged = judgedOnRead(p.meta, p.leadoffActive);
+  if (judged === null) return;
+  let n = 0;
+  for (let k = 0; k < npy.len(judged.data); k++) if (!npy.boolAt(judged.data, k)) n++;
+  p.leadoffJudged = judged;
+  fixes.push(
+    `the device ran firmware ${firmwareCannotCheck(p.meta)}, which cannot check electrode contact: its lead-off ` +
+      "detection does not work, and every electrode reads off whether it touches skin or not. The lead-off bits " +
+      `of the ${grouped(n)} samples taken with detection on are read as no verdict on contact.`,
   );
 }
 

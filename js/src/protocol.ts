@@ -20,15 +20,18 @@
  *
  * **The timeline is never silently repaired.** A forward step in the sample
  * index is a loss with an exact count. A step that is not forward is a break
- * whose extent is not a number, and this module says so rather than
- * returning a count that would be a fiction.
+ * whose extent is not known, and this module says so rather than returning
+ * a count that would be a fiction.
  *
  * **Nothing is assumed about width.** The number of channels, the converter
  * resolution, the reference voltage, and the tick rate all come from the
  * device, and the scaling helper takes them as arguments.
  */
 
+import { repr } from "./capture/pyfmt.ts";
+import { holdsTooLong, quoted, tooLong, written } from "./capture/pyjson.ts";
 import { sha256 } from "./digest.ts";
+import { slotRefusal } from "./slot.ts";
 
 export { Crc32, crc32, sha256 } from "./digest.ts";
 
@@ -153,16 +156,41 @@ function hex(b: Uint8Array): string {
   return s;
 }
 
-/** Bytes from a hex string, for tests and for anything that logs one. */
+function isAsciiSpace(c: number): boolean {
+  return c === 0x20 || (c >= 0x09 && c <= 0x0d);
+}
+
+function hexDigit(c: number): number {
+  if (c >= 0x30 && c <= 0x39) return c - 0x30;
+  if (c >= 0x61 && c <= 0x66) return c - 0x61 + 10;
+  if (c >= 0x41 && c <= 0x46) return c - 0x41 + 10;
+  return 16;
+}
+
+/**
+ * Bytes from a hex string, read as Python's `bytes.fromhex` reads one, which
+ * is how the Python library reads every hex string it is given: ASCII
+ * whitespace between bytes is skipped, and the first character that is not
+ * where a digit has to be is refused with its position, in Python's words.
+ */
 export function fromHex(s: string): Uint8Array {
-  if (s.length % 2 !== 0) throw new Invalid("a hex string has an even number of characters");
-  const out = new Uint8Array(s.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    const byte = Number.parseInt(s.slice(i * 2, i * 2 + 2), 16);
-    if (Number.isNaN(byte)) throw new Invalid(`${s.slice(i * 2, i * 2 + 2)} is not a hex byte`);
-    out[i] = byte;
+  const out: number[] = [];
+  const refused = (i: number): Invalid =>
+    new Invalid(`ValueError: non-hexadecimal number found in fromhex() arg at position ${i}`);
+  let i = 0;
+  while (i < s.length) {
+    if (isAsciiSpace(s.charCodeAt(i))) {
+      i++;
+      continue;
+    }
+    const high = hexDigit(s.charCodeAt(i));
+    if (high > 15) throw refused(i);
+    const low = i + 1 < s.length ? hexDigit(s.charCodeAt(i + 1)) : 16;
+    if (low > 15) throw refused(i + 1);
+    out.push(high * 16 + low);
+    i += 2;
   }
-  return out;
+  return Uint8Array.from(out);
 }
 
 export { hex as toHex };
@@ -380,6 +408,13 @@ export function encodeRequest(
   if (name === null || code === undefined) {
     const shown = typeof opcode === "string" ? opcode : toByte(opcode);
     throw new Invalid(`${shown} is not an opcode this contract defines`);
+  }
+  // A head's slot is one byte, and one that does not fit is refused, never
+  // carried as another slot.
+  if (name === "select_head" || name === "remove_head") {
+    const refused = slotRefusal(arg);
+    if (refused !== null) throw new Invalid(refused);
+    return new Uint8Array([code, Number(arg)]);
   }
   if (TAKES_PAYLOAD.has(name)) {
     if (!(arg instanceof Uint8Array)) throw new Invalid(`${name} takes a payload of bytes`);
@@ -1097,7 +1132,7 @@ export function microvolts(raw: number, vrefUv: number, gain: number, adcBits: n
 export interface Continuity {
   /** The contract's own words for the three cases. */
   readonly verdict: "continuous" | "gap" | "break";
-  /** Samples missing. Null for a break, whose extent is not a number. */
+  /** Samples missing. Null for a break, whose extent is not known. */
   readonly lost: number | null;
   /** Whether this is a gap or a break rather than continuous. */
   readonly broken: boolean;
@@ -1457,6 +1492,16 @@ export function withEncoders(list: HeadList, encoders: ReadonlyMap<number, strin
   };
 }
 
+/**
+ * Whether a head names `encoderId` as the encoder it was trained beside,
+ * null when the head does not say, as the Python library's
+ * `Head.trained_beside` answers.
+ */
+export function trainedBeside(head: { readonly encoderId: string }, encoderId: string): boolean | null {
+  if (head.encoderId === NO_ENCODER_ID) return null;
+  return head.encoderId === encoderId;
+}
+
 /** GET_MODEL_INFO's answer. */
 export interface ModelInfo {
   /** The model runtime's state code. See `MODEL_STATES`. */
@@ -1573,13 +1618,13 @@ export function encodeModelInterval(seconds: number): Uint8Array {
   return out;
 }
 
-/** The most a composed name may be, in bytes: what a scan response carries. The same limit bounds each part. */
+/** The most a composed name may be, in bytes: what a scan response carries, so every scan list shows the whole of it. The same limit bounds each part. */
 export const NAME_MAX_COMPOSED = 29;
 
 const utf8 = new TextEncoder();
 const utf8Decoder = new TextDecoder("utf-8");
 
-/** A name or an adjective: UTF-8 of at most 29 bytes, no control characters, no leading or trailing space. Empty is allowed. */
+/** A name or an adjective: UTF-8 of at most `NAME_MAX_COMPOSED` bytes, no control characters, no leading or trailing space. Empty is allowed. */
 export function namePartOk(part: string): boolean {
   const b = utf8.encode(part);
   if (b.length > NAME_MAX_COMPOSED) return false;
@@ -1596,7 +1641,12 @@ export function composeName(name: string, adjective: string, product = PRODUCT_N
   return parts.join(" ");
 }
 
-/** Whether the composition fits the air, so the device will accept it. */
+/**
+ * Whether a device takes this name and adjective: each part as `namePartOk`
+ * allows, and the name they compose with `product`, as `composeName`
+ * composes it, within the `NAME_MAX_COMPOSED` bytes of UTF-8 a scan response
+ * carries. A device refuses any other pair.
+ */
 export function nameFits(name: string, adjective: string, product = PRODUCT_NAME): boolean {
   return namePartOk(name) && namePartOk(adjective) && utf8.encode(composeName(name, adjective, product)).length <= NAME_MAX_COMPOSED;
 }
@@ -1893,7 +1943,7 @@ export function encodePredictionInput(source: number | InputSourceName, stages: 
   const code = typeof source === "string" ? INPUT_SOURCES[source] : source;
   // Synthetic is reported by a device generating its signal, never requested.
   if (code === undefined || INPUT_SOURCE_NAMES[code] === undefined || code === INPUT_SOURCES.synthetic) {
-    throw new Invalid(`${source} is not a source a host may ask for`);
+    throw new Invalid(`${written(source)} is not a source a host may ask for`);
   }
   const chain = encodeChain(stages);
   const out = new Uint8Array(1 + chain.length);
@@ -2531,7 +2581,7 @@ export const ENVELOPE_VERSION = 1;
 /** The `slot_link` byte for an image that is not linked to an application slot. */
 export const SLOT_LINK_NONE = 0xff;
 
-/** A START request, as the device reads it. */
+/** A START request, as the device reads it. A slot that is not a whole number from 0 to 255 is refused with `Invalid`, in words. */
 export function encodeUpdateStart(
   target: UpdateTargetName | number,
   slot: number,
@@ -2542,12 +2592,14 @@ export function encodeUpdateStart(
   if (code === undefined || UPDATE_TARGET_BY_CODE[code] === undefined) {
     throw new Invalid(`${target} is not something this contract transfers`);
   }
+  const refused = slotRefusal(slot);
+  if (refused !== null) throw new Invalid(refused);
   const id = typeof transferId === "string" ? fromHex(transferId) : transferId;
   if (id.length !== 8) throw new Invalid("a transfer identifier is eight bytes");
   const out = new Uint8Array(UPDATE_START_LEN);
   out[0] = UPDATE_OPS.start;
   out[1] = code;
-  out[2] = slot;
+  out[2] = Number(slot);
   view(out).setUint32(3, totalLen, true);
   out.set(id, 7);
   return out;
@@ -2854,6 +2906,16 @@ export interface HeadBlob {
  * `encoderId` names the encoder the head was trained beside (1.3, format 2),
  * so a host can warn when it is uploaded to a device running another;
  * `version` 1 writes the 1.0 header for a device that predates format 2.
+ *
+ * It does what the Python library's `build_head` does with the same values:
+ * the same checks in the same order, and an empty encoder id taken as none.
+ * Each weight and bias is cut to its whole part. A weight that is then not
+ * a signed byte, -128 to 127, a bias that is not a whole number of four
+ * bytes, -2147483648 to 2147483647, an infinity or a value that is not a
+ * number in either, a scale that is not a finite number or that a four-byte
+ * float cannot hold, an encoder id that is not text holding eight bytes as
+ * hex digits, two to a byte, and a name that is not text are refused with
+ * `Invalid`, in words.
  */
 export function buildHead(
   weights: ReadonlyArray<ArrayLike<number>>,
@@ -2861,13 +2923,6 @@ export function buildHead(
   scale: ArrayLike<number>,
   options: { name?: string; inDim?: number; encoderId?: string; version?: number } = {},
 ): Uint8Array {
-  const version = options.version ?? 2;
-  if (version !== 1 && version !== 2) throw new Invalid("a head is written in format 1 or 2");
-  const encoder = fromHex(options.encoderId ?? NO_ENCODER_ID);
-  if (encoder.length !== 8) throw new Invalid("an encoder id is eight bytes, sixteen hex digits");
-  if (version === 1 && options.encoderId !== undefined && options.encoderId !== NO_ENCODER_ID) {
-    throw new Invalid("format 1 has no room for an encoder id");
-  }
   const outDim = weights.length;
   if (outDim === 0) throw new Invalid("a head has at least one output");
   const inDim = options.inDim ?? weights[0]!.length;
@@ -2877,6 +2932,27 @@ export function buildHead(
   if (bias.length !== outDim || scale.length !== outDim) {
     throw new Invalid("one bias and one scale per output");
   }
+  for (const row of weights) {
+    for (let i = 0; i < inDim; i++) {
+      if (!wholeIn(row[i]!, -128, 127)) throw new Invalid("head weights are signed bytes, so they are trained or scaled to fit");
+    }
+  }
+  const encoderId: unknown = options.encoderId;
+  if (encoderId !== undefined && encoderId !== null && typeof encoderId !== "string") {
+    throw new Invalid(`an encoder id is text, sixteen hex digits, not ${shownValue(encoderId)}`);
+  }
+  let encoder: Uint8Array;
+  try {
+    encoder = fromHex(encoderId || NO_ENCODER_ID);
+  } catch {
+    throw new Invalid(`an encoder id is eight bytes, sixteen hex digits, and ${shownValue(encoderId)} is not hex digits two to a byte`);
+  }
+  if (encoder.length !== 8) throw new Invalid("an encoder id is eight bytes, sixteen hex digits");
+  const version = options.version ?? 2;
+  if (version !== 1 && version !== 2) throw new Invalid("a head is written in format 1 or 2");
+  if (version === 1 && encoder.some((b) => b !== 0)) throw new Invalid("format 1 has no room for an encoder id");
+  const name: unknown = options.name === undefined ? "" : options.name;
+  if (typeof name !== "string") throw new Invalid(`a head's name is text, not ${shownValue(name)}`);
   const blob = new Uint8Array(headBlobLen(inDim, outDim, version));
   const v = view(blob);
   blob.set(fromHex(HEAD_MAGIC), 0);
@@ -2884,22 +2960,73 @@ export function buildHead(
   blob[5] = HEAD_KIND_LINEAR;
   v.setUint16(6, inDim, true);
   v.setUint16(8, outDim, true);
-  blob.set(paddedName(options.name ?? "", HEAD_NAME_LEN), 10);
+  blob.set(paddedName(name, HEAD_NAME_LEN), 10);
   if (version === 2) blob.set(encoder, 32);
   let at = version === 2 ? HEAD_HEADER_LEN_2 : HEAD_HEADER_LEN;
   for (const row of weights) {
-    for (let i = 0; i < inDim; i++) {
-      const w = row[i]!;
-      if (!Number.isInteger(w) || w < -128 || w > 127) {
-        throw new Invalid("head weights are signed bytes, so they are trained or scaled to fit");
-      }
-      blob[at++] = w & 0xff;
-    }
+    for (let i = 0; i < inDim; i++) blob[at++] = Math.trunc(row[i]!) & 0xff;
   }
-  for (let o = 0; o < outDim; o++, at += 4) v.setInt32(at, bias[o]!, true);
-  for (let o = 0; o < outDim; o++, at += 4) v.setFloat32(at, scale[o]!, true);
+  for (let o = 0; o < outDim; o++, at += 4) {
+    const b = bias[o]!;
+    if (!wholeIn(b, -2147483648, 2147483647)) {
+      throw new Invalid(`bias[${o}] is ${shownValue(b)}, and a head's bias is a whole number of four bytes, -2147483648 to 2147483647`);
+    }
+    v.setInt32(at, Math.trunc(b), true);
+  }
+  for (let o = 0; o < outDim; o++, at += 4) {
+    // A scale that is not a finite number is refused, and so is a finite
+    // scale that four bytes round to infinity, rather than written as
+    // infinity.
+    const given: unknown = scale[o];
+    const s = typeof given === "number" ? given : typeof given === "boolean" ? Number(given) : typeof given === "bigint" ? Number(given) : Number.NaN;
+    if (!Number.isFinite(s) && typeof given !== "bigint") {
+      throw new Invalid(`scale[${o}] is ${shownValue(given)}, and a head's scale is a finite number`);
+    }
+    if (!Number.isFinite(Math.fround(s))) {
+      throw new Invalid(`scale[${o}] is ${shownValue(given)}, which a head's four-byte float cannot hold`);
+    }
+    v.setFloat32(at, s, true);
+  }
   blob.set(sha256(blob.subarray(0, at)), at);
   return blob;
+}
+
+/** Whether `x`, cut toward zero to its whole part, is from `low` to `high`. An infinity and a value that is not a number are not. */
+function wholeIn(x: number, low: number, high: number): boolean {
+  if (!Number.isFinite(x)) return false;
+  const w = Math.trunc(x);
+  return w >= low && w <= high;
+}
+
+/** A number a caller gave, as a refusal shows it: a whole number as one, NaN and the infinities as JavaScript writes them, and any other number as Python writes a float, such as 1e+39. */
+function shownNumber(x: number): string {
+  if (!Number.isFinite(x)) return String(x);
+  if (Number.isSafeInteger(x) && !Object.is(x, -0)) return String(x);
+  return repr(x);
+}
+
+/**
+ * A value a caller gave, as a refusal shows it, as the library's `_shown`
+ * shows it: a number as `shownNumber` shows it, text in double quotes, a row
+ * in brackets, and anything else as JavaScript writes it, or by its type. A
+ * whole number of more digits than Python turns into text, 4,300, and text
+ * written as one, are named by how many digits they have, never printed,
+ * and a row holding such a whole number by its type, as Python, which will
+ * not print it, names it.
+ */
+function shownValue(x: unknown): string {
+  if (typeof x === "number") return shownNumber(x);
+  const long = tooLong(x);
+  if (long !== null) return long;
+  if (typeof x === "string") return quoted(x);
+  if (Array.isArray(x) && holdsTooLong(x)) return "a list of more digits than Python prints";
+  if (Array.isArray(x) || (ArrayBuffer.isView(x) && !(x instanceof DataView))) {
+    return `[${Array.from(x as ArrayLike<unknown>, shownValue).join(", ")}]`;
+  }
+  if (x === null || x === undefined || typeof x === "boolean" || typeof x === "bigint") return String(x);
+  if (typeof x === "function") return "a function";
+  const type = (x as { constructor?: { name?: string } }).constructor?.name;
+  return type && type !== "Object" ? `a ${type}` : "an object";
 }
 
 /** Read a head back, and check it the way the device does. */
@@ -2954,18 +3081,41 @@ export function decodeHead(blob: Uint8Array): HeadBlob {
   };
 }
 
+/** The typed arrays of whole numbers: an embedding in one is the device's integers. */
+const INTEGER_ARRAYS = [Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array];
+
+/**
+ * Whether an embedding is the encoder's floats, as the Python library's
+ * `evaluate_head` decides it, by whether it holds a float. A typed array of
+ * floats does, and a plain array does when a value in it is not a safe
+ * integer, as `model.trainHead` decides it for each row.
+ */
+function holdsFloats(embedding: ArrayLike<number>): boolean {
+  if (ArrayBuffer.isView(embedding)) return !INTEGER_ARRAYS.some((T) => embedding instanceof T);
+  for (let i = 0; i < embedding.length; i++) if (!Number.isSafeInteger(embedding[i])) return true;
+  return false;
+}
+
 /**
  * What a head produces, computed the way the device computes it: the
  * accumulation is exact in integers and only the scale is a float.
  *
- * `embedding` is the integers a head receives, which is what
- * `quantizeEmbedding` returns. Floats are not taken here, because a head
- * that was handed floats would silently produce something the device never
- * would.
+ * `embedding` is the integers a head receives, or the encoder's floats,
+ * which are quantized first, as `quantizeEmbedding` quantizes them and as
+ * the Python library's `evaluate_head` does, so a head gives here what it
+ * gives on the device either way. A float that is not a number has no
+ * integer, and is refused in Python's words.
  */
 export function evaluateHead(head: HeadBlob, embedding: ArrayLike<number>): number[] {
-  if (embedding.length !== head.inDim) {
-    throw new Invalid(`this head takes an embedding of ${head.inDim}, and it was given ${embedding.length}`);
+  let ints: ArrayLike<number> = embedding;
+  if (holdsFloats(embedding)) {
+    for (let i = 0; i < embedding.length; i++) {
+      if (Number.isNaN(embedding[i])) throw new Invalid("ValueError: cannot convert float NaN to integer");
+    }
+    ints = quantizeEmbedding(embedding);
+  }
+  if (ints.length !== head.inDim) {
+    throw new Invalid(`this head takes an embedding of ${head.inDim}, and it was given ${ints.length}`);
   }
   const out: number[] = [];
   for (let o = 0; o < head.outDim; o++) {
@@ -2974,13 +3124,7 @@ export function evaluateHead(head: HeadBlob, embedding: ArrayLike<number>): numb
     // most two to the twenty second, and a head would need two billion
     // inputs before the sum could round.
     let acc = head.bias[o]!;
-    for (let i = 0; i < head.inDim; i++) {
-      const e = embedding[i]!;
-      if (!Number.isInteger(e)) {
-        throw new Invalid("a head takes the quantized embedding, from quantizeEmbedding");
-      }
-      acc += head.weights[o]![i]! * e;
-    }
+    for (let i = 0; i < head.inDim; i++) acc += head.weights[o]![i]! * ints[i]!;
     out.push(head.scale[o]! * acc);
   }
   return out;

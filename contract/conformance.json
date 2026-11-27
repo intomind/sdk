@@ -98,12 +98,12 @@
     {
       "name": "two samples, four channels, test mode, lead-off on, on USB",
       "kind": "eeg_data",
-      "bytes": "01160000efbeaddeefcdab896745230102050605000001ffffff8000007fffff0003e80003e90003ea0003eb",
+      "bytes": "01160000efbeaddeefcdab896745230102050005000001ffffff8000007fffff0003e80003e90003ea0003eb",
       "fields": {
         "device_time": "81985529216486895",
         "discontinuity": false,
-        "gain": 24,
-        "gain_code": 6,
+        "gain": 1,
+        "gain_code": 0,
         "leadoff_active": true,
         "loff_statp": 5,
         "mode": 1,
@@ -1558,7 +1558,7 @@
     {
       "name": "a packet whose payload is one byte short of its own sample count",
       "kind": "eeg_data",
-      "bytes": "01160000efbeaddeefcdab896745230102050605000001ffffff8000007fffff0003e80003e90003ea0003",
+      "bytes": "01160000efbeaddeefcdab896745230102050005000001ffffff8000007fffff0003e80003e90003ea0003",
       "reason": "truncated"
     },
     {
@@ -1570,7 +1570,7 @@
     {
       "name": "a packet type that is not a packet type",
       "kind": "eeg_data",
-      "bytes": "09160000efbeaddeefcdab896745230102050605000001ffffff8000007fffff0003e80003e90003ea0003eb",
+      "bytes": "09160000efbeaddeefcdab896745230102050005000001ffffff8000007fffff0003e80003e90003ea0003eb",
       "reason": "invalid"
     },
     {

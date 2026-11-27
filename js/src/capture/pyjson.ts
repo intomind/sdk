@@ -362,6 +362,157 @@ export function pyRepr(v: Value): string {
 }
 
 /**
+ * A value as a refusal thrown to a program shows it, as JavaScript writes
+ * it, readably, and as JSON writes it where JSON can: text in double quotes,
+ * as `quoted` writes it, a list in brackets and an object in braces with its
+ * keys quoted, ", " between items and ": " after a key, null, true and
+ * false, NaN, Infinity and -Infinity, a whole number as one, and any other
+ * number as Python writes a float, such as 0.5 or 1e+39.
+ */
+export function jsRepr(v: Value): string {
+  switch (v.kind) {
+    case "null":
+      return "null";
+    case "bool":
+      return v.value ? "true" : "false";
+    case "int":
+      return v.value;
+    case "float":
+      return Number.isFinite(v.value) ? repr(v.value) : String(v.value);
+    case "str":
+      return quoted(v.value);
+    case "array":
+      return `[${v.items.map(jsRepr).join(", ")}]`;
+    case "object":
+      return `{${v.entries.map(([k, x]) => `${quoted(k)}: ${jsRepr(x)}`).join(", ")}}`;
+  }
+}
+
+/** Text as a refusal thrown to a program quotes it: in double quotes, a quote, a backslash and a control character escaped, as `JSON.stringify` writes it. */
+export function quoted(s: string): string {
+  return JSON.stringify(s);
+}
+
+/**
+ * Plain data a program passed, as a refusal thrown to it shows it: as
+ * `jsRepr` writes the JSON value it is, a number as `jsRepr` writes a whole
+ * number or a float, a bigint as the whole number it is, a typed array as a
+ * list and a `Map` whose keys are text as an object, undefined as
+ * undefined, a function as "a function", and any other object that is not
+ * plain data by its class, as "a Profile". A key whose value is undefined
+ * is left out, as `JSON.stringify` leaves it, and an object inside itself
+ * is shown as "...".
+ */
+export function shown(x: unknown): string {
+  return shownIn(x, []);
+}
+
+/** How many digits Python turns a whole number into text with, and reads one from text with, at most: 4,300 unless a program changes that. */
+const INT_MAX_STR_DIGITS = 4300;
+
+/** What Python's `str.strip` takes away: Unicode's white space, and the four separators of files, groups, records and units. */
+const STRIPPED = new Set([...WHITE_SPACE, 0x1c, 0x1d, 0x1e, 0x1f]);
+
+/** A whole number as a refusal names it without printing it: "a whole number of N digits", its sign aside, as the library's `protocol._digits_said` names it. */
+export function digitsSaid(whole: bigint | string): string {
+  const digits = (typeof whole === "bigint" ? whole.toString() : whole).replace(/^[+-]/, "").length;
+  return `a whole number of ${digits} digits`;
+}
+
+/**
+ * `v` as a refusal names it where it is a whole number of more digits than
+ * Python turns into text, 4,300, or text written as one: "a whole number of
+ * N digits" or "text of N digits", its sign aside, never printed, as the
+ * library's `protocol._too_long` names it. A whole number is a bigint or a
+ * JSON value's integer, and text is a string or a JSON value's string,
+ * counted in any script's decimal digits, an underscore between them aside.
+ * Null for any other value.
+ */
+export function tooLong(v: unknown): string | null {
+  if (isValue(v)) return v.kind === "int" || v.kind === "str" ? tooLong(v.kind === "int" ? BigInt(v.value) : v.value) : null;
+  if (typeof v === "bigint") return (v < 0n ? -v : v).toString().length > INT_MAX_STR_DIGITS ? digitsSaid(v) : null;
+  if (typeof v !== "string") return null;
+  let a = 0;
+  let b = v.length;
+  while (a < b && STRIPPED.has(v.charCodeAt(a))) a++;
+  while (b > a && STRIPPED.has(v.charCodeAt(b - 1))) b--;
+  let body = v.slice(a, b);
+  if (body.startsWith("+") || body.startsWith("-")) body = body.slice(1);
+  body = body.replaceAll("_", "");
+  const digits = [...body].length;
+  return digits > INT_MAX_STR_DIGITS && /^\p{Nd}+$/u.test(body) ? `text of ${digits} digits` : null;
+}
+
+/**
+ * Whether `x` is a list or an object holding, at any depth, a whole number
+ * of more digits than Python turns into text, 4,300, which Python will not
+ * print, so a refusal names it by its type.
+ */
+export function holdsTooLong(x: unknown): boolean {
+  const inside = (y: unknown, within: readonly object[]): boolean => {
+    if (typeof y === "bigint") return tooLong(y) !== null;
+    if (isValue(y)) {
+      if (y.kind === "int") return tooLong(y) !== null;
+      if (y.kind === "array") return y.items.some((i) => inside(i, within));
+      return y.kind === "object" && y.entries.some(([, v]) => inside(v, within));
+    }
+    if (y === null || typeof y !== "object" || within.includes(y) || ArrayBuffer.isView(y)) return false;
+    const deeper = [...within, y];
+    const items = Array.isArray(y) ? y : y instanceof Map ? [...y.values()] : Object.values(y);
+    return items.some((i) => inside(i, deeper));
+  };
+  return typeof x === "object" && x !== null && !(isValue(x) && (x.kind === "int" || x.kind === "str")) && inside(x, []);
+}
+
+/**
+ * A value a refusal writes where Python's words write it with `str`: text
+ * as it is, a number as JavaScript writes it, and anything else as `shown`
+ * shows it, so a list or an object a program passed reads as JSON writes
+ * it.
+ */
+export function written(x: unknown): string {
+  return typeof x === "string" ? x : typeof x === "number" || typeof x === "bigint" ? String(x) : shown(x);
+}
+
+function shownIn(x: unknown, within: readonly object[]): string {
+  if (x === null) return "null";
+  if (x === undefined) return "undefined";
+  switch (typeof x) {
+    case "boolean":
+      return x ? "true" : "false";
+    case "bigint":
+      return x.toString();
+    case "number":
+      return !Number.isFinite(x) ? String(x) : Number.isSafeInteger(x) && !Object.is(x, -0) ? String(x) : repr(x);
+    case "string":
+      return quoted(x);
+    case "function":
+      return "a function";
+    case "symbol":
+      return "a symbol";
+    default:
+      break;
+  }
+  const o = x as object;
+  if (isValue(o)) return jsRepr(o);
+  if (within.includes(o)) return "...";
+  const inner = [...within, o];
+  if (Array.isArray(o) || (ArrayBuffer.isView(o) && !(o instanceof DataView))) {
+    return `[${Array.from(o as ArrayLike<unknown>, (v) => shownIn(v, inner)).join(", ")}]`;
+  }
+  const entries = (pairs: Iterable<[string, unknown]>): string => {
+    const out: string[] = [];
+    for (const [k, v] of pairs) if (v !== undefined) out.push(`${quoted(k)}: ${shownIn(v, inner)}`);
+    return `{${out.join(", ")}}`;
+  };
+  if (o instanceof Map && [...o.keys()].every((k) => typeof k === "string")) return entries(o as Map<string, unknown>);
+  const proto = Object.getPrototypeOf(o);
+  if (proto === Object.prototype || proto === null) return entries(Object.entries(o));
+  const type = (o as { constructor?: { name?: string } }).constructor?.name;
+  return type ? `${/^[AEIOU]/.test(type) ? "an" : "a"} ${type}` : "an object";
+}
+
+/**
  * Python's `repr` of a string: single quotes unless the text holds a single
  * quote and no double quote, and every character Python does not print as
  * itself written as its escape, from Python's own table.

@@ -40,13 +40,25 @@ export function tenTwenty(v: Value): boolean {
 export class Fail extends Error {
   /** Which of the three it is. */
   readonly kind: "montage" | "placement" | "other";
+  /** The words a refusal thrown to a program says, where they differ from the library's words a manifest records, as a value a program passed is shown in JavaScript's own words. */
+  readonly shown: string;
 
-  /** One failure, of a kind, in words. */
-  constructor(kind: "montage" | "placement" | "other", message: string) {
+  /** One failure, of a kind, in the library's words, and in the words thrown to a program where they differ. */
+  constructor(kind: "montage" | "placement" | "other", message: string, shown: string = message) {
     super(message);
     this.name = "Fail";
     this.kind = kind;
+    this.shown = shown;
   }
+}
+
+/**
+ * A montage refusal, in the library's words a manifest records, each value
+ * `words` shows written by Python's `repr`, and in the words thrown to a
+ * program, each written as JavaScript writes it.
+ */
+function montageFail(words: (r: (v: Value) => string) => string): Fail {
+  return new Fail("montage", words(J.pyRepr), words(J.jsRepr));
 }
 
 /** Python's `KeyError` on a missing key. */
@@ -56,7 +68,7 @@ export function keyError(key: string): Fail {
 
 /** `d[key]`. */
 export function item(d: Value, key: string): Value {
-  if (d.kind !== "object") throw new Fail("other", `TypeError: ${J.pyRepr(d)} is not a dict`);
+  if (d.kind !== "object") throw new Fail("other", `TypeError: ${J.jsRepr(d)} is not a dict`);
   const v = J.get(d, key);
   if (v === undefined) throw keyError(key);
   return v;
@@ -64,7 +76,7 @@ export function item(d: Value, key: string): Value {
 
 /** `d.get(key)`, which needs a dict. */
 export function get(d: Value, key: string): Value {
-  if (d.kind !== "object") throw new Fail("other", `AttributeError: ${J.pyRepr(d)} has no get`);
+  if (d.kind !== "object") throw new Fail("other", `AttributeError: ${J.jsRepr(d)} has no get`);
   return J.field(d, key);
 }
 
@@ -72,7 +84,7 @@ export function get(d: Value, key: string): Value {
 export function list(v: Value): Value[] {
   if (v.kind === "array") return v.items;
   if (!J.truthy(v)) return [];
-  throw new Fail("other", `TypeError: ${J.pyRepr(v)} is not a list`);
+  throw new Fail("other", `TypeError: ${J.jsRepr(v)} is not a list`);
 }
 
 /** Whether `sorted(idx) == list(range(1, len(idx) + 1))`. */
@@ -88,7 +100,7 @@ export function oneToN(idx: Value[]): boolean {
 /** `int(value)`, for a channel index. */
 function intOf(v: Value): bigint {
   const i = J.asI64(v);
-  if (i === null) throw new Fail("other", `ValueError: invalid literal for int(): ${J.pyRepr(v)}`);
+  if (i === null) throw new Fail("other", `ValueError: invalid literal for int(): ${J.jsRepr(v)}`);
   return i;
 }
 
@@ -96,7 +108,7 @@ function intOf(v: Value): bigint {
 export function site(name: Value, tenTwentyName: Value, description: Value): Value {
   if (!J.truthy(name)) throw new Fail("montage", "a site needs a name");
   if (tenTwentyName.kind !== "null" && !tenTwenty(tenTwentyName)) {
-    throw new Fail("montage", `${J.pyRepr(tenTwentyName)} is not a 10-20/10-10 position`);
+    throw montageFail((r) => `${r(tenTwentyName)} is not a 10-20/10-10 position`);
   }
   return J.object([
     ["name", name],
@@ -112,7 +124,11 @@ function isDerivation(v: Value): boolean {
 /** One recorded channel: a difference between two sites. */
 export function channel(index: Value, derivation: Value, positive: Value, negative: Value, label: Value): Value {
   if (!isDerivation(derivation)) {
-    throw new Fail("montage", `derivation must be one of ('bipolar', 'referential'), got ${J.pyRepr(derivation)}`);
+    throw new Fail(
+      "montage",
+      `derivation must be one of ('bipolar', 'referential'), got ${J.pyRepr(derivation)}`,
+      `derivation must be one of ["bipolar", "referential"], got ${J.jsRepr(derivation)}`,
+    );
   }
   const i = intOf(index);
   if (i < 1n) throw new Fail("montage", "channel index is 1-based");
@@ -155,19 +171,19 @@ export function validate(m: Value): void {
   if (chans.length === 0) throw new Fail("montage", "a montage with no channels describes nothing");
   const idx = chans.map((c) => item(c, "index"));
   if (!oneToN(idx)) {
-    throw new Fail("montage", `channel indices must be 1..n with no gaps, got ${J.pyRepr(J.array(idx))}`);
+    throw montageFail((r) => `channel indices must be 1..n with no gaps, got ${r(J.array(idx))}`);
   }
   const reference = get(m, "reference");
   for (const c of chans) {
     const at = J.pyStr(item(c, "index"));
     const derivation = item(c, "derivation");
-    if (!isDerivation(derivation)) throw new Fail("montage", `ch${at}: bad derivation ${J.pyRepr(derivation)}`);
+    if (!isDerivation(derivation)) throw montageFail((r) => `ch${at}: bad derivation ${r(derivation)}`);
     for (const pole of ["positive", "negative"]) {
       const s = get(c, pole);
       if (!J.truthy(s) || !J.truthy(get(s, "name"))) throw new Fail("montage", `ch${at}: ${pole} site is missing`);
       const tt = get(s, "ten_twenty");
       if (tt.kind !== "null" && !tenTwenty(tt)) {
-        throw new Fail("montage", `ch${at}: ${J.pyRepr(tt)} is not a 10-20/10-10 position`);
+        throw montageFail((r) => `ch${at}: ${r(tt)} is not a 10-20/10-10 position`);
       }
     }
     if (derivation.kind === "str" && derivation.value === REFERENTIAL) {
@@ -177,10 +193,7 @@ export function validate(m: Value): void {
       const theirs = item(item(c, "negative"), "name");
       const ours = item(reference, "name");
       if (!J.pyEq(theirs, ours)) {
-        throw new Fail(
-          "montage",
-          `ch${at} is referential against ${J.pyRepr(theirs)}, but the montage's reference is ${J.pyRepr(ours)}`,
-        );
+        throw montageFail((r) => `ch${at} is referential against ${r(theirs)}, but the montage's reference is ${r(ours)}`);
       }
     }
   }

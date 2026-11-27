@@ -7,6 +7,17 @@
 //! regions under them, and the montage generated from the two. Both arrive
 //! as JSON from an application, so every rule here is Python's rule on a
 //! Python dict, refusal words included.
+//!
+//! What is under a 10-10 position was measured, as the Python library has
+//! it: for 65 of the 77 positions, Table 3 of C. L. Scrivener and A. T.
+//! Reader, "Variability of EEG electrode positions and their underlying brain
+//! regions: visualizing gel artifacts from a simultaneous EEG-fMRI dataset",
+//! Brain and Behavior 12 (2022), e2476, doi:10.1002/brb3.2476, published
+//! under the Creative Commons Attribution 4.0 International license,
+//! <https://creativecommons.org/licenses/by/4.0/>. Changed here: the paper's
+//! abbreviations are written out as the paper defines them, the names are in
+//! lower case, the one "Precuneous" is spelled "precuneus" as the paper
+//! spells it elsewhere, and its column of Brodmann areas is left out.
 
 use crate::montage::{self as m, get, item, list, one_to_n, Fail};
 use crate::pyfmt;
@@ -20,7 +31,7 @@ const BIAS: &str = "bias";
 const REFERENCE: &str = "reference";
 
 /// What can be under an electrode: key, words, and kind.
-const REGIONS: [(&str, &str, &str); 18] = [
+const REGIONS: [(&str, &str, &str); 44] = [
     ("frontal-pole", "frontal pole", "cortical"),
     ("dlpfc", "dorsolateral prefrontal", "cortical"),
     ("vlpfc", "ventrolateral prefrontal", "cortical"),
@@ -39,6 +50,35 @@ const REGIONS: [(&str, &str, &str); 18] = [
     ("frontalis", "frontalis (brow muscle)", "muscle"),
     ("ocular", "eye movement", "ocular"),
     ("mastoid-bone", "mastoid bone, little cortex beneath", "bone"),
+    // The regions a study found under the 10-10 positions, named as it
+    // names them with its abbreviations written out. Two of them, the frontal
+    // pole and the temporal pole, are above already under the same names.
+    ("superior-frontal-gyrus", "superior frontal gyrus", "cortical"),
+    ("middle-frontal-gyrus", "middle frontal gyrus", "cortical"),
+    ("inferior-frontal-gyrus-pars-triangularis", "inferior frontal gyrus (pars triangularis)", "cortical"),
+    ("inferior-frontal-gyrus-pars-opercularis", "inferior frontal gyrus (pars opercularis)", "cortical"),
+    ("juxtapositional-lobule-cortex", "juxtapositional lobule cortex (formerly supplementary motor cortex)", "cortical"),
+    ("precentral-gyrus", "precentral gyrus", "cortical"),
+    ("postcentral-gyrus", "postcentral gyrus", "cortical"),
+    ("central-opercular-cortex", "central opercular cortex", "cortical"),
+    ("anterior-supramarginal-gyrus", "anterior supramarginal gyrus", "cortical"),
+    ("posterior-supramarginal-gyrus", "posterior supramarginal gyrus", "cortical"),
+    ("angular-gyrus", "angular gyrus", "cortical"),
+    ("superior-parietal-lobule", "superior parietal lobule", "cortical"),
+    ("precuneus-cortex", "precuneus cortex", "cortical"),
+    ("anterior-superior-temporal-gyrus", "anterior superior temporal gyrus", "cortical"),
+    ("posterior-superior-temporal-gyrus", "posterior superior temporal gyrus", "cortical"),
+    ("planum-temporale", "planum temporale", "cortical"),
+    ("anterior-middle-temporal-gyrus", "anterior middle temporal gyrus", "cortical"),
+    ("posterior-middle-temporal-gyrus", "posterior middle temporal gyrus", "cortical"),
+    ("middle-temporal-gyrus-temporooccipital-part", "middle temporal gyrus (temporooccipital part)", "cortical"),
+    ("anterior-inferior-temporal-gyrus", "anterior inferior temporal gyrus", "cortical"),
+    ("posterior-inferior-temporal-gyrus", "posterior inferior temporal gyrus", "cortical"),
+    ("inferior-temporal-gyrus-temporooccipital-part", "inferior temporal gyrus (temporooccipital part)", "cortical"),
+    ("superior-lateral-occipital-cortex", "superior lateral occipital cortex", "cortical"),
+    ("inferior-lateral-occipital-cortex", "inferior lateral occipital cortex", "cortical"),
+    ("occipital-pole", "occipital pole", "cortical"),
+    ("cuneal-cortex", "cuneal cortex", "cortical"),
 ];
 
 /// Where a person can put an electrode: key, words, the sides it comes in
@@ -128,20 +168,192 @@ fn scalp_table() -> Vec<(String, Value)> {
     out
 }
 
-/// One scalp position by key, or the refusal naming how many there are.
-fn scalp(key: &Value) -> Result<Value, Fail> {
+/// The whole 10-10 system, front to back and left to right, then the
+/// earlobes and the mastoids: the positions a placement may name by their
+/// codes.
+const TEN_TEN: [&str; 77] = [
+    "Nz", "Fp1", "Fpz", "Fp2", "AF7", "AF3", "AFz", "AF4", "AF8", "F9", "F7", "F5", "F3", "F1", "Fz", "F2", "F4", "F6",
+    "F8", "F10", "FT9", "FT7", "FC5", "FC3", "FC1", "FCz", "FC2", "FC4", "FC6", "FT8", "FT10", "T9", "T7", "C5", "C3",
+    "C1", "Cz", "C2", "C4", "C6", "T8", "T10", "TP9", "TP7", "CP5", "CP3", "CP1", "CPz", "CP2", "CP4", "CP6", "TP8",
+    "TP10", "P9", "P7", "P5", "P3", "P1", "Pz", "P2", "P4", "P6", "P8", "P10", "PO7", "PO3", "POz", "PO4", "PO8", "O1",
+    "Oz", "O2", "Iz", "A1", "A2", "M1", "M2",
+];
+
+/// The side a 10-10 code names: z the midline, an odd number the left, an
+/// even one the right.
+fn side_of(code: &str) -> &'static str {
+    if code.ends_with('z') {
+        return MIDLINE;
+    }
+    let number = code.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+    if number.parse::<u32>().is_ok_and(|n| n % 2 == 1) {
+        LEFT
+    } else {
+        RIGHT
+    }
+}
+
+/// What is under each 10-10 position the study covered, as measured: Table
+/// 3 of the study this module credits, row by row in its order, every region
+/// it found with its share, the percentage of the participants usable at
+/// that position whose electrode lay over it, as the paper prints it. The
+/// other positions are absent: nothing is said about them.
+const UNDER: [(&str, &[(&str, f64)]); 65] = [
+    ("AF3", &[("frontal-pole", 100.0)]),
+    ("AF4", &[("frontal-pole", 100.0)]),
+    ("AF7", &[("frontal-pole", 100.0)]),
+    ("AF8", &[("frontal-pole", 100.0)]),
+    ("AFz", &[("frontal-pole", 62.5), ("superior-frontal-gyrus", 37.5)]),
+    ("C1", &[("precentral-gyrus", 71.0), ("postcentral-gyrus", 29.0)]),
+    ("C2", &[("precentral-gyrus", 87.5), ("postcentral-gyrus", 12.5)]),
+    ("C3", &[("postcentral-gyrus", 87.5), ("precentral-gyrus", 12.5)]),
+    ("C4", &[("postcentral-gyrus", 85.0), ("precentral-gyrus", 15.0)]),
+    ("C5", &[("postcentral-gyrus", 50.0), ("anterior-supramarginal-gyrus", 44.4), ("precentral-gyrus", 5.6)]),
+    ("C6", &[("anterior-supramarginal-gyrus", 72.0), ("postcentral-gyrus", 28.0)]),
+    ("CP1", &[("superior-parietal-lobule", 66.67), ("postcentral-gyrus", 27.78),
+        ("superior-lateral-occipital-cortex", 5.56)]),
+    ("CP2", &[("superior-parietal-lobule", 80.0), ("postcentral-gyrus", 13.0),
+        ("superior-lateral-occipital-cortex", 7.0)]),
+    ("CP3", &[("posterior-supramarginal-gyrus", 47.0), ("superior-parietal-lobule", 27.0), ("angular-gyrus", 13.0),
+        ("postcentral-gyrus", 13.0)]),
+    ("CP4", &[("angular-gyrus", 50.0), ("superior-parietal-lobule", 42.0), ("postcentral-gyrus", 8.0)]),
+    ("CP5", &[("posterior-supramarginal-gyrus", 61.11), ("anterior-supramarginal-gyrus", 16.67),
+        ("angular-gyrus", 11.11), ("posterior-superior-temporal-gyrus", 5.56),
+        ("superior-lateral-occipital-cortex", 5.56)]),
+    ("CP6", &[("angular-gyrus", 53.0), ("posterior-supramarginal-gyrus", 40.0),
+        ("superior-lateral-occipital-cortex", 7.0)]),
+    ("CPz", &[("postcentral-gyrus", 62.5), ("precuneus-cortex", 18.75), ("superior-parietal-lobule", 12.5),
+        ("superior-lateral-occipital-cortex", 6.25)]),
+    ("Cz", &[("precentral-gyrus", 87.0), ("postcentral-gyrus", 13.0)]),
+    ("F1", &[("superior-frontal-gyrus", 71.0), ("frontal-pole", 29.0)]),
+    ("F2", &[("superior-frontal-gyrus", 77.0), ("frontal-pole", 23.0)]),
+    ("F3", &[("middle-frontal-gyrus", 64.0), ("frontal-pole", 36.0)]),
+    ("F4", &[("frontal-pole", 53.0), ("middle-frontal-gyrus", 47.0)]),
+    ("F5", &[("middle-frontal-gyrus", 65.0), ("frontal-pole", 35.0)]),
+    ("F6", &[("middle-frontal-gyrus", 50.0), ("frontal-pole", 50.0)]),
+    ("F7", &[("inferior-frontal-gyrus-pars-triangularis", 83.0), ("frontal-pole", 11.0),
+        ("inferior-frontal-gyrus-pars-opercularis", 6.0)]),
+    ("F8", &[("inferior-frontal-gyrus-pars-triangularis", 66.67), ("inferior-frontal-gyrus-pars-opercularis", 16.67),
+        ("middle-frontal-gyrus", 5.56), ("precentral-gyrus", 5.56), ("frontal-pole", 5.56)]),
+    ("FC1", &[("superior-frontal-gyrus", 93.75), ("middle-frontal-gyrus", 6.25)]),
+    ("FC2", &[("superior-frontal-gyrus", 82.0), ("precentral-gyrus", 18.0)]),
+    ("FC3", &[("middle-frontal-gyrus", 89.0), ("precentral-gyrus", 11.0)]),
+    ("FC4", &[("middle-frontal-gyrus", 92.0), ("precentral-gyrus", 8.0)]),
+    ("FC5", &[("precentral-gyrus", 88.0), ("middle-frontal-gyrus", 6.0),
+        ("inferior-frontal-gyrus-pars-opercularis", 6.0)]),
+    ("FC6", &[("precentral-gyrus", 81.0), ("postcentral-gyrus", 13.0), ("middle-frontal-gyrus", 6.0)]),
+    ("FCz", &[("juxtapositional-lobule-cortex", 66.7), ("superior-frontal-gyrus", 33.3)]),
+    ("Fp1", &[("frontal-pole", 100.0)]),
+    ("Fp2", &[("frontal-pole", 100.0)]),
+    ("Fpz", &[("frontal-pole", 100.0)]),
+    ("FT10", &[("anterior-middle-temporal-gyrus", 66.7), ("posterior-inferior-temporal-gyrus", 11.1),
+        ("temporal-pole", 11.1), ("posterior-middle-temporal-gyrus", 5.6), ("anterior-inferior-temporal-gyrus", 5.6)]),
+    ("FT7", &[("precentral-gyrus", 64.29), ("temporal-pole", 14.29), ("anterior-superior-temporal-gyrus", 14.29),
+        ("inferior-frontal-gyrus-pars-opercularis", 7.14)]),
+    ("FT8", &[("precentral-gyrus", 62.5), ("anterior-superior-temporal-gyrus", 25.0),
+        ("central-opercular-cortex", 6.25), ("posterior-middle-temporal-gyrus", 6.25)]),
+    ("FT9", &[("anterior-middle-temporal-gyrus", 42.0), ("temporal-pole", 37.0),
+        ("posterior-middle-temporal-gyrus", 16.0), ("anterior-inferior-temporal-gyrus", 5.0)]),
+    ("Fz", &[("superior-frontal-gyrus", 100.0)]),
+    ("O1", &[("occipital-pole", 100.0)]),
+    ("O2", &[("occipital-pole", 100.0)]),
+    ("Oz", &[("occipital-pole", 100.0)]),
+    ("P1", &[("superior-lateral-occipital-cortex", 95.0), ("superior-parietal-lobule", 5.0)]),
+    ("P2", &[("superior-lateral-occipital-cortex", 100.0)]),
+    ("P3", &[("superior-lateral-occipital-cortex", 95.0), ("angular-gyrus", 5.0)]),
+    ("P4", &[("superior-lateral-occipital-cortex", 100.0)]),
+    ("P5", &[("superior-lateral-occipital-cortex", 89.47), ("inferior-lateral-occipital-cortex", 5.26),
+        ("angular-gyrus", 5.26)]),
+    ("P6", &[("superior-lateral-occipital-cortex", 100.0)]),
+    ("P7", &[("inferior-lateral-occipital-cortex", 75.0), ("superior-lateral-occipital-cortex", 20.0),
+        ("middle-temporal-gyrus-temporooccipital-part", 5.0)]),
+    ("P8", &[("inferior-lateral-occipital-cortex", 85.0), ("superior-lateral-occipital-cortex", 10.0),
+        ("angular-gyrus", 5.0)]),
+    ("PO3", &[("superior-lateral-occipital-cortex", 65.0), ("occipital-pole", 35.0)]),
+    ("PO4", &[("occipital-pole", 58.0), ("superior-lateral-occipital-cortex", 42.0)]),
+    ("PO7", &[("inferior-lateral-occipital-cortex", 80.0), ("superior-lateral-occipital-cortex", 15.0),
+        ("occipital-pole", 5.0)]),
+    ("PO8", &[("occipital-pole", 33.33), ("superior-lateral-occipital-cortex", 33.33),
+        ("inferior-lateral-occipital-cortex", 33.33)]),
+    ("POz", &[("cuneal-cortex", 37.5), ("occipital-pole", 31.3), ("superior-lateral-occipital-cortex", 25.0),
+        ("precuneus-cortex", 6.3)]),
+    ("Pz", &[("precuneus-cortex", 60.0), ("superior-lateral-occipital-cortex", 33.33),
+        ("superior-parietal-lobule", 6.66)]),
+    ("T7", &[("posterior-superior-temporal-gyrus", 72.2), ("posterior-middle-temporal-gyrus", 16.6),
+        ("anterior-superior-temporal-gyrus", 5.6), ("anterior-supramarginal-gyrus", 5.6)]),
+    ("T8", &[("posterior-superior-temporal-gyrus", 52.9), ("posterior-middle-temporal-gyrus", 29.4),
+        ("planum-temporale", 5.9), ("anterior-supramarginal-gyrus", 5.9), ("central-opercular-cortex", 5.9)]),
+    ("TP7", &[("middle-temporal-gyrus-temporooccipital-part", 73.7), ("posterior-supramarginal-gyrus", 15.8),
+        ("posterior-middle-temporal-gyrus", 10.5)]),
+    ("TP8", &[("middle-temporal-gyrus-temporooccipital-part", 75.0), ("angular-gyrus", 20.0),
+        ("posterior-supramarginal-gyrus", 5.0)]),
+    ("TP9", &[("inferior-temporal-gyrus-temporooccipital-part", 100.0)]),
+    ("TP10", &[("inferior-temporal-gyrus-temporooccipital-part", 89.0),
+        ("middle-temporal-gyrus-temporooccipital-part", 11.0)]),
+];
+
+const UNDER_SOURCE: &str = "Scrivener and Reader 2022, doi:10.1002/brb3.2476";
+
+/// The study's row for a 10-10 position, empty where it did not cover it.
+fn under(code: &str) -> &'static [(&'static str, f64)] {
+    UNDER.iter().find(|(c, _)| *c == code).map_or(&[], |(_, row)| *row)
+}
+
+/// One 10-10 position as the Python library offers it, with the regions the
+/// study found under it, if it covered it.
+fn ten_ten(code: &str) -> Value {
+    Value::obj([
+        ("key", Value::str(code)),
+        ("zone", Value::Null),
+        ("side", Value::str(side_of(code))),
+        ("human", Value::str(code)),
+        ("ten_ten", Value::str(code)),
+        ("over", Value::Array(under(code).iter().map(|(r, _)| Value::str(*r)).collect())),
+    ])
+}
+
+/// The position for anywhere the 10-10 system has no position, the place
+/// written in the placement's note.
+fn other() -> Value {
+    Value::obj([
+        ("key", Value::str("other")),
+        ("zone", Value::Null),
+        ("side", Value::Null),
+        ("human", Value::str("a position off the 10-10 system")),
+        ("ten_ten", Value::Null),
+        ("over", Value::Array(Vec::new())),
+    ])
+}
+
+/// One position by key, as the Python library's `placement.scalp` reads
+/// it: a 10-10 code, "other", or the key of one of the 32 named positions
+/// of `scalp_table`, such as `left-forehead-outer`. Any other text, a
+/// number or a null is refused in the library's own words, the names in
+/// them the library's, because the refusal never reaches a Rust program as
+/// an error: a recording's manifest keeps it under `montage_error`, word for
+/// word as the library writes it, in the file format every program reads.
+pub(crate) fn scalp(key: &Value) -> Result<Value, Fail> {
     let table = scalp_table();
     if matches!(key, Value::Array(_) | Value::Object(_)) {
-        return Err(Fail::Other(format!("TypeError: unhashable type: {}", key.py_repr())));
+        return Err(Fail::Other(format!("TypeError: unhashable type: {}", key.rust_repr())));
     }
     if let Value::Str(k) = key {
         if let Some((_, v)) = table.iter().find(|(t, _)| t == k) {
             return Ok(v.clone());
         }
+        if TEN_TEN.contains(&k.as_str()) {
+            return Ok(ten_ten(k));
+        }
+        if k == "other" {
+            return Ok(other());
+        }
     }
     Err(Fail::Placement(format!(
-        "{} is not a scalp position. There are {}; `placement.choices()` lists them.",
+        "{} is not a position key. There are {} on offer, the 10-10 codes and \"other\" for anywhere else, its \
+         place written in the note; `placement.positions()` lists them. The {} names in `placement.SCALP` are \
+         accepted as well.",
         key.py_repr(),
+        TEN_TEN.len() + 1,
         table.len()
     )))
 }
@@ -154,21 +366,30 @@ fn region(key: &Value) -> Option<(&'static str, &'static str, &'static str)> {
 }
 
 /// What is under a scalp position, its side carried down, each entry
-/// marked as inferred.
-fn regions_under(scalp_key: &Value) -> Result<Vec<Value>, Fail> {
+/// marked as inferred. Under a 10-10 position each region carries its share
+/// and the study it comes from. A position the study did not cover, and
+/// "other", carry no region.
+pub(crate) fn regions_under(scalp_key: &Value) -> Result<Vec<Value>, Fail> {
     let s = scalp(scalp_key)?;
     let side = s.field("side").py_str();
+    let code = s.field("key").py_str();
+    let shares: &[(&str, f64)] = if TEN_TEN.contains(&code.as_str()) { under(&code) } else { &[] };
     let mut out = Vec::new();
     for key in list(s.field("over"))? {
         let (r, human, kind) = region(key).ok_or_else(|| Fail::key(&key.py_str()))?;
         let sided = if side != MIDLINE && kind != "ocular" { format!("{side} {human}") } else { human.to_string() };
-        out.push(Value::obj([
+        let mut entry = vec![
             ("region", Value::str(r)),
             ("human", Value::str(sided)),
             ("kind", Value::str(kind)),
             ("side", Value::str(side.clone())),
             ("derived", Value::Bool(true)),
-        ]));
+        ];
+        if let Some((_, share)) = shares.iter().find(|(k, _)| *k == r) {
+            entry.push(("share", Value::Float(*share)));
+            entry.push(("source", Value::str(UNDER_SOURCE)));
+        }
+        out.push(Value::Object(entry.into_iter().map(|(k, v)| (k.to_string(), v)).collect()));
     }
     Ok(out)
 }
@@ -176,7 +397,7 @@ fn regions_under(scalp_key: &Value) -> Result<Vec<Value>, Fail> {
 /// A key a Python dict can hold. A list or an object cannot be one.
 fn hashable(v: &Value) -> Result<(), Fail> {
     match v {
-        Value::Array(_) | Value::Object(_) => Err(Fail::Other(format!("TypeError: unhashable type: {}", v.py_repr()))),
+        Value::Array(_) | Value::Object(_) => Err(Fail::Other(format!("TypeError: unhashable type: {}", v.rust_repr()))),
         _ => Ok(()),
     }
 }
@@ -210,7 +431,7 @@ fn keys(d: &Value) -> Result<Vec<Value>, Fail> {
     match d {
         Value::Object(o) => Ok(o.iter().map(|(k, _)| Value::str(k.clone())).collect()),
         v if !v.truthy() => Ok(Vec::new()),
-        other => Err(Fail::Other(format!("AttributeError: {} has no keys", other.py_repr()))),
+        other => Err(Fail::Other(format!("AttributeError: {} has no keys", other.rust_repr()))),
     }
 }
 
@@ -230,7 +451,7 @@ pub(crate) fn iterate(v: &Value) -> Result<Vec<Value>, Fail> {
         Value::Array(a) => Ok(a.clone()),
         Value::Str(s) => Ok(s.chars().map(|c| Value::str(c.to_string())).collect()),
         Value::Object(_) => keys(v),
-        other => Err(Fail::Other(format!("TypeError: {} is not iterable", other.py_repr()))),
+        other => Err(Fail::Other(format!("TypeError: {} is not iterable", other.rust_repr()))),
     }
 }
 
@@ -319,7 +540,7 @@ fn validate_preset(f: &Value, p: &Value, slots: &[(Value, Value)]) -> Result<(),
             match k {
                 Value::Str(s) => names.push(s.clone()),
                 other => {
-                    return Err(Fail::Other(format!("TypeError: sequence item: expected str, {}", other.py_repr())))
+                    return Err(Fail::Other(format!("TypeError: sequence item: expected str, {}", other.rust_repr())))
                 }
             }
         }
@@ -369,7 +590,7 @@ pub(crate) fn layout_from(d: &Value) -> Result<Option<&Value>, Fail> {
 fn get_or<'a>(d: &'a Value, key: &str, default: &'a Value) -> Result<&'a Value, Fail> {
     match d {
         Value::Object(_) => Ok(d.get(key).unwrap_or(default)),
-        other => Err(Fail::Other(format!("AttributeError: {} has no get", other.py_repr()))),
+        other => Err(Fail::Other(format!("AttributeError: {} has no get", other.rust_repr()))),
     }
 }
 

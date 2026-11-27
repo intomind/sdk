@@ -6,8 +6,10 @@
 //! crate. The release gate holds the documentation's blocks to this file
 //! line for line, so what the page shows is what compiled.
 //!
-//! The stand-ins for a Bluetooth stack are the point of the design: this
-//! crate does no input and no output, so every example compiles without one.
+//! The stand-ins for a Bluetooth stack are the point of the design: the
+//! session does no Bluetooth input or output, so every example compiles
+//! without one. Saving a recording and exporting one are the only places
+//! it writes files.
 #![allow(dead_code, unused_variables, unused_imports, unused_mut, clippy::all)]
 
 /// Connect and stream.
@@ -59,10 +61,11 @@ mod commands {
         use intomind::protocol::device_info::capability;
 
         if session.can(capability::LEADOFF) {
-            let command = session.set_leadoff(true)?;
+            let command = session.set_leadoff(true)?;                      // refused on firmware older than 1.4.6
         }
-        // Every batch then says whether detection was running, in `batch.leadoff_active`:
-        // a lead-off byte of zero is an attached electrode only when it was.
+        // Every batch then says whether detection was running, in `batch.leadoff_active`, and
+        // `session.leadoff_judged(&batch, row)` whether a row's lead-off is the device's verdict:
+        // a lead-off byte of zero is an attached electrode only where both hold.
         let verbose = session.set_indicator(indicator::VERBOSE)?;          // silent, reserved, verbose
         let identify = session.identify(5)?;                               // the status light winks for five seconds
         let name = session.set_name("Ada", "Blue", "IntoMind One")?;       // refused unless it fits 29 bytes
@@ -167,7 +170,7 @@ mod record {
         session.on_time_sync_clocks(&answer, before, HostClocks::now())?;
 
         session.arm_recorder();             // then send reset_epoch() and start_stream()
-        // Every notification goes to session.on_notification, as before.
+        // Every notification goes to session.on_notification, as in Connect and stream.
         // Send stop_stream() at the end.
         let mut run = Run::default();
         run.extra.set("experiment", "my-experiment".into());

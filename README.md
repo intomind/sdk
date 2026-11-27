@@ -9,12 +9,19 @@ Build on an IntoMind device, in the language you already use.
 | `crates/intomind-capture` | what a recording is on disk, read and exported as the Python library does it |
 | `crates/intomind-model` | the device's encoder, the arithmetic exactly as the device does it |
 | `crates/intomind-pipeline` | the device's processing chain, so a host can check one before sending it and reproduce what the device did |
-| `js/` | the protocol, the session, the timebase, recording and the six exports in TypeScript, for browsers and Node |
+| `js/` | the protocol, the session, the timebase, recording and the six exports in TypeScript, and the experiments, several devices together, training a head and the analyses as the Python library runs them, for browsers and Node |
 
 Python users want `intomind` on PyPI, which is the instrument library and
 carries the recorder, the provenance, the exports, and the analyses as
 well. This repository is the protocol and the model for everyone else, and
 in Rust and in JavaScript the same recordings, recorded, read and exported.
+
+Rust carries one device: its session over any transport, its recordings,
+recorded, read and exported, the timebase that dates them, and the encoder.
+It leaves what sits above one device to the Python library: the
+experiments, several devices driven together, training a head and the
+analyses. The JavaScript package carries those as well, held to the
+library's own runs by the fixtures in `contract`.
 
 ## One contract, several implementations, held together by tests
 
@@ -26,7 +33,7 @@ scaling from counts to microvolts, and the continuity rule.
 Every implementation here decodes those vectors to the stated fields and
 refuses the malformed ones for the stated reason. So does the Python
 library, and so does the firmware. An implementation that drifts fails a
-test rather than a bench session.
+test before it reaches a device.
 
 Two things about the file are worth knowing before you write a fifth
 implementation. A 64-bit field is written as a decimal string, because a
@@ -72,10 +79,11 @@ landed, and putting it in force is a separate act.
 
 ## No transport is forced on you
 
-The Rust client does no input and no output. It is handed bytes that
-arrived and it hands back bytes to send, so it works over whatever
-Bluetooth stack you already have, on whatever runtime you already use, and
-it can be tested without either.
+The Rust session does no Bluetooth input or output. It is handed bytes
+that arrived and it hands back bytes to send, so it works over whatever
+Bluetooth stack you already have, on whatever runtime you already use,
+and it can be tested without either. Saving a recording and exporting one
+are the only places it writes files.
 
 ```rust
 let mut session = Session::new();
@@ -113,7 +121,7 @@ anything is sent.
 ## The timeline is never silently repaired
 
 A forward step in the sample index is a loss with an exact count. A step
-that is not forward is a break whose extent is not a number, and this
+that is not forward is a break whose extent is not known, and this
 reports it as unknown rather than as zero, because zero missing samples
 is a different statement. The subtraction is signed, so the index's own
 wrap is exact.
@@ -123,8 +131,9 @@ writing samples down writes the break down first and can never splice.
 
 ## The model
 
-A device can carry an encoder that turns four seconds of signal into an
-embedding. `intomind-model` is that encoder: given the weights file a
+A device can carry an encoder that turns a window of signal into an
+embedding: as many samples as its weights say, four seconds for the model
+units ship with. `intomind-model` is that encoder: given the weights file a
 device runs, a host produces the same numbers. The encoder's weights are
 not published, and the device sends its embeddings, so heads are trained
 on those. The crate is `no_std` and allocates nothing, which is how the

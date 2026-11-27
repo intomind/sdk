@@ -3,13 +3,14 @@
  *
  * A MATLAB v7.3 file is an HDF5 file with a 512-byte user block whose first
  * 128 bytes are MATLAB's own header. An export holds one group, the root,
- * with at most eight variables, each a contiguous one- or two-dimensional
- * array with a `MATLAB_class` attribute and, for logical and char variables,
- * a `MATLAB_int_decode` one. This writes exactly that, in the structures the
+ * with its variables, each a contiguous one- or two-dimensional array with a
+ * `MATLAB_class` attribute and, for logical and char variables, a
+ * `MATLAB_int_decode` one. This writes exactly that, in the structures the
  * HDF5 library writes for the same file by default: the version 0
- * superblock, a symbol table group with one B-tree node, one local heap and
- * one symbol node, and version 1 object headers. No HDF5 library is needed
- * to write it, and any HDF5 reader, MATLAB's included, reads it.
+ * superblock, a symbol table group with one B-tree node, one local heap, a
+ * symbol node for every eight variables, the most one holds, and version 1
+ * object headers. No HDF5 library is needed to write it, and any HDF5
+ * reader, MATLAB's included, reads it.
  */
 
 /** The undefined address. */
@@ -221,7 +222,17 @@ function byName(a: string, b: string): number {
 
 /** The file: the user block with `header` at its start, then the HDF5 data. */
 export function write(header: Uint8Array, vars: Variable[]): Uint8Array {
-  if (vars.length > 2 * LEAF_K) throw new Error("one symbol node holds eight variables");
+  // The variables in name order, in as few symbol nodes as hold them, each
+  // as full as the others, one node even for none.
+  const order = vars.map((_, k) => k).sort((a, b) => byName(vars[a]!.name, vars[b]!.name));
+  const nodeCount = Math.max(1, Math.ceil(order.length / (2 * LEAF_K)));
+  if (nodeCount > 2 * NODE_K) throw new Error(`one B-tree node holds ${4 * LEAF_K * NODE_K} variables`);
+  const nodes: number[][] = [];
+  for (let i = 0, from = 0; i < nodeCount; i++) {
+    const to = from + Math.ceil((order.length - from) / (nodeCount - i));
+    nodes.push(order.slice(from, to));
+    from = to;
+  }
   // Where everything goes, as addresses from the base.
   const superblockLen = 96;
   const rootAt = superblockLen;
@@ -242,7 +253,7 @@ export function write(header: Uint8Array, vars: Variable[]): Uint8Array {
   const heapDataAt = heapAt + 32;
   const snodAt = heapDataAt + heap.b.length;
   const snodLen = 8 + 2 * LEAF_K * 40;
-  let next = snodAt + snodLen;
+  let next = snodAt + nodeCount * snodLen;
 
   // Each variable's object header, and its data right after it.
   const objects: [number, number[], Uint8Array][] = [];
@@ -290,23 +301,19 @@ export function write(header: Uint8Array, vars: Variable[]): Uint8Array {
   o.u32(m.length);
   o.u8(0, 0, 0, 0);
   o.bytes(m);
-  // The B-tree: one leaf entry pointing at the one symbol node, keyed by
-  // the empty name and the largest name.
-  let largest = 0;
-  if (vars.length > 0) {
-    let best = 0;
-    for (let k = 1; k < vars.length; k++) if (byName(vars[k]!.name, vars[best]!.name) >= 0) best = k;
-    largest = nameAt[best]!;
-  }
+  // The B-tree: one leaf entry for each symbol node, keyed by the empty name
+  // and then by the largest name in each node.
   const bt = new Out();
   bt.u8(0x54, 0x52, 0x45, 0x45);
   bt.u8(0, 0);
-  bt.u16(vars.length === 0 ? 0 : 1);
+  bt.u16(vars.length === 0 ? 0 : nodeCount);
   bt.u64(UNDEF);
   bt.u64(UNDEF);
   bt.u64(0);
-  bt.u64(snodAt);
-  bt.u64(largest);
+  nodes.forEach((node, i) => {
+    bt.u64(snodAt + i * snodLen);
+    bt.u64(node.length === 0 ? 0 : nameAt[node[node.length - 1]!]!);
+  });
   while (bt.b.length < btreeLen) bt.b.push(0);
   o.bytes(bt.b);
   // The local heap, with no free space.
@@ -316,21 +323,22 @@ export function write(header: Uint8Array, vars: Variable[]): Uint8Array {
   o.u64(1);
   o.u64(heapDataAt);
   o.bytes(heap.b);
-  // The symbol node: an entry per variable, in name order.
-  const order = vars.map((_, k) => k).sort((a, b) => byName(vars[a]!.name, vars[b]!.name));
-  const sn = new Out();
-  sn.u8(0x53, 0x4e, 0x4f, 0x44);
-  sn.u8(1, 0);
-  sn.u16(vars.length);
-  for (const k of order) {
-    sn.u64(nameAt[k]!);
-    sn.u64(objects[k]![0]);
-    sn.u32(0);
-    sn.u32(0);
-    for (let z = 0; z < 16; z++) sn.u8(0);
+  // The symbol nodes: an entry per variable, in name order.
+  for (const node of nodes) {
+    const sn = new Out();
+    sn.u8(0x53, 0x4e, 0x4f, 0x44);
+    sn.u8(1, 0);
+    sn.u16(node.length);
+    for (const k of node) {
+      sn.u64(nameAt[k]!);
+      sn.u64(objects[k]![0]);
+      sn.u32(0);
+      sn.u32(0);
+      for (let z = 0; z < 16; z++) sn.u8(0);
+    }
+    while (sn.b.length < snodLen) sn.b.push(0);
+    o.bytes(sn.b);
   }
-  while (sn.b.length < snodLen) sn.b.push(0);
-  o.bytes(sn.b);
   out.set(o.b, BASE);
   // The variables.
   for (const [at, hdr, data] of objects) {

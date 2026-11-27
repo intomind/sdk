@@ -1,5 +1,5 @@
 {
- "library": "1.4.3",
+ "library": "1.4.4",
  "sessions": [
   {
    "name": "demo-minute",
@@ -192,6 +192,15 @@
        540
       ],
       "46c1e90d74746c5782945084fe2c40577bfcb8039819d0cfc171929599fef9ec",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       540
+      ],
+      "f7bce5f450d01d8da55246e6c310697e2e1f3f6b90b328177d64d793d06fcea8",
       false
      ]
     ]
@@ -732,6 +741,15 @@
       ],
       "685ca4282cfa2d16efaa67ca58c45841f687d194ac8d2f278cba6eb1f5f29cd3",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       630
+      ],
+      "e8195f8e18c1f0602bab8831ed7a652b2e58628df6b28024d379ab83579a4516",
+      false
      ]
     ]
    }
@@ -1202,6 +1220,15 @@
       ],
       "ea408c3cbf1264df419a1da68c86f5e9cb6caf58c5401140474f255806abbd2f",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       378
+      ],
+      "8d8c294831ae2b1dd67f6a4903ae6eb38cdaede56707bf6508e70b1e4acbb43e",
+      false
      ]
     ]
    }
@@ -1457,7 +1484,7 @@
       "read_only": true
      }
     },
-    "meta_json": "{\n  \"manifest_version\": 7,\n  \"label\": \"breaks-copies-and-usb\",\n  \"started_utc\": null,\n  \"finished_utc\": \"2026-01-01T00:05:10Z\",\n  \"captured_unix\": 1767225910.0,\n  \"device_id\": \"a0a1a2a3a4a5a6a7\",\n  \"firmware_version\": \"1.4.2\",\n  \"firmware_sha256\": null,\n  \"firmware_artifact\": null,\n  \"tick_hz\": 1000000,\n  \"vref_uv\": 4500000,\n  \"adc_bits\": 24,\n  \"channels\": 4,\n  \"device_proto\": \"1.4\",\n  \"board_revision\": \"unknown\",\n  \"electrode_montage\": null,\n  \"montage\": null,\n  \"montage_error\": null,\n  \"montage_matches_device\": null,\n  \"montage_source\": null,\n  \"electrode_layout\": null,\n  \"placement\": null,\n  \"mains_hz\": null,\n  \"psu_volts\": null,\n  \"subject_id\": null,\n  \"regs_before\": null,\n  \"regs_after\": null,\n  \"regs_diff\": {},\n  \"config_after\": null,\n  \"device_config_changed_by_run\": false,\n  \"gain\": 24,\n  \"rate_sps\": 500,\n  \"fs_effective\": 141.07142857142858,\n  \"protocol_id\": \"demo-record\",\n  \"protocol_params\": {},\n  \"signal_chain\": {\n    \"adapter\": {\n      \"name\": \"intomind.ble\",\n      \"version\": \"1\",\n      \"first_party\": true,\n      \"transport\": \"bluetooth-le\"\n    },\n    \"filtering\": \"none\",\n    \"filters\": null\n  },\n  \"signal_source\": \"normal\",\n  \"synthetic\": false,\n  \"quality\": {\n    \"gaps\": [\n      {\n        \"after_sample\": 125,\n        \"lost\": 5\n      }\n    ],\n    \"n_gaps\": 1,\n    \"epoch_resets\": 1,\n    \"samples_received\": 396,\n    \"samples_expected\": 401,\n    \"samples_lost\": 5\n  },\n  \"gaps_announced\": 3,\n  \"clock\": {\n    \"n_syncs\": 4,\n    \"skew\": 1.000000000000031,\n    \"offset\": -1.241460267920047e-10,\n    \"skew_pinned\": false,\n    \"skew_pinned_why\": null,\n    \"residual_ms\": 3.2155493553843714e-10,\n    \"max_half_rtt_ms\": 14.999985694885254,\n    \"span_s\": 5.0,\n    \"fitted_against\": \"monotonic\",\n    \"anchors\": [\n      [\n        1767225900.0149999,\n        4000.0150000000003\n      ],\n      [\n        1767225900.165,\n        4000.165\n      ],\n      [\n        1767225900.315,\n        4000.3150000000005\n      ],\n      [\n        1767225905.0149999,\n        4005.0150000000003\n      ]\n    ],\n    \"frame_mono\": 4000.0150000000003,\n    \"wall_clock_steps\": [],\n    \"wall_clock_stepped\": false,\n    \"skew_measured\": 1.000000000000031,\n    \"skew_measured_pinned_why\": null,\n    \"map_frozen_at_stream_start\": false,\n    \"uncorrected_drift_s\": 0.0\n  },\n  \"git_commit\": null,\n  \"git_dirty\": null,\n  \"host_versions\": {\n    \"python\": \"fixture\",\n    \"platform\": \"fixture\",\n    \"numpy\": \"fixture\",\n    \"scipy\": null,\n    \"bleak\": null\n  },\n  \"n\": 396,\n  \"fw\": \"1.4.2\",\n  \"experiment\": \"demo-record\"\n}",
+    "meta_json": "{\n  \"manifest_version\": 7,\n  \"label\": \"breaks-copies-and-usb\",\n  \"started_utc\": null,\n  \"finished_utc\": \"2026-01-01T00:05:10Z\",\n  \"captured_unix\": 1767225910.0,\n  \"device_id\": \"a0a1a2a3a4a5a6a7\",\n  \"firmware_version\": \"1.4.2\",\n  \"firmware_sha256\": null,\n  \"firmware_artifact\": null,\n  \"tick_hz\": 1000000,\n  \"vref_uv\": 4500000,\n  \"adc_bits\": 24,\n  \"channels\": 4,\n  \"device_proto\": \"1.4\",\n  \"board_revision\": \"unknown\",\n  \"electrode_montage\": null,\n  \"montage\": null,\n  \"montage_error\": null,\n  \"montage_matches_device\": null,\n  \"montage_source\": null,\n  \"electrode_layout\": null,\n  \"placement\": null,\n  \"mains_hz\": null,\n  \"psu_volts\": null,\n  \"subject_id\": null,\n  \"regs_before\": null,\n  \"regs_after\": null,\n  \"regs_diff\": {},\n  \"config_after\": null,\n  \"device_config_changed_by_run\": false,\n  \"gain\": 24,\n  \"rate_sps\": 500,\n  \"fs_effective\": 500.0,\n  \"protocol_id\": \"demo-record\",\n  \"protocol_params\": {},\n  \"signal_chain\": {\n    \"adapter\": {\n      \"name\": \"intomind.ble\",\n      \"version\": \"1\",\n      \"first_party\": true,\n      \"transport\": \"bluetooth-le\"\n    },\n    \"filtering\": \"none\",\n    \"filters\": null\n  },\n  \"signal_source\": \"normal\",\n  \"synthetic\": false,\n  \"quality\": {\n    \"gaps\": [\n      {\n        \"after_sample\": 125,\n        \"lost\": 5\n      }\n    ],\n    \"n_gaps\": 1,\n    \"epoch_resets\": 1,\n    \"samples_received\": 396,\n    \"samples_expected\": 401,\n    \"samples_lost\": 5\n  },\n  \"gaps_announced\": 3,\n  \"clock\": {\n    \"n_syncs\": 4,\n    \"skew\": 1.000000000000031,\n    \"offset\": -1.241460267920047e-10,\n    \"skew_pinned\": false,\n    \"skew_pinned_why\": null,\n    \"residual_ms\": 3.2155493553843714e-10,\n    \"max_half_rtt_ms\": 14.999985694885254,\n    \"span_s\": 5.0,\n    \"fitted_against\": \"monotonic\",\n    \"anchors\": [\n      [\n        1767225900.0149999,\n        4000.0150000000003\n      ],\n      [\n        1767225900.165,\n        4000.165\n      ],\n      [\n        1767225900.315,\n        4000.3150000000005\n      ],\n      [\n        1767225905.0149999,\n        4005.0150000000003\n      ]\n    ],\n    \"frame_mono\": 4000.0150000000003,\n    \"wall_clock_steps\": [],\n    \"wall_clock_stepped\": false,\n    \"skew_measured\": 1.000000000000031,\n    \"skew_measured_pinned_why\": null,\n    \"map_frozen_at_stream_start\": false,\n    \"uncorrected_drift_s\": 0.0\n  },\n  \"git_commit\": null,\n  \"git_dirty\": null,\n  \"host_versions\": {\n    \"python\": \"fixture\",\n    \"platform\": \"fixture\",\n    \"numpy\": \"fixture\",\n    \"scipy\": null,\n    \"bleak\": null\n  },\n  \"n\": 396,\n  \"fw\": \"1.4.2\",\n  \"experiment\": \"demo-record\",\n  \"ended_by_usb\": true\n}",
     "events_json": null,
     "sha256_names": [
      "breaks-copies-and-usb.meta.json",
@@ -1527,6 +1554,250 @@
        396
       ],
       "d08a47aa771d8fee050ad7fe6378906a6ddcee1e8aa8966118739eed0cffb477",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       396
+      ],
+      "58553b15fb3888e443e29fff5663675b8f70e37f0ea6c54076489d6ff04c1032",
+      false
+     ]
+    ]
+   }
+  },
+  {
+   "name": "usb-ended-then-started-again",
+   "note": "USB power ends the stream, and a stream started again once it is unplugged no longer says so",
+   "script": [
+    {
+     "op": "info",
+     "bytes": "0104010402041840420f0020aa4400edf70700a0a1a2a3a4a5a6a7500101070001020304050607086000f401d00704200010f40000700400002006000000000000000000000000000000000003000000",
+     "pipeline": "91000008010105000302e00108020302d403fc030302c805f005030244026c0203029c04c4040302f4061c0702010000"
+    },
+    {
+     "op": "sync",
+     "before": [
+      4100.0,
+      1767225950.0
+     ],
+     "after": [
+      4100.03,
+      1767225950.03
+     ],
+     "ticks": 4000015000
+    },
+    {
+     "op": "sync",
+     "before": [
+      4100.15,
+      1767225950.15
+     ],
+     "after": [
+      4100.179999999999,
+      1767225950.18
+     ],
+     "ticks": 4000165000
+    },
+    {
+     "op": "arm"
+    },
+    {
+     "op": "start"
+    },
+    {
+     "op": "data",
+     "packets": [
+      "010300000000000000286bee0000000012000605cb12aedee570f3124124beb018e00e0a13d2e5f45a02d60bdb901e02ac0329701513ce530495cedb8e8d1353f30fa1f5c5da31f39e15d21f24f3da73dd27ff34a2a82378c9d2de1bd936bc2a1895c44d2cd96f8d2c558425646830b7960c8e97e894b7280960fb9b7cdb9365f5135723e965f10705e37796e278b53e4917dac9cf354408c1c7cb345a1a3ad130deab213aedf43e76e91e7b782da513eef9d2c0bbe1feb0b0d76e95c6a039374a4e20699e33a943dd18b3034fe2e0ddb939c26808a1143301ec2746c00b099eebc9a43606b5304f850d19f7",
+      "0102000012000000a0b46bee00000000120006050eed88cb9a87d3c89df58e870faff72bac8dd9ef61368547d1040a37fde33383e3c42028ecd8452fd08e065948d34bd5d5c972e059f6ebcfc62e1bbd092cd9378feedcba9df3e9e2383c36d166e22dc8dfe737f9c23eba227ba20a2e7bca10491b492500c48cf5eba003a7f9114385cfc154c649af07e9e4f5e8cfd06cfef274060b3afc374a6ee2c98712caa702ddf20e581b0914672de34a3a7c09cffe00f94050e78805ca0a45355531dda23dd9daa502b09f3783a321169e1304851461331e91ccefe46131fb8414e871d838073322e329c4eaca6f20",
+      "010200002400000040416cee00000000120006051ca1abd7faea1126ea2fd88c1df8cc3539aa1dfa74cb81af0bb7d503131f063693d69cc0f9f942245082c821cfeb9f16ea65e6384b39db5c36d74cf8c954142f9b0fcbf0e5e3db3c130ddbfecc45c884b206f32af0f0fee5fec9fff2740a04a0df1e3631b2c4e0d968d27aeb331c920f84c627d6a0f98efc1a9443da729efdb1a6022680e3371918af3e35d411f89637328ccd0dd531cf47c3302c10df9be5f0b98dd053573e4707e03df222f6ef07ebdf3d278f19acdd33fc75ccb8e72cf705c6c5b8f9b3fb0f3457fe65ddda5b962652ed2ac038e2e4c5",
+      "0102000036000000e0cd6cee0000000012000605fae573e7faeb3522a1efa3973a3ba3d603840776fe26d6d43055abd07afbc083d5fdf553d57c67057f11ff956c3c7d92e9ec68259b0903478436fc9a2c5b28c590f5e3b83bd8586bec3f842d5214c4d7cf04d50a3d6107152df8ffc0230f031bee27d8d211440decd4c6a81adf1bc7d28d68cc7966d68b483552f9d02400c9044cd7fb312189403de40a0f74c41f5a48162ff907fee3e601f7de9c1dce3fcfcb28a41ce26cee0d0cddc5cc16027d3d223c1a1dbd00871d377f59db5becf570fec8c9a1ebd21c05826b22e50010b22ec498cff5d0aa3da11c",
+      "0102000048000000805a6dee0000000012000605d255dec66dd63c432efa390ced4424ef6d4deab5dc221d0ceb87d6d1b3f1f000de0053b7da3e62ea0bd03cd46f2a6652f50361d28d2b2fee1b18d9b3f072e71143fee6e65bf18f47c32913caa2b2034d610eb5542cf7f237dec6efcb08d0dcfa27b444c635983251750152970754b1334adf23595a10bdf5d817eb3b99b3e1e90c257118e61d18cc2fd32474a9f70e34fcaed1d872edd4cba01974eae566033aa8e92592281e8cbedbcccf3b9bc0cac13fe511c6c5f4a03b807ce8ae9f1569ef3cbccb303159e69f530641e6e0ae27084b4b14207a0e4a3f",
+      "011200005a00000020e76dee00000000120006053cd98022eaeb0a8204269ea8230548c507fcfa2d5df3b2ab1d2563ea9ad1f082c1c35a26e1d6adc8c6bb0ac29bd3025a19e7a0176fd73b88571eb262274c0128068b3433ec3b4231d194f3d117a61a6e4e1d1535e7fb05f237d609c8ece6bc261c072e05f1062052193e68e41638c4ee7a6213faad1a68fcc898352ce7b736460c06c8d6d55e7531328dd4250c126ed23f2f55c8cb06e21c08f674e91da1e1e223bd27891330952803754110ae7eed36b4fe7a053d0bafc7137debeb3e368d8ef5ddfb10fa3e0776230f7bbdc1a6c91efbb82eeedfe0f227"
+     ]
+    },
+    {
+     "op": "start"
+    },
+    {
+     "op": "data",
+     "packets": [
+      "010300000000000000b67dee0000000012000605113360e2fbe5ed123cdd6f3f312d63c886cb0679ef1ab319010f190c64310632100284d6e3c7b4d2729f1d5b9e1dd420c22d542b1c270ce0d209e0d830857cee4afc3913e735997efa0cea1737bd3fb88e0a1734cea31bfd0ee11eb7c5de92281c0674333247d1a9d0fea4c9347d6835dec2e644a3d9cdb1034fbc2e28b52694ea2f2e0fea2e3ddcea1cdc4aa4172888dd3771f5e36a17d508e77f45e4be9b233bec3e76710c645616ef18fdd646e7f2ea35840838c8da3edd62c3c225dc7f53e1091229ec2e29f12dcb8b98d77ea9d461b4f489e010a2f7",
+      "0102000012000000a0427eee0000000012000605145a701855c8ed2a722ef483fd85c6f18f5eed93ed27b5fb300223edb84e3a42d430bb64d3c036322f6d38fed537d36ef9f10232902ddbc16dc6c7513d1f60fe67d9e6a1831e5b461c047d1bc759c15e723088640ca483eff6683b9335100c40351e85f05d590caf7ddf89acfa04a73246343f55852d227619a8901bb20e103623e3e70cdf42d23ac014f8eaa13b3eaa1df544c5e831ea7b80f179c1d5e1622414a325837f2ae18dc15b0b1bca96ef0329d63460cdb1071cc5d1f826973c4e8c261a091d381cda41170c12aef7753916e58ed7b127c600fd",
+      "010200002400000040cf7eee00000000120006053179ba055c721f4bf0db71d1daebaf1136a60d5bb6e3fb34d67c5800ff6df266900f0426dcb557dd620a3f9bef0b1bacd6e2833bcf9cc1033d3d58cdc54402c3a454084c8adc5691f3382c0dc5cf294a403c2b47d8c1e3cdaa91f08f12c3ededf4a3afe4a3150efabf089a4f31e8d91f54530b43de1a49cb04bb08f57f10d0973520edbf36b3e32e0c53e43ceed57cb8f5b1a229b6e7f1ca453028c63861c0dd140a1db55cc014a129851d2264d0e4ae2e0d1e28ed1b46de20d613dbb8e68977089e57348d46e15509e01c9ce1d266f20a9a245e373e0a6f",
+      "0102000036000000e05b7fee00000000120006051557b7390e89021e320f81ef1e5909fbe97bf8caa725bec4fbbeb9f9d5e2156850ece53812d6331f5a391e6c9f240c2e283fc7f12bc0dbe9bc0bff3ce254590c12a811df5e161a3feb70e7fb4ed9d82b61f5d070ffc45a2f4b232f00d6f4e3b712ca96c82c63ca878e12f9381fc5900c1e3208dc29f7b0bf3fbd33eae2d2e218b619f9c0c0088c34956cfe1a36146855e0539e0a2b1621db9d18cf83e262e123b6e32ab125053724c0dae0062a6105c22add64b9d58104d5c3acf2119acf7268347a9716d89c279e62ef66b3f6be01196ebce2df82ece708",
+      "010200004800000080e87fee00000000120006050598d1296847db38a31742f5d26bfaffab22d0ec87c44fb43bc7a13b96bdf7e8f93d2c6ded44b032a2c1edc58031ab75e81aa820fd091ad2a2f596b12fd39832b93ff82585ef7d1af7b27be2804f0eb267328695c2525c0536ade2e06839097507b85bd60e90e5cd3e0acdfe2ecffe1925023db33bfae3e62430b1f3af9cf8c55225893cee79a9ffce40ee5e94ed8ebcf6a4e00b3b9fe0dcf005bd37e57f641ba6bb0d6f27d42c771522a03467e73056f3ed3c00e84a52020d60f6093ed567512f379af40bb9f27f0ffea49426343ac166bcc31ff8d61682",
+      "010200005a000000207580ee00000000120006053c7eb5ed60bc094dff25cbbd0cd6d3cad4bce1eb4101fb7a2ddd42dbe612e5deea29f4c62e71a31429f81fca7bde402cc3c1c53a820208f4c8e775b2079504feae231a6e240d0bf930dd8d28f2da32d1c0d81a32354905eba98ee9358fc61ddcf9abed00be39f6f8762af777dbaf8ec383e933a88a35090b3137ad20c49cd14135d1f5c0044e72e8a0c0349db4d079a5334eced22b43169b2a0d40c931ce68fe2f3315dbd7e86ed13453cdf404d7f0582ac57d97001a0ce32ea71d8c90e75189fbf9fe3d6f5232e5a00a78f00df3bd2e55b2f4de5be9c761"
+     ]
+    },
+    {
+     "op": "stop"
+    },
+    {
+     "op": "save",
+     "label": "usb-ended-then-started-again",
+     "extra": {
+      "experiment": "demo-record"
+     },
+     "events": null,
+     "now": [
+      4104.0,
+      1767225954.0
+     ]
+    }
+   ],
+   "expected": {
+    "clock": [
+     {
+      "n_syncs": 1,
+      "skew": 1.0,
+      "offset": 99.99999999999955,
+      "skew_pinned": true,
+      "skew_pinned_why": "one exchange: a point has no slope",
+      "residual_ms": null,
+      "max_half_rtt_ms": 14.999985694885254,
+      "span_s": null,
+      "fitted_against": "monotonic",
+      "anchors": [
+       [
+        1767225950.0149999,
+        4100.014999999999
+       ]
+      ],
+      "frame_mono": 4100.014999999999,
+      "wall_clock_steps": [],
+      "wall_clock_stepped": false,
+      "skew_measured": 1.0,
+      "skew_measured_pinned_why": "one exchange: a point has no slope",
+      "map_frozen_at_stream_start": false
+     },
+     {
+      "n_syncs": 2,
+      "skew": 1.0,
+      "offset": 99.99999999999909,
+      "skew_pinned": true,
+      "skew_pinned_why": "two exchanges: a slope with no residual to check it",
+      "residual_ms": 0.0,
+      "max_half_rtt_ms": 14.999985694885254,
+      "span_s": 0.15000000000009095,
+      "fitted_against": "monotonic",
+      "anchors": [
+       [
+        1767225950.0149999,
+        4100.014999999999
+       ],
+       [
+        1767225950.165,
+        4100.164999999999
+       ]
+      ],
+      "frame_mono": 4100.014999999999,
+      "wall_clock_steps": [],
+      "wall_clock_stepped": false,
+      "skew_measured": 1.0,
+      "skew_measured_pinned_why": "two exchanges: a slope with no residual to check it",
+      "map_frozen_at_stream_start": false,
+      "uncorrected_drift_s": 0.0
+     }
+    ],
+    "config_after": null,
+    "processing": null,
+    "link_ok": true,
+    "files": {
+     "SESSIONS.jsonl": {
+      "read_only": false
+     },
+     "usb-ended-then-started-again.meta.json": {
+      "read_only": true
+     },
+     "usb-ended-then-started-again.npz": {
+      "read_only": true
+     },
+     "usb-ended-then-started-again.sha256": {
+      "read_only": true
+     }
+    },
+    "meta_json": "{\n  \"manifest_version\": 7,\n  \"label\": \"usb-ended-then-started-again\",\n  \"started_utc\": null,\n  \"finished_utc\": \"2026-01-01T00:05:54Z\",\n  \"captured_unix\": 1767225954.0,\n  \"device_id\": \"a0a1a2a3a4a5a6a7\",\n  \"firmware_version\": \"1.4.2\",\n  \"firmware_sha256\": null,\n  \"firmware_artifact\": null,\n  \"tick_hz\": 1000000,\n  \"vref_uv\": 4500000,\n  \"adc_bits\": 24,\n  \"channels\": 4,\n  \"device_proto\": \"1.4\",\n  \"board_revision\": \"unknown\",\n  \"electrode_montage\": null,\n  \"montage\": null,\n  \"montage_error\": null,\n  \"montage_matches_device\": null,\n  \"montage_source\": null,\n  \"electrode_layout\": null,\n  \"placement\": null,\n  \"mains_hz\": null,\n  \"psu_volts\": null,\n  \"subject_id\": null,\n  \"regs_before\": null,\n  \"regs_after\": null,\n  \"regs_diff\": {},\n  \"config_after\": null,\n  \"device_config_changed_by_run\": false,\n  \"gain\": 24,\n  \"rate_sps\": 500,\n  \"fs_effective\": 500.0,\n  \"protocol_id\": \"demo-record\",\n  \"protocol_params\": {},\n  \"signal_chain\": {\n    \"adapter\": {\n      \"name\": \"intomind.ble\",\n      \"version\": \"1\",\n      \"first_party\": true,\n      \"transport\": \"bluetooth-le\"\n    },\n    \"filtering\": \"none\",\n    \"filters\": null\n  },\n  \"signal_source\": \"normal\",\n  \"synthetic\": false,\n  \"quality\": {\n    \"gaps\": [],\n    \"n_gaps\": 0,\n    \"epoch_resets\": 1,\n    \"samples_received\": 216,\n    \"samples_expected\": 216,\n    \"samples_lost\": 0\n  },\n  \"gaps_announced\": 2,\n  \"clock\": {\n    \"n_syncs\": 2,\n    \"skew\": 1.0,\n    \"offset\": 99.99999999999909,\n    \"skew_pinned\": true,\n    \"skew_pinned_why\": \"two exchanges: a slope with no residual to check it\",\n    \"residual_ms\": 0.0,\n    \"max_half_rtt_ms\": 14.999985694885254,\n    \"span_s\": 0.15000000000009095,\n    \"fitted_against\": \"monotonic\",\n    \"anchors\": [\n      [\n        1767225950.0149999,\n        4100.014999999999\n      ],\n      [\n        1767225950.165,\n        4100.164999999999\n      ]\n    ],\n    \"frame_mono\": 4100.014999999999,\n    \"wall_clock_steps\": [],\n    \"wall_clock_stepped\": false,\n    \"skew_measured\": 1.0,\n    \"skew_measured_pinned_why\": \"two exchanges: a slope with no residual to check it\",\n    \"map_frozen_at_stream_start\": false,\n    \"uncorrected_drift_s\": 0.0\n  },\n  \"git_commit\": null,\n  \"git_dirty\": null,\n  \"host_versions\": {\n    \"python\": \"fixture\",\n    \"platform\": \"fixture\",\n    \"numpy\": \"fixture\",\n    \"scipy\": null,\n    \"bleak\": null\n  },\n  \"n\": 216,\n  \"fw\": \"1.4.2\",\n  \"experiment\": \"demo-record\"\n}",
+    "events_json": null,
+    "sha256_names": [
+     "usb-ended-then-started-again.meta.json",
+     "usb-ended-then-started-again.npz"
+    ],
+    "sessions_jsonl": "{\"label\": \"usb-ended-then-started-again\", \"started_utc\": null, \"finished_utc\": \"2026-01-01T00:05:54Z\", \"protocol_id\": \"demo-record\", \"board_revision\": \"unknown\", \"firmware_version\": \"1.4.2\", \"gain\": 24, \"rate_sps\": 500, \"device_config_changed_by_run\": false, \"git_commit\": null, \"n\": 216, \"samples_lost\": 0}\n",
+    "arrays": [
+     [
+      "counts",
+      "<i8",
+      [
+       4,
+       216
+      ],
+      "5260fb1b3dc3c8983c7d88dacb2c4804465bcab6fb184376edb23e151e5aa9db",
+      true
+     ],
+     [
+      "index",
+      "<i8",
+      [
+       216
+      ],
+      "4c30b04fdbfca699e1c19da137d2c2fe0243a6e76185a5f13a21e4b3857f74e9",
+      false
+     ],
+     [
+      "device_ticks",
+      "<i8",
+      [
+       216
+      ],
+      "90842bc100b93bfe5cbfe5f916649a0f718f215991d66d381fc6d5e4fad0f927",
+      false
+     ],
+     [
+      "host_time",
+      "<f8",
+      [
+       216
+      ],
+      "e67b1963bd61185de2c66756ff7e5d077f6337e43263a48d52f98379a542e87c",
+      false
+     ],
+     [
+      "leadoff",
+      "|u1",
+      [
+       216
+      ],
+      "a5645e7a3fa0866cde8842c4dab96567507c3d1a3c028b816bc63f6966367b70",
+      false
+     ],
+     [
+      "gap_before",
+      "|b1",
+      [
+       216
+      ],
+      "b39adebcacda1330a4bb946c68c5c3b42f506e0f07a0febea6d1d8eae3e4fcf1",
+      false
+     ],
+     [
+      "leadoff_active",
+      "|b1",
+      [
+       216
+      ],
+      "9cd41b3d52e4f7c43807cfbe3b0ad6346f9c99337a895cef31d84d294007deea",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       216
+      ],
+      "a5645e7a3fa0866cde8842c4dab96567507c3d1a3c028b816bc63f6966367b70",
       false
      ]
     ]
@@ -1718,6 +1989,15 @@
        180
       ],
       "59278ecd80902c8e0f8efaf1aa8f4bb09aed7d3dfbc14309e17528466cbdd1d2",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       180
+      ],
+      "10b2a66888c58a54b277fe2e68fb6e87150c3cd2c537b7f6a2d84559017438c7",
       false
      ]
     ]
@@ -2408,6 +2688,15 @@
       ],
       "761136e30319b547b806f3753bb0237dcf74194a44f77561bcc360ba1a5b7adb",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       144
+      ],
+      "81c611f35bff79491538b2f7cf201c7597a661a5c549633541c62bdc8af1613f",
+      false
      ]
     ]
    }
@@ -2717,6 +3006,15 @@
       ],
       "761136e30319b547b806f3753bb0237dcf74194a44f77561bcc360ba1a5b7adb",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       144
+      ],
+      "81c611f35bff79491538b2f7cf201c7597a661a5c549633541c62bdc8af1613f",
+      false
      ]
     ]
    }
@@ -2961,6 +3259,15 @@
        72
       ],
       "c8bed0af5473e956f38c0def7c0b5047ff756a6a7e666f5f3fb956c5c1652b1e",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       72
+      ],
+      "834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400",
       false
      ]
     ]
@@ -3980,6 +4287,15 @@
       ],
       "08b7a5efba9f3a04aef2f2cacac0023bf0f844cbf644ca01d5a9ca0bd93c347c",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       270
+      ],
+      "04bd11c311f0107c20d95e65d9a593ee5c92c7cb53507e10b680ece3de7add1c",
+      false
      ]
     ]
    }
@@ -4419,6 +4735,15 @@
       ],
       "34db545211b85858a6c703c8a7f075b18e716a97651be6e714668feb3919f72f",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       108
+      ],
+      "77133f431d5e12dd850002c0d3d4e0fecbe3a7a699d604dc8c5eae9976e1d260",
+      false
      ]
     ]
    }
@@ -4829,6 +5154,15 @@
       ],
       "c8bed0af5473e956f38c0def7c0b5047ff756a6a7e666f5f3fb956c5c1652b1e",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       72
+      ],
+      "834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400",
+      false
      ]
     ]
    }
@@ -4962,6 +5296,15 @@
       ],
       "7e5906b7c0e1829e4d0c25851f3e2fbecb999a2f7e901828b79f714463055cd5",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       54
+      ],
+      "ea659cdc838619b3767c057fdf8e6d99fde2680c5d8517eb06761c0878d40c40",
+      false
      ]
     ]
    }
@@ -5048,13 +5391,13 @@
       "read_only": true
      }
     },
-    "meta_json": "{\n  \"manifest_version\": 7,\n  \"label\": \"nothing-recorded\",\n  \"started_utc\": null,\n  \"finished_utc\": \"2026-01-01T00:35:01Z\",\n  \"captured_unix\": 1767227701.0,\n  \"device_id\": \"a0a1a2a3a4a5a6a7\",\n  \"firmware_version\": \"1.4.2\",\n  \"firmware_sha256\": null,\n  \"firmware_artifact\": null,\n  \"tick_hz\": 1000000,\n  \"vref_uv\": 4500000,\n  \"adc_bits\": 24,\n  \"channels\": 4,\n  \"device_proto\": \"1.4\",\n  \"board_revision\": \"unknown\",\n  \"electrode_montage\": null,\n  \"montage\": null,\n  \"montage_error\": null,\n  \"montage_matches_device\": null,\n  \"montage_source\": null,\n  \"electrode_layout\": null,\n  \"placement\": null,\n  \"mains_hz\": null,\n  \"psu_volts\": null,\n  \"subject_id\": null,\n  \"regs_before\": null,\n  \"regs_after\": null,\n  \"regs_diff\": {},\n  \"config_after\": null,\n  \"device_config_changed_by_run\": false,\n  \"gain\": null,\n  \"rate_sps\": null,\n  \"fs_effective\": 0.0,\n  \"protocol_id\": \"demo-record\",\n  \"protocol_params\": {},\n  \"signal_chain\": {\n    \"adapter\": {\n      \"name\": \"intomind.ble\",\n      \"version\": \"1\",\n      \"first_party\": true,\n      \"transport\": \"bluetooth-le\"\n    },\n    \"filtering\": \"none\",\n    \"filters\": null\n  },\n  \"signal_source\": null,\n  \"synthetic\": null,\n  \"quality\": {\n    \"gaps\": [],\n    \"n_gaps\": 0,\n    \"epoch_resets\": 0,\n    \"samples_received\": 0,\n    \"samples_expected\": 0,\n    \"samples_lost\": 0\n  },\n  \"gaps_announced\": 0,\n  \"clock\": {\n    \"n_syncs\": 1,\n    \"skew\": 1.0,\n    \"offset\": 10000.0,\n    \"skew_pinned\": true,\n    \"skew_pinned_why\": \"one exchange: a point has no slope\",\n    \"residual_ms\": null,\n    \"max_half_rtt_ms\": 14.999985694885254,\n    \"span_s\": null,\n    \"fitted_against\": \"monotonic\",\n    \"anchors\": [\n      [\n        1767227700.0149999,\n        14000.015\n      ]\n    ],\n    \"frame_mono\": 14000.015,\n    \"wall_clock_steps\": [],\n    \"wall_clock_stepped\": false,\n    \"skew_measured\": 1.0,\n    \"skew_measured_pinned_why\": \"one exchange: a point has no slope\",\n    \"map_frozen_at_stream_start\": false\n  },\n  \"git_commit\": null,\n  \"git_dirty\": null,\n  \"host_versions\": {\n    \"python\": \"fixture\",\n    \"platform\": \"fixture\",\n    \"numpy\": \"fixture\",\n    \"scipy\": null,\n    \"bleak\": null\n  },\n  \"n\": 0,\n  \"fw\": \"1.4.2\",\n  \"experiment\": \"demo-record\"\n}",
+    "meta_json": "{\n  \"manifest_version\": 7,\n  \"label\": \"nothing-recorded\",\n  \"started_utc\": null,\n  \"finished_utc\": \"2026-01-01T00:35:01Z\",\n  \"captured_unix\": 1767227701.0,\n  \"device_id\": \"a0a1a2a3a4a5a6a7\",\n  \"firmware_version\": \"1.4.2\",\n  \"firmware_sha256\": null,\n  \"firmware_artifact\": null,\n  \"tick_hz\": 1000000,\n  \"vref_uv\": 4500000,\n  \"adc_bits\": 24,\n  \"channels\": 4,\n  \"device_proto\": \"1.4\",\n  \"board_revision\": \"unknown\",\n  \"electrode_montage\": null,\n  \"montage\": null,\n  \"montage_error\": null,\n  \"montage_matches_device\": null,\n  \"montage_source\": null,\n  \"electrode_layout\": null,\n  \"placement\": null,\n  \"mains_hz\": null,\n  \"psu_volts\": null,\n  \"subject_id\": null,\n  \"regs_before\": null,\n  \"regs_after\": null,\n  \"regs_diff\": {},\n  \"config_after\": null,\n  \"device_config_changed_by_run\": false,\n  \"gain\": 6,\n  \"rate_sps\": null,\n  \"fs_effective\": 0.0,\n  \"protocol_id\": \"demo-record\",\n  \"protocol_params\": {},\n  \"signal_chain\": {\n    \"adapter\": {\n      \"name\": \"intomind.ble\",\n      \"version\": \"1\",\n      \"first_party\": true,\n      \"transport\": \"bluetooth-le\"\n    },\n    \"filtering\": \"none\",\n    \"filters\": null\n  },\n  \"signal_source\": null,\n  \"synthetic\": null,\n  \"quality\": {\n    \"gaps\": [],\n    \"n_gaps\": 0,\n    \"epoch_resets\": 0,\n    \"samples_received\": 0,\n    \"samples_expected\": 0,\n    \"samples_lost\": 0\n  },\n  \"gaps_announced\": 0,\n  \"clock\": {\n    \"n_syncs\": 1,\n    \"skew\": 1.0,\n    \"offset\": 10000.0,\n    \"skew_pinned\": true,\n    \"skew_pinned_why\": \"one exchange: a point has no slope\",\n    \"residual_ms\": null,\n    \"max_half_rtt_ms\": 14.999985694885254,\n    \"span_s\": null,\n    \"fitted_against\": \"monotonic\",\n    \"anchors\": [\n      [\n        1767227700.0149999,\n        14000.015\n      ]\n    ],\n    \"frame_mono\": 14000.015,\n    \"wall_clock_steps\": [],\n    \"wall_clock_stepped\": false,\n    \"skew_measured\": 1.0,\n    \"skew_measured_pinned_why\": \"one exchange: a point has no slope\",\n    \"map_frozen_at_stream_start\": false\n  },\n  \"git_commit\": null,\n  \"git_dirty\": null,\n  \"host_versions\": {\n    \"python\": \"fixture\",\n    \"platform\": \"fixture\",\n    \"numpy\": \"fixture\",\n    \"scipy\": null,\n    \"bleak\": null\n  },\n  \"n\": 0,\n  \"fw\": \"1.4.2\",\n  \"experiment\": \"demo-record\"\n}",
     "events_json": null,
     "sha256_names": [
      "nothing-recorded.meta.json",
      "nothing-recorded.npz"
     ],
-    "sessions_jsonl": "{\"label\": \"nothing-recorded\", \"started_utc\": null, \"finished_utc\": \"2026-01-01T00:35:01Z\", \"protocol_id\": \"demo-record\", \"board_revision\": \"unknown\", \"firmware_version\": \"1.4.2\", \"gain\": null, \"rate_sps\": null, \"device_config_changed_by_run\": false, \"git_commit\": null, \"n\": 0, \"samples_lost\": 0}\n",
+    "sessions_jsonl": "{\"label\": \"nothing-recorded\", \"started_utc\": null, \"finished_utc\": \"2026-01-01T00:35:01Z\", \"protocol_id\": \"demo-record\", \"board_revision\": \"unknown\", \"firmware_version\": \"1.4.2\", \"gain\": 6, \"rate_sps\": null, \"device_config_changed_by_run\": false, \"git_commit\": null, \"n\": 0, \"samples_lost\": 0}\n",
     "arrays": [
      [
       "counts",
@@ -5285,6 +5628,15 @@
       ],
       "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       1
+      ],
+      "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      false
      ]
     ]
    }
@@ -5455,6 +5807,15 @@
       ],
       "c8bed0af5473e956f38c0def7c0b5047ff756a6a7e666f5f3fb956c5c1652b1e",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       72
+      ],
+      "834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400",
+      false
      ]
     ]
    }
@@ -5624,6 +5985,15 @@
       ],
       "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
       false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       1
+      ],
+      "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      false
      ]
     ]
    }
@@ -5788,6 +6158,15 @@
        108
       ],
       "34db545211b85858a6c703c8a7f075b18e716a97651be6e714668feb3919f72f",
+      false
+     ],
+     [
+      "leadoff_judged",
+      "|b1",
+      [
+       108
+      ],
+      "77133f431d5e12dd850002c0d3d4e0fecbe3a7a699d604dc8c5eae9976e1d260",
       false
      ]
     ]
@@ -9020,7 +9399,7 @@
    },
    "result": {
     "montage": null,
-    "montage_error": "'left-elbow' is not a scalp position. There are 32; `placement.choices()` lists them.",
+    "montage_error": "'left-elbow' is not a position key. There are 78 on offer, the 10-10 codes and \"other\" for anywhere else, its place written in the note; `placement.positions()` lists them. The 32 names in `placement.SCALP` are accepted as well.",
     "montage_matches_device": false,
     "montage_source": "placement",
     "electrode_layout": {
@@ -9474,7 +9853,7 @@
    },
    "result": {
     "montage": null,
-    "montage_error": "'broca' is not a region; there are 18",
+    "montage_error": "'broca' is not a region; there are 44",
     "montage_matches_device": false,
     "montage_source": "placement",
     "electrode_layout": {

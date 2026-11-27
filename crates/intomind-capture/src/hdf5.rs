@@ -2,14 +2,14 @@
 //!
 //! A MATLAB v7.3 file is an HDF5 file with a 512-byte user block whose first
 //! 128 bytes are MATLAB's own header. An export holds one group, the root,
-//! with at most eight variables, each a contiguous one- or two-dimensional
-//! array with a `MATLAB_class` attribute and, for logical and char
-//! variables, a `MATLAB_int_decode` one. This writes exactly that, in the
-//! structures the HDF5 library writes for the same file by default: the
-//! version 0 superblock, a symbol table group with one B-tree node, one
-//! local heap and one symbol node, and version 1 object headers. No HDF5
-//! library is needed to write it, and any HDF5 reader, MATLAB's included,
-//! reads it.
+//! with its variables, each a contiguous one- or two-dimensional array with
+//! a `MATLAB_class` attribute and, for logical and char variables, a
+//! `MATLAB_int_decode` one. This writes exactly that, in the structures the
+//! HDF5 library writes for the same file by default: the version 0
+//! superblock, a symbol table group with one B-tree node, one local heap, a
+//! symbol node for every eight variables, the most one holds, and version 1
+//! object headers. No HDF5 library is needed to write it, and any HDF5
+//! reader, MATLAB's included, reads it.
 
 /// The undefined address.
 const UNDEF: u64 = u64::MAX;
@@ -180,7 +180,19 @@ fn object_header(messages: &[Vec<u8>]) -> Vec<u8> {
 
 /// The file: the user block with `header` at its start, then the HDF5 data.
 pub(crate) fn write(header: &[u8; 128], vars: &[Variable]) -> Vec<u8> {
-    assert!(vars.len() <= 2 * LEAF_K, "one symbol node holds eight variables");
+    // The variables in name order, in as few symbol nodes as hold them, each
+    // as full as the others, one node even for none.
+    let mut order: Vec<usize> = (0..vars.len()).collect();
+    order.sort_by(|&a, &b| vars[a].name.cmp(&vars[b].name));
+    let node_count = order.len().div_ceil(2 * LEAF_K).max(1);
+    assert!(node_count <= 2 * NODE_K, "one B-tree node holds {} variables", 4 * LEAF_K * NODE_K);
+    let mut nodes: Vec<&[usize]> = Vec::with_capacity(node_count);
+    let mut from = 0;
+    for i in 0..node_count {
+        let to = from + (order.len() - from).div_ceil(node_count - i);
+        nodes.push(&order[from..to]);
+        from = to;
+    }
     // Where everything goes, as addresses from the base.
     let superblock_len = 96;
     let root_at = superblock_len as u64;
@@ -200,7 +212,7 @@ pub(crate) fn write(header: &[u8; 128], vars: &[Variable]) -> Vec<u8> {
     let heap_data_at = heap_at + 32;
     let snod_at = heap_data_at + heap_data.len() as u64;
     let snod_len = 8 + 2 * LEAF_K * 40;
-    let mut next = snod_at + snod_len as u64;
+    let mut next = snod_at + (node_count * snod_len) as u64;
 
     // Each variable's object header, and its data right after it.
     let mut objects: Vec<(u64, Vec<u8>, Vec<u8>)> = Vec::new();
@@ -255,18 +267,19 @@ pub(crate) fn write(header: &[u8; 128], vars: &[Variable]) -> Vec<u8> {
         h
     };
     out.extend(root);
-    // The B-tree: one leaf entry pointing at the one symbol node, keyed by
-    // the empty name and the largest name.
-    let largest = (0..vars.len()).max_by(|&a, &b| vars[a].name.cmp(&vars[b].name)).map(|i| name_at[i]).unwrap_or(0);
+    // The B-tree: one leaf entry for each symbol node, keyed by the empty
+    // name and then by the largest name in each node.
     let mut bt = Vec::with_capacity(btree_len);
     bt.extend(b"TREE");
     bt.extend([0u8, 0]);
-    bt.extend((if vars.is_empty() { 0u16 } else { 1 }).to_le_bytes());
+    bt.extend((if vars.is_empty() { 0u16 } else { node_count as u16 }).to_le_bytes());
     bt.extend(UNDEF.to_le_bytes());
     bt.extend(UNDEF.to_le_bytes());
     bt.extend(0u64.to_le_bytes());
-    bt.extend(snod_at.to_le_bytes());
-    bt.extend(largest.to_le_bytes());
+    for (i, node) in nodes.iter().enumerate() {
+        bt.extend((snod_at + (i * snod_len) as u64).to_le_bytes());
+        bt.extend(node.last().map_or(0, |&k| name_at[k]).to_le_bytes());
+    }
     bt.resize(btree_len, 0);
     out.extend(bt);
     // The local heap, with no free space.
@@ -276,22 +289,22 @@ pub(crate) fn write(header: &[u8; 128], vars: &[Variable]) -> Vec<u8> {
     out.extend(1u64.to_le_bytes());
     out.extend(heap_data_at.to_le_bytes());
     out.extend(&heap_data);
-    // The symbol node: an entry per variable, in name order.
-    let mut order: Vec<usize> = (0..vars.len()).collect();
-    order.sort_by(|&a, &b| vars[a].name.cmp(&vars[b].name));
-    let mut sn = Vec::with_capacity(snod_len);
-    sn.extend(b"SNOD");
-    sn.extend([1u8, 0]);
-    sn.extend((vars.len() as u16).to_le_bytes());
-    for i in order {
-        sn.extend(name_at[i].to_le_bytes());
-        sn.extend(objects[i].0.to_le_bytes());
-        sn.extend(0u32.to_le_bytes());
-        sn.extend(0u32.to_le_bytes());
-        sn.extend([0u8; 16]);
+    // The symbol nodes: an entry per variable, in name order.
+    for node in &nodes {
+        let mut sn = Vec::with_capacity(snod_len);
+        sn.extend(b"SNOD");
+        sn.extend([1u8, 0]);
+        sn.extend((node.len() as u16).to_le_bytes());
+        for &i in node.iter() {
+            sn.extend(name_at[i].to_le_bytes());
+            sn.extend(objects[i].0.to_le_bytes());
+            sn.extend(0u32.to_le_bytes());
+            sn.extend(0u32.to_le_bytes());
+            sn.extend([0u8; 16]);
+        }
+        sn.resize(snod_len, 0);
+        out.extend(sn);
     }
-    sn.resize(snod_len, 0);
-    out.extend(sn);
     // The variables.
     for (at, hdr, data) in &objects {
         out.resize((BASE + at) as usize, 0);

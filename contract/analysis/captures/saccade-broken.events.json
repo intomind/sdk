@@ -1,0 +1,114 @@
+[
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262832.9965994,
+    "mono": 4503698.59659932,
+    "trial": 0
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262836.9973996,
+    "mono": 4503702.59739948,
+    "trial": 1
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262840.9981997,
+    "mono": 4503706.5981996395,
+    "trial": 2
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262844.9989998,
+    "mono": 4503710.598999799,
+    "trial": 3
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262853.9967995,
+    "mono": 4503719.59679936,
+    "trial": 4
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262857.9975996,
+    "mono": 4503723.597599519,
+    "trial": 5
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262861.9983997,
+    "mono": 4503727.598399679,
+    "trial": 6
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262866.1992397,
+    "mono": 4503731.799239848,
+    "trial": 7
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262870.20004,
+    "mono": 4503735.800040008,
+    "trial": 8
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262874.3968794,
+    "mono": 4503739.996879376,
+    "trial": 9
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262878.3976796,
+    "mono": 4503743.997679535,
+    "trial": 10
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262882.3984797,
+    "mono": 4503747.998479696,
+    "trial": 11
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262886.3992798,
+    "mono": 4503751.999279856,
+    "trial": 12
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262890.40008,
+    "mono": 4503756.0000800155,
+    "trial": 13
+  },
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262894.3968794,
+    "mono": 4503759.996879376,
+    "trial": 14
+  },
+  {
+    "cond": "right",
+    "kind": "cue",
+    "host_time": 1767262898.3976796,
+    "mono": 4503763.997679535,
+    "trial": 15
+  }
+]

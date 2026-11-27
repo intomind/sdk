@@ -30,14 +30,15 @@ You need a commercial license to build a closed product on this code, or to
 run a modified service without publishing your changes.
 
 We can offer both because we hold the copyright in the code, which is
-also why contributions are covered by the agreement in `CONTRIBUTING.md`.
+also why contributions are covered by the agreement in `CLA.md`.
 
 ## Contributions
 
 The first time you contribute, you sign a contributor license agreement.
 It says you wrote what you are contributing and that you give IntoMind
 the rights to use it under both licenses, while you keep the copyright
-in your own work. `CONTRIBUTING.md` has the detail and the process.
+in your own work. The agreement's text is in `CLA.md`, and
+`CONTRIBUTING.md` has the process.
 
 ## Trademarks
 

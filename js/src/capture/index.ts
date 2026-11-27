@@ -5,7 +5,7 @@
  * name: `name.npz` with the samples, `name.meta.json` with the manifest,
  * `name.events.json` with the markers, and `name.sha256`, written last.
  * `Collection` reads them as the Python library reads them, its checks and
- * its two corrections included, and `exportRecording` writes any of them as
+ * its three corrections included, and `exportRecording` writes any of them as
  * npz, edf, bdf, csv, tsv or mat, each byte for byte or array for array
  * what the Python library writes, with the same summary.
  * docs.intomind.com/files.html states what both promise.

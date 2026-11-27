@@ -32,7 +32,10 @@ pub enum Opcode {
     GetBattery = 0x42,
     /// Ask how and how many times the device has booted.
     GetBootInfo = 0x43,
-    /// Zero `sample_index` and start a fresh epoch.
+    /// Start a fresh epoch of `sample_index`: the device gives index 1 to the
+    /// oldest sample it has not yet sent, or with none waiting to the next it
+    /// takes, and numbers every later sample on from there. In the synthetic
+    /// signal that sample is index 0.
     ResetEpoch = 0x50,
     /// Forget every bond but the requesting host's, at the next disconnect.
     ClearBonds = 0x53,

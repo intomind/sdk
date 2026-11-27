@@ -14,8 +14,54 @@
  * arrays and fields, and differ only in what their containers stamp: the
  * time a member was written, and the order a library lays out its records.
  * The fixtures in `contract/recordings` hold both claims.
+ *
+ * Lead-off is in every format, and only where the recording says detection
+ * was running and the bits are a verdict, because a lead-off word of zero is
+ * an attached electrode there and nothing at all anywhere else. From firmware
+ * 1.4.6 the IntoMind device's bits read 0 until its first judgment of a
+ * stream, 0.512 s in or later, and a recording holds `leadoff_judged`, false
+ * for each sample whose bits came before it. Detection was running for those
+ * samples, and no format calls them attached: `csv` and `tsv` leave their
+ * lead-off columns empty there, as where nothing was checking, and `edf` and
+ * `bdf` label the stretch `LEADOFF_NOT_JUDGED`. An IntoMind device whose
+ * firmware is older than 1.4.6 cannot check electrode contact: its lead-off
+ * detection does not work, and every electrode reads off whether it touches
+ * skin or not. A recording of one that holds no `leadoff_judged` is read with every sample
+ * taken with detection on as no verdict, from the firmware its manifest
+ * names, as `Collection.load` reads it, so no format calls its electrodes
+ * off. Every summary says, in `contact`, whether contact was "checked",
+ * "partly checked", "not checked", or is "not known", a sample counting as
+ * checked where detection was running and its bits are a verdict. Where
+ * contact was checked somewhere in the recording, `csv` and `tsv` write a
+ * `chN_leadoff` column for each channel the lead-off word covers, and `edf`
+ * and `bdf` label each stretch one of those channels' electrodes was off
+ * `BAD_LEADOFF` and the channel. The lead-off word covers, for a recording of
+ * the IntoMind device, whose lead-off is a byte, its first eight channels, or
+ * all of them where it has fewer. A `chN_leadoff` cell holds 1 where the electrode was off, 0 where it
+ * was attached, and is empty where nothing was checking or the device had
+ * not yet judged contact.
+ *
+ * The header's recording field of an `edf` or `bdf` export begins as EDF+
+ * requires it to: Startdate, the start date, and the administration,
+ * technician and equipment codes, each an X where it is not known, the
+ * equipment being the device that made the recording, its name or id with
+ * an underscore for each run of white space. The library's own words follow:
+ * "SYNTHETIC, not measured:" for a generated signal, the width of the file's
+ * samples with "lossy" where it is narrower than the recording's, the board
+ * revision, "unknown" where the recording states none or states it as null,
+ * and the name of the raw record. The field holds 80 characters, and the
+ * device is cut to leave room for the words about a generated signal and the
+ * width, so only the revision and the raw record's name can be cut away.
+ *
+ * An `edf` or `bdf` export of a recording whose start cannot be read from its
+ * `started_utc` has a header whose recording field begins "Startdate X X X",
+ * its start date and the two subfields after it each written as EDF+ writes a
+ * subfield that is not known, followed by the device as the equipment and the
+ * library's words, as for a known start, and whose start date and time
+ * fields, which must hold a date, hold 01.01.00 and 00.00.00.
  */
 
+import { isSpace, strip } from "../py.ts";
 import * as edf from "./edf.ts";
 import { CaptureError } from "./errors.ts";
 import * as hdf5 from "./hdf5.ts";
@@ -24,7 +70,7 @@ import type { Data, NpyArray } from "./npy.ts";
 import { fixed } from "./pyfmt.ts";
 import * as J from "./pyjson.ts";
 import type { Value } from "./pyjson.ts";
-import { checkLabel, partsOf } from "./recording.ts";
+import { checkLabel, judgedOnRead, partsOf } from "./recording.ts";
 import type { Collection, Recording } from "./recording.ts";
 import * as zip from "./zip.ts";
 
@@ -34,7 +80,10 @@ export const FORMATS = ["npz", "edf", "bdf", "csv", "tsv", "mat"] as const;
 /** One of the six formats. */
 export type Format = (typeof FORMATS)[number];
 
-/** Channels the lead-off status covers: one byte per packet, one bit per channel. */
+/**
+ * Channels the lead-off status covers: one byte per packet, one bit per
+ * channel, so a channel past the eighth has none.
+ */
 const LEADOFF_CHANNELS = 8;
 
 /** One export: the file's bytes and what it cost. */
@@ -61,7 +110,7 @@ export interface ExportOptions {
 export function formatOf(format: string): Format {
   const name = J.trim(format).toLowerCase().replace(/^\.+/, "");
   if (!(FORMATS as readonly string[]).includes(name)) {
-    throw new CaptureError(`unknown export format ${J.reprStr(format)}. Known formats: ${FORMATS.join(", ")}`);
+    throw new CaptureError(`unknown export format ${J.quoted(format)}. Known formats: ${FORMATS.join(", ")}`);
   }
   return name as Format;
 }
@@ -121,7 +170,10 @@ export function exportRecording(
   };
 }
 
-/** The keys every format answers with, and the problems verification reported, then the format's own. */
+/**
+ * The keys every format answers with, and the problems verification
+ * reported, then the format's own.
+ */
 function summary(
   cap: Recording,
   fmt: string,
@@ -144,6 +196,11 @@ function strs(xs: string[]): Value {
   return J.array(xs.map(J.str));
 }
 
+/**
+ * A channel's label: `ch1_uv`, or `ch1_synthetic_uv` when the device
+ * generated the signal, so the columns that hold a generated signal say so
+ * wherever the file goes without its manifest.
+ */
 function column(cap: Recording, c: number): string {
   return cap.synthetic ? `ch${c + 1}_synthetic_uv` : `ch${c + 1}_uv`;
 }
@@ -152,7 +209,12 @@ function column(cap: Recording, c: number): string {
  * Every per-sample array except the microvolts, each only where it lines up
  * with `n` samples, and a sentence for each one left out. A recording made
  * before detection was kept has no `leadoff_active`, and `contact` says so
- * instead of a sentence here.
+ * instead of a sentence here. A recording whose every sample's lead-off bits
+ * are a verdict holds no `leadoff_judged`, and nothing was left out of it.
+ * An IntoMind device whose firmware is older than 1.4.6 cannot check
+ * electrode contact, and a recording of one that holds no `leadoff_judged`
+ * has every sample taken with detection on read as no verdict, so no format
+ * calls its electrodes off.
  */
 function perSample(cap: Recording, n: number): [[string, NpyArray][], string[]] {
   const p = partsOf(cap);
@@ -165,10 +227,11 @@ function perSample(cap: Recording, n: number): [[string, NpyArray][], string[]] 
     ["leadoff", p.leadoff],
     ["gap_before", p.gapBefore],
     ["leadoff_active", p.leadoffActive],
+    ["leadoff_judged", p.leadoffJudged],
   ];
   for (const [name, a] of all) {
     if (a === null) {
-      if (name !== "leadoff_active") omitted.push(`${name}: the capture does not carry it`);
+      if (name !== "leadoff_active" && name !== "leadoff_judged") omitted.push(`${name}: the capture does not carry it`);
       continue;
     }
     const got = a.shape.length === 0 ? 0 : a.shape[0]!;
@@ -178,6 +241,10 @@ function perSample(cap: Recording, n: number): [[string, NpyArray][], string[]] 
       found.push([name, a]);
     }
   }
+  if (find(found, "leadoff_judged") === null) {
+    const judged = judgedOnRead(cap.manifest, find(found, "leadoff_active"));
+    if (judged !== null) found.push(["leadoff_judged", judged]);
+  }
   return [found, omitted];
 }
 
@@ -185,14 +252,33 @@ function find(found: [string, NpyArray][], name: string): NpyArray | null {
   return found.find(([k]) => k === name)?.[1] ?? null;
 }
 
-/** Whether electrode contact was checked: "checked", "partly checked", "not checked", or "not known" where the recording does not say whether detection was running. */
-function contactState(leadoff: Data | null, active: Data | null): string {
+/**
+ * Whether electrode contact was checked: "checked", "partly checked", "not
+ * checked", or "not known" where the recording does not say whether
+ * detection was running, as the library's `export.contact_state`. `judged`,
+ * where a recording holds it, says which samples' bits are a verdict, and a
+ * sample counts as checked where detection was running and its bits are
+ * one, so a recording whose first samples came before the device's first
+ * judgment is "partly checked", and one none of whose samples did is "not
+ * checked", though detection was running.
+ */
+function contactState(leadoff: Data | null, active: Data | null, judged: Data | null = null): string {
   if (leadoff === null || active === null) return "not known";
   const n = npy.len(active);
   let on = 0;
-  for (let k = 0; k < n; k++) if (npy.boolAt(active, k)) on++;
+  for (let k = 0; k < n; k++) if (checkedAt(active, judged, k)) on++;
   if (on === 0) return "not checked";
   return on === n ? "checked" : "partly checked";
+}
+
+/** Whether sample `k`'s contact was checked: detection was running and, where the recording says, its lead-off bits are a verdict. */
+function checkedAt(active: Data, judged: Data | null, k: number): boolean {
+  return npy.boolAt(active, k) && (judged === null || npy.boolAt(judged, k));
+}
+
+/** The contact state of what `perSample` found. */
+function contactOf(found: [string, NpyArray][]): string {
+  return contactState(find(found, "leadoff")?.data ?? null, find(found, "leadoff_active")?.data ?? null, find(found, "leadoff_judged")?.data ?? null);
 }
 
 /** Decimal places that carry one count with room to spare. */
@@ -245,7 +331,7 @@ function exportNpz(cap: Recording, problems: string[], now: number): [Uint8Array
       ["lsb_uv", J.float(lsb)],
       ["omitted", strs(omitted)],
       ["arrays", strs(names)],
-      ["contact", J.str(contactState(find(found, "leadoff")?.data ?? null, find(found, "leadoff_active")?.data ?? null))],
+      ["contact", J.str(contactOf(found))],
     ]),
   ];
 }
@@ -263,7 +349,11 @@ function exportDelimited(cap: Recording, problems: string[], fmt: string, d: str
   const ticks = find(found, "device_ticks")?.data ?? null;
   const byte = find(found, "leadoff")?.data ?? null;
   const active = find(found, "leadoff_active")?.data ?? null;
-  const checked = contactState(byte, active);
+  const judged = find(found, "leadoff_judged")?.data ?? null;
+  const checked = contactState(byte, active, judged);
+  // A column for each electrode covered, and only where contact was checked
+  // somewhere in the recording: a column of zeros from a recording where
+  // nothing was checking would read as every electrode attached.
   const off = checked === "checked" || checked === "partly checked" ? Math.min(nch, LEADOFF_CHANNELS) : 0;
 
   const header = ["host_time_s", "device_time"];
@@ -275,9 +365,12 @@ function exportDelimited(cap: Recording, problems: string[], fmt: string, d: str
     row += d;
     if (ticks !== null) row += npy.i64At(ticks, i).toString();
     for (const u of uv) row += d + fixed(u[i]!, dec);
+    // A row is filled only where detection was running and its bits are a
+    // verdict.
+    const verdict = off > 0 && checkedAt(active!, judged, i);
     for (let c = 0; c < off; c++) {
       row += d;
-      if (npy.boolAt(active!, i)) row += ((npy.i64At(byte!, i) >> BigInt(c)) & 1n).toString();
+      if (verdict) row += ((npy.i64At(byte!, i) >> BigInt(c)) & 1n).toString();
     }
     rows.push(row);
   }
@@ -310,6 +403,27 @@ function deviceOf(meta: Value): string {
     if (J.truthy(v)) return J.pyStr(v);
   }
   return "unknown device";
+}
+
+/**
+ * One subfield of an EDF+ recording field: the text with each run of white
+ * space, as Python's `str.split` finds it, written as an underscore, since a
+ * space separates the subfields, or X, the standard's mark of a subfield that
+ * is not known, where there is no text.
+ */
+function code(text: string): string {
+  const words: string[] = [];
+  let word = "";
+  for (let k = 0; k < text.length; k++) {
+    if (isSpace(text.charCodeAt(k))) {
+      if (word !== "") words.push(word);
+      word = "";
+    } else {
+      word += text[k];
+    }
+  }
+  if (word !== "") words.push(word);
+  return words.join("_") || "X";
 }
 
 function take80(s: string): string {
@@ -354,7 +468,12 @@ function exportEdfFamily(collection: Collection, cap: Recording, problems: strin
     );
   }
   const meta = cap.manifest;
-  const start = edf.startOf(J.asStr(J.field(meta, "started_utc")));
+  const started = edf.knownStart(J.asStr(J.field(meta, "started_utc")));
+  // EDF+ writes a subfield that is not known as X, so a start that is not
+  // known is the recording field's start date written so. The start date and
+  // time fields must hold a date, and hold this one, which that X says is not
+  // the start.
+  const start = started ?? edf.startOf(null);
 
   // A recording that armed before its count was reset begins with samples
   // from before it, and the file starts at the reset.
@@ -407,31 +526,41 @@ function exportEdfFamily(collection: Collection, cap: Recording, problems: strin
   const uv = uvAll(cap);
   const signals: [string, Float64Array][] = uv.map((u, c) => [labelOf(c), u.slice(Math.min(skip, u.length))]);
 
-  // Lead-off, labeled only where detection was running.
+  // Lead-off, read as every format reads it: a stretch an electrode was off
+  // is labeled only where detection was running and the bits are a verdict,
+  // and if contact was checked for part of the recording, the rest is
+  // labeled too, so that it cannot read as contact that was checked.
   const [found] = perSample(cap, index.length);
   const byteA = find(found, "leadoff");
   const activeA = find(found, "leadoff_active");
+  const judgedA = find(found, "leadoff_judged");
   const byte = byteA === null ? null : npy.skip(byteA.data, skip);
   const active = activeA === null ? null : npy.skip(activeA.data, skip);
-  const checked = contactState(byte, active);
+  const judged = byte === null || active === null || judgedA === null ? null : npy.skip(judgedA.data, skip);
+  const checked = contactState(byte, active, judged);
   const stretches: [string, boolean[]][] = [];
   if (checked === "checked" || checked === "partly checked") {
     const b = byte!;
     const a = active!;
     const m = npy.len(a);
+    const verdict: boolean[] = new Array(m);
+    for (let i = 0; i < m; i++) verdict[i] = checkedAt(a, judged, i);
     for (let c = 0; c < Math.min(cap.channels, LEADOFF_CHANNELS); c++) {
       const flags: boolean[] = new Array(m);
-      for (let i = 0; i < m; i++) flags[i] = npy.boolAt(a, i) && ((npy.i64At(b, i) >> BigInt(c)) & 1n) !== 0n;
+      for (let i = 0; i < m; i++) flags[i] = verdict[i]! && ((npy.i64At(b, i) >> BigInt(c)) & 1n) !== 0n;
       stretches.push([`${edf.LEADOFF_LABEL} ${labelOf(c)}`, flags]);
     }
-    if (checked === "partly checked") {
-      const flags: boolean[] = new Array(m);
-      for (let i = 0; i < m; i++) flags[i] = !npy.boolAt(a, i);
-      stretches.push([edf.NOT_CHECKED_LABEL, flags]);
-    }
+    const off: boolean[] = new Array(m);
+    for (let i = 0; i < m; i++) off[i] = !npy.boolAt(a, i);
+    if (off.some((x) => x)) stretches.push([edf.NOT_CHECKED_LABEL, off]);
+    const unjudged: boolean[] = new Array(m);
+    for (let i = 0; i < m; i++) unjudged[i] = npy.boolAt(a, i) && !verdict[i]!;
+    if (unjudged.some((x) => x)) stretches.push([edf.NOT_JUDGED_LABEL, unjudged]);
   }
+  // A revision of null, or of no text, states none, as a manifest without one
+  // does.
   const revV = J.get(meta, "board_revision");
-  const rev = revV === undefined ? "unknown" : J.pyStr(revV);
+  const rev = revV === undefined || revV.kind === "null" || strip(J.pyStr(revV)) === "" ? "unknown" : J.pyStr(revV);
   const recBits = J.field(meta, "adc_bits");
   const bits = w.sampleBytes === 2 ? 16 : 24;
   let note = "";
@@ -441,7 +570,20 @@ function exportEdfFamily(collection: Collection, cap: Recording, problems: strin
     if (BigInt(bits) < rb) note = " lossy";
   }
   const generated = synthetic ? "SYNTHETIC, not measured: " : "";
-  const recording = `${generated}${deviceOf(meta)} ${rev} ${bits}-bit${note}; raw record is ${label}.npz`;
+  const width = `${bits}-bit${note}`;
+  // The device that made it, from the recording's own manifest.
+  const device = deviceOf(meta);
+  // The recording field begins with the five subfields EDF+ requires, the
+  // device as the equipment whether the start is known or not. What a reader
+  // must not lose comes next, where no cut of the 80 characters can take it
+  // away: that a generated signal is generated, since the file is opened by
+  // software that never reads the manifest, and the width with its lossy
+  // note. The device is cut to leave them room, so only the revision and the
+  // raw record's name can be cut away.
+  const lead = `Startdate ${started !== null ? edf.startdate(started) : "X"} X X `;
+  const room = edf.RECORDING_WIDTH - lead.length - ` ${generated}${width}`.length;
+  const equipment = Array.from(code(device !== "unknown device" ? device : "")).slice(0, room).join("");
+  const recording = `${lead}${equipment} ${generated}${width}, ${rev}; raw record is ${label}.npz`;
   const prefilter = prefilterOf(meta);
   const transducer = transducerOf(meta);
   const idx = index.slice(Math.min(skip, index.length));
@@ -593,7 +735,7 @@ function exportMat(cap: Recording, problems: string[], now: number): [Uint8Array
       ["stored_dtype", J.str("float64")],
       ["omitted", strs(omitted)],
       ["variables", strs(names)],
-      ["contact", J.str(contactState(find(found, "leadoff")?.data ?? null, find(found, "leadoff_active")?.data ?? null))],
+      ["contact", J.str(contactOf(found))],
     ]),
   ];
 }

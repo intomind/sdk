@@ -160,7 +160,7 @@ export function fixed(x: number, places: number): string {
     body = a.toFixed(places);
     // `toFixed` takes the larger of two equally close results. The tie is
     // exact when the value, scaled to one place past the last, is an odd
-    // integer, and then the even neighbour below is the one Python takes.
+    // integer, and then the even neighbor below is the one Python takes.
     const scaled = a * 2 ** (places + 1);
     if (Number.isInteger(scaled) && scaled < 2 ** 53 && scaled % 2 === 1) {
       const last = body.charCodeAt(body.length - 1) - 48;

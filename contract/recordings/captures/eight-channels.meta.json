@@ -5,7 +5,7 @@
   "finished_utc": "2026-01-01T10:20:33Z",
   "captured_unix": 1767262833.25,
   "device_id": "00000000c0de0001",
-  "firmware_version": "1.4.5",
+  "firmware_version": "1.4.6",
   "firmware_sha256": null,
   "firmware_artifact": null,
   "tick_hz": 1000000,
@@ -112,6 +112,6 @@
     "bleak": null
   },
   "n": 600,
-  "fw": "1.4.5",
+  "fw": "1.4.6",
   "experiment": "fixture"
 }

@@ -1,0 +1,58 @@
+[
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262831.0,
+    "mono": 4503696.6,
+    "rep": 0
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262841.0,
+    "mono": 4503706.6,
+    "rep": 0
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262851.0,
+    "mono": 4503716.6,
+    "rep": 1
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262861.0,
+    "mono": 4503726.6,
+    "rep": 1
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262871.0,
+    "mono": 4503736.6,
+    "rep": 2
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262881.0,
+    "mono": 4503746.6,
+    "rep": 2
+  },
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262891.0,
+    "mono": 4503756.6,
+    "rep": 3
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262901.0,
+    "mono": 4503766.6,
+    "rep": 3
+  }
+]

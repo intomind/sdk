@@ -435,9 +435,10 @@ impl<'m, 'a> Forward<'m, 'a> {
                 }
                 // Copy it out and nothing more. The caller may hold the
                 // window under a lock that stops interrupts, and finding
-                // two medians over a channel took milliseconds there: on
-                // the device one conversion per channel was missed at every
-                // window, measured on the bench. The copy is microseconds.
+                // two medians over a channel takes milliseconds on the
+                // device, long enough for its converter to miss
+                // conversions, so that is left to the next step. The copy
+                // takes microseconds.
                 window.read_channel(c, p.channel);
                 Phase::Normalize { c }
             }

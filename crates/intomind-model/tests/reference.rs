@@ -1,14 +1,11 @@
 //! The check that the firmware's arithmetic is the training framework's.
 //!
-//! The fixture is a small model exported by `export_device.py`, with the
-//! embeddings that framework produced for four windows of microvolts. If
-//! this runtime and that exporter ever disagree, about the blob's layout
-//! or about any step of the computation, these numbers move and the test
-//! fails. That is the whole point: neither side is trusted, they are
+//! The fixture is a small model in the device's blob format, with the
+//! embeddings the training framework produced for four windows of
+//! microvolts. If this runtime and the exporter that wrote the blob ever
+//! disagree, about the blob's layout or about any step of the computation,
+//! these numbers move and the test fails. Neither side is trusted; they are
 //! compared.
-//!
-//! The full sized model is checked the same way where its weights live,
-//! against `dev_distil_sometimes_vectors.bin`, and the result is recorded.
 
 use intomind_model::{Model, Slice};
 

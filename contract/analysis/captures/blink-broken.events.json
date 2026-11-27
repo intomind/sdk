@@ -1,0 +1,86 @@
+[
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262832.4964993,
+    "mono": 4503698.0964993,
+    "trial": 0
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262834.9969995,
+    "mono": 4503700.596999399,
+    "trial": 1
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262837.4974995,
+    "mono": 4503703.097499499,
+    "trial": 2
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262839.9979997,
+    "mono": 4503705.5979996,
+    "trial": 3
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262842.6985397,
+    "mono": 4503708.298539707,
+    "trial": 4
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262845.1990397,
+    "mono": 4503710.799039807,
+    "trial": 5
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262847.69954,
+    "mono": 4503713.299539908,
+    "trial": 6
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262850.40008,
+    "mono": 4503716.0000800155,
+    "trial": 7
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262852.8965793,
+    "mono": 4503718.4965793155,
+    "trial": 8
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262855.3970795,
+    "mono": 4503720.997079415,
+    "trial": 9
+  },
+  {
+    "cond": "sham",
+    "kind": "cue",
+    "host_time": 1767262857.8975794,
+    "mono": 4503723.497579516,
+    "trial": 10
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262860.3980796,
+    "mono": 4503725.998079616,
+    "trial": 11
+  }
+]

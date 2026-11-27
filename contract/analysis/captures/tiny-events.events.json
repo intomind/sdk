@@ -1,0 +1,20 @@
+[
+  {
+    "cond": "left",
+    "kind": "cue",
+    "host_time": 1767262830.01,
+    "mono": 4503695.609999999
+  },
+  {
+    "cond": "blink",
+    "kind": "cue",
+    "host_time": 1767262830.02,
+    "mono": 4503695.619999999
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262830.03,
+    "mono": 4503695.63
+  }
+]

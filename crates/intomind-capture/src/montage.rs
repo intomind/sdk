@@ -50,7 +50,7 @@ impl Fail {
 pub(crate) fn item<'a>(d: &'a Value, key: &str) -> Result<&'a Value, Fail> {
     match d {
         Value::Object(_) => d.get(key).ok_or_else(|| Fail::key(key)),
-        other => Err(Fail::Other(format!("TypeError: {} is not a dict", other.py_repr()))),
+        other => Err(Fail::Other(format!("TypeError: {} is not a dict", other.rust_repr()))),
     }
 }
 
@@ -58,7 +58,7 @@ pub(crate) fn item<'a>(d: &'a Value, key: &str) -> Result<&'a Value, Fail> {
 pub(crate) fn get<'a>(d: &'a Value, key: &str) -> Result<&'a Value, Fail> {
     match d {
         Value::Object(_) => Ok(d.field(key)),
-        other => Err(Fail::Other(format!("AttributeError: {} has no get", other.py_repr()))),
+        other => Err(Fail::Other(format!("AttributeError: {} has no get", other.rust_repr()))),
     }
 }
 
@@ -67,7 +67,7 @@ pub(crate) fn list(v: &Value) -> Result<Vec<&Value>, Fail> {
     match v {
         Value::Array(a) => Ok(a.iter().collect()),
         v if !v.truthy() => Ok(Vec::new()),
-        other => Err(Fail::Other(format!("TypeError: {} is not a list", other.py_repr()))),
+        other => Err(Fail::Other(format!("TypeError: {} is not a list", other.rust_repr()))),
     }
 }
 
@@ -86,7 +86,7 @@ pub(crate) fn one_to_n(idx: &[&Value]) -> Result<bool, Fail> {
 
 /// `int(value)`, for a channel index.
 fn int_of(v: &Value) -> Result<i64, Fail> {
-    v.as_i64().ok_or_else(|| Fail::Other(format!("ValueError: invalid literal for int(): {}", v.py_repr())))
+    v.as_i64().ok_or_else(|| Fail::Other(format!("ValueError: invalid literal for int(): {}", v.rust_repr())))
 }
 
 /// One electrode position, refused when it has no name or claims a 10-20

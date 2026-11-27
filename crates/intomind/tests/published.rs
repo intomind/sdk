@@ -12,7 +12,7 @@
 //!
 //! The converter (the ADS1299 family) and the radio module (an MDBT50Q,
 //! which is an nRF52840) are named in the product's public datasheet and
-//! may be named here (ruled 2026-09-26). No other part is named, or needs
+//! may be named here. No other part is named, or needs
 //! to be, and `intomind-protocol` is copied from the firmware, so this
 //! check reads every re-sync.
 
@@ -128,7 +128,7 @@ fn no_tracked_file_names_what_it_must_not() {
             }
         }
     }
-    assert!(read > 20, "almost nothing was read, so this proves almost nothing");
+    assert!(read > 20, "almost nothing was read, so this test checks almost nothing");
     assert!(problems.is_empty(), "\n  {}", problems.join("\n  "));
 }
 

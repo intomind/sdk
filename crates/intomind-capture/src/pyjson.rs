@@ -257,6 +257,38 @@ impl Value {
         }
     }
 
+    /// A value as an error a Rust program receives names it, in Rust's
+    /// spelling: text as Rust's `{:?}` writes a `str`, in double quotes,
+    /// `true` and `false`, `null` for a JSON null, as this crate's JSON
+    /// value prints it, a whole number as one, a float as Rust's `{:?}`
+    /// writes an `f64`, such as `0.5`, `1e308`, `NaN` and `inf`, a list in
+    /// brackets and an object in braces with its keys in double quotes. A
+    /// recording keeps Python's `repr`, `py_repr`.
+    pub(crate) fn rust_repr(&self) -> String {
+        match self {
+            Value::Null => "null".into(),
+            Value::Bool(b) => b.to_string(),
+            Value::Int(d) => d.clone(),
+            Value::Float(f) => format!("{f:?}"),
+            Value::Str(s) => format!("{s:?}"),
+            Value::Array(a) => format!("[{}]", a.iter().map(|v| v.rust_repr()).collect::<Vec<_>>().join(", ")),
+            Value::Object(o) => format!(
+                "{{{}}}",
+                o.iter().map(|(k, v)| format!("{k:?}: {}", v.rust_repr())).collect::<Vec<_>>().join(", ")
+            ),
+        }
+    }
+
+    /// A value as an error a Rust program receives writes it where Python's
+    /// words write it with `str`: text as it is, and anything else as
+    /// `rust_repr` names it.
+    pub(crate) fn rust_str(&self) -> String {
+        match self {
+            Value::Str(s) => s.clone(),
+            other => other.rust_repr(),
+        }
+    }
+
     /// `repr(value)` in Python, for the values JSON can hold.
     pub fn py_repr(&self) -> String {
         match self {
@@ -832,6 +864,16 @@ mod tests {
         for bad in ["{\"a\": 1,}", "[1 2]", "01", "1.", "\"\u{1}\"", "{'a': 1}", "[1] x"] {
             assert!(loads(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn a_value_an_error_names_is_in_rusts_spelling() {
+        let v = loads(r#"[null, true, false, 1, 1.0, 1e308, 0.5, "it's \"x\"", "é\u0001", {"k": [2]}]"#).unwrap();
+        assert_eq!(v.rust_repr(), r#"[null, true, false, 1, 1.0, 1e308, 0.5, "it's \"x\"", "é\u{1}", {"k": [2]}]"#);
+        assert_eq!(Value::Float(f64::NAN).rust_repr(), "NaN");
+        assert_eq!(Value::Float(f64::NEG_INFINITY).rust_repr(), "-inf");
+        assert_eq!(Value::str("x").rust_str(), "x");
+        assert_eq!(Value::Bool(true).rust_str(), "true");
     }
 
     #[test]

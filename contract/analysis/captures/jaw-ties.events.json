@@ -1,0 +1,114 @@
+[
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262832.0,
+    "mono": 4503697.6,
+    "trial": 0
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262835.0,
+    "mono": 4503700.6,
+    "trial": 1
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262838.0,
+    "mono": 4503703.6,
+    "trial": 2
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262841.0,
+    "mono": 4503706.6,
+    "trial": 3
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262844.0,
+    "mono": 4503709.6,
+    "trial": 4
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262847.0,
+    "mono": 4503712.6,
+    "trial": 5
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262850.0,
+    "mono": 4503715.6,
+    "trial": 6
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262853.0,
+    "mono": 4503718.6,
+    "trial": 7
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262856.0,
+    "mono": 4503721.6,
+    "trial": 8
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262859.0,
+    "mono": 4503724.6,
+    "trial": 9
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262862.0,
+    "mono": 4503727.6,
+    "trial": 10
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262865.0,
+    "mono": 4503730.6,
+    "trial": 11
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262868.0,
+    "mono": 4503733.6,
+    "trial": 12
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262871.0,
+    "mono": 4503736.6,
+    "trial": 13
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262874.0,
+    "mono": 4503739.6,
+    "trial": 14
+  },
+  {
+    "cond": "clench",
+    "kind": "cue",
+    "host_time": 1767262877.0,
+    "mono": 4503742.6,
+    "trial": 15
+  }
+]

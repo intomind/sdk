@@ -1,0 +1,14 @@
+[
+  {
+    "cond": "closed",
+    "kind": "cue",
+    "host_time": 1767262830.0,
+    "mono": 4503695.6
+  },
+  {
+    "cond": "open",
+    "kind": "cue",
+    "host_time": 1767262840.0,
+    "mono": 4503705.6
+  }
+]

@@ -14,7 +14,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import * as P from "../src/protocol.ts";
-import { Batch, NoDeviceInfo, NotCapable, Session, type Event } from "../src/session.ts";
+import { Batch, NoDeviceInfo, NotCapable, Session, SessionError, type Event } from "../src/session.ts";
+import { readNpz } from "../src/capture/recording.ts";
+import { JUDGES_FROM, firmwareAtLeast } from "../src/firmware.ts";
+import type { NpyArray } from "../src/capture/npy.ts";
 
 const VECTORS = JSON.parse(readFileSync(new URL("../../contract/conformance.json", import.meta.url), "utf8"));
 
@@ -101,7 +104,7 @@ test("a batch carries the samples the vector states", () => {
   const want = vector("eeg_data").fields.samples as number[][];
   assert.equal(batch.rows, want.length);
   assert.equal(batch.channels, 4);
-  assert.equal(batch.gain, 24);
+  assert.equal(batch.gain, vector("eeg_data").fields.gain);
   assert.equal(batch.sampleRateHz, 500);
   assert.equal(batch.index, 3735928559);
   assert.equal(batch.deviceTime, 0x0123456789abcdefn);
@@ -111,7 +114,7 @@ test("a batch carries the samples the vector states", () => {
     }
   }
   // And one count is worth what the device's own numbers say.
-  assert.equal(batch.microvolts(0, 0, s.requireInfo()), 0.022351741790771484);
+  assert.equal(batch.microvolts(0, 0, s.requireInfo()), 0.5364418029785156);
 });
 
 test("a break is announced before the samples that follow it", () => {
@@ -130,7 +133,7 @@ test("a break is announced before the samples that follow it", () => {
   assert.ok(!loss.isRebase);
   assert.equal(s.samplesLost, 3);
 
-  // The timeline re-based: a break whose extent is not a number.
+  // The timeline re-based: a break whose extent is not known.
   const rebased = s.onNotification(P.FILL.EEG_DATA, repoint(0, true));
   assert.deepEqual(rebased.map((e) => e.type), ["gap", "samples"]);
   const rebase = at(rebased, 0, "gap").gap;
@@ -141,9 +144,9 @@ test("a break is announced before the samples that follow it", () => {
 });
 
 test("a packet delivered twice is passed on once", () => {
-  // Measured on the bench: the system's Bluetooth service sends each
-  // notification once per program subscribed, and every subscriber hears all
-  // of the copies. A copy is the same packet, first index and device time.
+  // The system's Bluetooth service can send each notification once per
+  // program subscribed, and every subscriber then hears all of the copies. A
+  // copy is the same packet, first index and device time.
   const s = ready();
   const packet = repoint(100, false);
   assert.deepEqual(s.onNotification(P.FILL.EEG_DATA, packet).map((e) => e.type), ["samples"]);
@@ -232,7 +235,7 @@ test("a command is the bytes the contract states", () => {
     assert.equal(command.characteristic, P.FILL.CONTROL);
   }
   assert.equal(checked, 18, "every control request vector was built from the session");
-  // 1.3: a name that does not fit the air is refused here, and the mode the
+  // 1.3: a name that does not fit a scan response is refused here, and the mode the
   // device claims is sent as the contract's byte.
   assert.throws(() => s.setName("Beatrice", "Purple"), P.Invalid);
   assert.equal(s.setName("Beatrice", "Green").bytes[0], 0x48, "8 + 5 makes 29 exactly");
@@ -370,4 +373,271 @@ test("a time exchange goes to the timebase the device's tick rate built", () => 
     ["samples"],
   );
   assert.equal(running.rebases, 0);
+});
+
+/** A sample as this session heard it. */
+interface Heard {
+  readonly index: number;
+  /** Whether its lead-off bits are a verdict, as the batch's `leadoffJudged` says. */
+  readonly judged: boolean;
+  readonly leadoff: number;
+  readonly leadoffActive: boolean;
+  /** Whether a break comes before it, as its batch's `gapBefore` says of its first sample. */
+  readonly gapBefore: boolean;
+}
+
+/**
+ * The samples this session hears of a stream of `n` samples at `rate` a
+ * second, `per` a packet, from a device of `firmware` with lead-off
+ * detection on or off, the stream started by this session or not, sent as
+ * the device's firmware sends them, and the recording the session's
+ * recorder made of it.
+ *
+ * The device restarts its count at every start, so a stream's first sample
+ * is index 1 whether this session restarted the count before it or not. A
+ * sample whose index is in `dropped` is one the device lost, as a frame it
+ * could not read: the packet under way ends before it, and the next is
+ * flagged as a break with the loss counted. From firmware 1.4.6, with
+ * detection on, the device judges each electrode over a block of
+ * round(0.512 * rate) consecutive samples and gives its verdict, `leadoff`,
+ * with the block's last sample. A lost sample starts the block over and
+ * leaves the last verdict standing, and until the first verdict every
+ * lead-off bit reads 0. On an older firmware, or with detection off, every
+ * sample's bits are `leadoff`. Every packet carries the bits of its last
+ * sample. The first `skip` packets are lost on the way, and so is the packet
+ * that holds each index in `lost`. `verdicts` gives, for each sample heard,
+ * whether the bits its packet carries are a verdict, or with detection off,
+ * true.
+ */
+function judging(
+  firmware: readonly [number, number, number],
+  options: {
+    readonly detecting?: boolean;
+    readonly start?: boolean;
+    readonly newEpoch?: boolean;
+    readonly skip?: number;
+    readonly leadoff?: number;
+    readonly rate?: number;
+    readonly per?: number;
+    readonly n?: number;
+    readonly dropped?: readonly number[];
+    readonly lost?: readonly number[];
+  } = {},
+): { heard: Heard[]; verdicts: boolean[]; npz: Map<string, NpyArray> } {
+  const { detecting = true, start = true, newEpoch = true, skip = 0, leadoff = 0 } = options;
+  const { rate = 500, per = 18, n = 720, dropped = [], lost = [] } = options;
+  const info = INFO_BYTES.slice();
+  info.set(firmware, 2);
+  const s = new Session();
+  s.onDeviceInfo(info);
+  assert.equal(s.requireInfo().tickHz, 1_000_000);
+  s.armRecorder();
+  if (start) {
+    if (newEpoch) s.resetEpoch();
+    s.startStream();
+  }
+  const judges = detecting && firmwareAtLeast(firmware, JUDGES_FROM);
+  const block = Math.round(0.512 * rate);
+  const tick = Math.floor(1_000_000 / rate);
+  // The samples the device keeps, each with its index, its bits and whether
+  // they are a verdict, gathered into packets of consecutive samples.
+  const packets: { index: number; bits: number; verdict: boolean }[][] = [];
+  let taken = 0;
+  let verdict = false;
+  for (let index = 1; index <= n; index++) {
+    if (dropped.includes(index)) {
+      taken = 0;
+      continue;
+    }
+    if (judges) {
+      taken += 1;
+      if (taken === block) {
+        taken = 0;
+        verdict = true;
+      }
+    }
+    const held = { index, bits: verdict || !judges ? leadoff : 0, verdict: judges ? verdict : !detecting };
+    const last = packets.at(-1);
+    if (last !== undefined && last.length < per && last.at(-1)!.index === index - 1) last.push(held);
+    else packets.push([held]);
+  }
+  const heard: Heard[] = [];
+  const verdicts: boolean[] = [];
+  packets.forEach((pk, k) => {
+    const first = pk[0]!.index;
+    const lostBefore = k ? first - packets[k - 1]!.at(-1)!.index - 1 : 0;
+    if (k < skip || pk.some((held) => lost.includes(held.index))) return;
+    const bytes = P.encodePacket({
+      index: first,
+      deviceTime: BigInt(5_000_000 + tick * (first - 1)),
+      gainCode: 6,
+      rateCode: P.CODE_BY_RATE.get(rate)!,
+      counts: pk.map(() => [0, 0, 0, 0]),
+      discontinuity: k === 0 || lostBefore > 0,
+      samplesLostBefore: lostBefore,
+      leadoffActive: detecting,
+      mode: 0,
+      usbPresent: false,
+      loffStatp: pk.at(-1)!.bits,
+    });
+    const batch = samples(s.onNotification(P.FILL.EEG_DATA, bytes));
+    for (let i = 0; i < batch.rows; i++) {
+      heard.push({
+        index: batch.index + i,
+        judged: batch.leadoffJudged(i),
+        leadoff: batch.leadoff,
+        leadoffActive: batch.leadoffActive,
+        gapBefore: batch.gapBefore && i === 0,
+      });
+      verdicts.push(pk.at(-1)!.verdict);
+    }
+  });
+  const saved = s.saveRecording("judging", {}, { finishedUnix: 1_767_225_600 });
+  const npz = new Map(readNpz(saved.files.find(([name]) => name.endsWith(".npz"))![1]));
+  return { heard, verdicts, npz };
+}
+
+const judgedOf = (heard: readonly Heard[]): boolean[] => heard.map((h) => h.judged);
+const notFirst = (n: number, total: number): boolean[] => Array.from({ length: total }, (_, i) => i >= n);
+
+test("the first half second of a stream started with lead-off detection on carries no lead-off verdict from firmware 1.4.6, no sample with detection on carries one on an older firmware, and a recording holds which samples do", () => {
+  // From firmware 1.4.6 the device judges each electrode over a block of
+  // 0.512 s of consecutive samples, 256 at 500 a second, its lead-off bits
+  // read 0 until its first judgment of a stream, which comes with the
+  // block's last sample, and each packet carries the bits of its last
+  // sample. So the samples of a stream this session started with detection
+  // on are not judged until the packet that holds the 256th, the first 252
+  // at 18 a packet, and every sample from that packet on is, detection
+  // running for all of them, whether the count was restarted before the
+  // start or not.
+  let got = judging([1, 4, 6]);
+  assert.ok(got.heard.length === 720 && got.heard.every((h) => h.leadoffActive));
+  assert.deepEqual(judgedOf(got.heard), notFirst(252, 720), "judged from the packet that holds the 256th sample, round(0.512 * 500)");
+  assert.deepEqual([...got.npz.get("leadoff_judged")!.data.values].map(Boolean), notFirst(252, 720));
+  // A first packet lost on the way starts the count at the first sample
+  // heard, since the device may have lost those samples itself and started
+  // its block after them.
+  got = judging([1, 4, 6], { skip: 2 });
+  assert.deepEqual(
+    [0, 251, 502].map((i) => [got.heard[i]!.index, got.heard[i]!.judged]),
+    [[37, false], [288, false], [539, true]],
+  );
+  assert.deepEqual(judgedOf(got.heard), notFirst(252, 684));
+  got = judging([1, 5, 0], { newEpoch: false });
+  assert.equal(got.heard[0]!.index, 1);
+  assert.deepEqual(judgedOf(got.heard), notFirst(252, 720), "a count not restarted before the start");
+  for (const [firmware, options] of [
+    [[1, 4, 6], { detecting: false }],
+    [[1, 4, 6], { start: false }],
+    [[1, 4, 5], { detecting: false }],
+  ] as const) {
+    got = judging(firmware, options);
+    assert.ok(got.heard.length === 720 && got.heard.every((h) => h.judged), JSON.stringify([firmware, options]));
+    assert.equal(got.npz.has("leadoff_judged"), false, "a recording of verdicts alone holds no such flags");
+  }
+  // A firmware older than 1.4.6 cannot check electrode contact: with
+  // detection on, no sample of it is a verdict, whoever started the stream.
+  for (const options of [{}, { start: false }, { newEpoch: false }] as const) {
+    got = judging([1, 4, 5], options);
+    assert.ok(got.heard.length === 720 && got.heard.every((h) => !h.judged), JSON.stringify(options));
+    assert.deepEqual([...got.npz.get("leadoff_judged")!.data.values].map(Boolean), Array.from({ length: 720 }, () => false));
+  }
+});
+
+/** Each rate the device offers, and the samples of its block there, round(0.512 * rate). */
+const BLOCKS = [
+  [250, 128],
+  [500, 256],
+  [1000, 512],
+] as const;
+
+test("the first lead-off verdict of a stream is marked from the packet that holds it, at every rate the device offers", () => {
+  // The device's first verdict of a stream comes with the last sample of its
+  // first block, the 128th, 256th or 512th, index 128, 256 or 512 since a
+  // stream's first sample is index 1, and every packet carries the bits of
+  // its last sample. A stream this session started with detection on is
+  // marked judged from the packet that holds that sample and not before,
+  // whether its count was restarted before the start or not: at 1 sample a
+  // packet the first 127, 255 or 511 samples are not judged, and at 18 a
+  // packet the samples of every packet before the one that holds it. Every
+  // sample marked judged carries the verdict, and none before it does.
+  for (const [rate, block] of BLOCKS) {
+    for (const per of [1, 18]) {
+      for (const newEpoch of [true, false]) {
+        const said = JSON.stringify({ rate, per, newEpoch });
+        const got = judging([1, 4, 6], { rate, per, n: 3 * block, newEpoch, leadoff: 0b0100 });
+        assert.ok(got.heard.length === 3 * block && got.heard[0]!.index === 1, said);
+        const first = Math.floor((block - 1) / per) * per;
+        assert.deepEqual(got.verdicts, notFirst(first, 3 * block), said);
+        assert.deepEqual(judgedOf(got.heard), got.verdicts, said);
+        assert.ok(got.heard[first]!.index === first + 1 && (per > 1 || got.heard[first]!.index === block), said);
+        assert.ok(got.heard.slice(0, first).every((h) => h.leadoff === 0), said);
+        assert.ok(got.heard.slice(first).every((h) => h.leadoff === 0b0100), said);
+      }
+    }
+  }
+});
+
+test("a break before the first lead-off verdict of a stream starts the count again, and one after it takes nothing from what is marked judged", () => {
+  // The device starts its block over at a sample it loses, and gives no
+  // verdict until a whole block of consecutive samples has ended, its bits
+  // reading 0 meanwhile. At each rate the device offers, a sample the device
+  // loses before its first verdict of a stream, the stream's first sample
+  // among them, starts the count again at the sample after it: no sample
+  // whose bits still read 0 is marked judged, and every sample whose bits
+  // are a verdict is. A packet lost on the way before the first verdict is a
+  // break a host cannot tell from one the device made, and the count starts
+  // again after it too: the samples are marked judged from the packet that
+  // holds the block's last sample counted from the first sample after it,
+  // and the device's verdict came no later. After the first verdict the
+  // device keeps its verdict through a break, and a sample it loses or a
+  // packet lost on the way takes nothing from what is marked judged.
+  for (const [rate, block] of BLOCKS) {
+    const n = 4 * block;
+    const step = Math.floor((block - 1) / 18) * 18;
+    for (const dropped of [[1], [40], [40, 41, 90]]) {
+      const said = JSON.stringify({ rate, dropped });
+      const got = judging([1, 4, 6], { rate, n, dropped, leadoff: 0b0100 });
+      const judged = judgedOf(got.heard);
+      assert.deepEqual(judged, got.verdicts, said);
+      const first = judged.indexOf(true);
+      assert.equal(got.heard[first]!.index, dropped.at(-1)! + 1 + step, said);
+      assert.ok(got.heard.slice(0, first).every((h) => h.leadoff === 0), said);
+      assert.ok(got.heard.slice(first).every((h) => h.leadoff === 0b0100), said);
+    }
+    let said = JSON.stringify({ rate, lost: "on the way" });
+    let got = judging([1, 4, 6], { rate, n, lost: [40], leadoff: 0b0100 });
+    let judged = judgedOf(got.heard);
+    assert.ok(got.heard[36]!.index === 55 && got.heard[36]!.gapBefore, said);
+    const first = judged.indexOf(true);
+    assert.ok(got.heard[first]!.index === 55 + step && judged.slice(first).every(Boolean), said);
+    assert.ok(got.verdicts.indexOf(true) <= first && got.verdicts.every((v, i) => v || !judged[i]), said);
+    said = JSON.stringify({ rate, after: "the first verdict" });
+    got = judging([1, 4, 6], { rate, n, dropped: [2 * block + 7], lost: [3 * block], leadoff: 0b0100 });
+    judged = judgedOf(got.heard);
+    assert.deepEqual(judged, got.verdicts, said);
+    assert.deepEqual(judged, notFirst(step, got.heard.length), said);
+  }
+});
+
+test("turning lead-off detection on is refused on a device whose firmware is older than 1.4.6, before a command is built, and turning it off is not", () => {
+  for (const [firmware, refused] of [
+    [[1, 4, 5], "This device's firmware (1.4.5) cannot check electrode contact. Update it to 1.4.6 or later."],
+    [[1, 2, 0], "This device's firmware (1.2.0) cannot check electrode contact. Update it to 1.4.6 or later."],
+    [[1, 4, 6], null],
+    [[2, 0, 0], null],
+  ] as const) {
+    const info = INFO_BYTES.slice();
+    info.set(firmware, 2);
+    const s = new Session();
+    s.onDeviceInfo(info);
+    assert.deepEqual([...s.setLeadoff(false).bytes], [...P.encodeRequest("set_leadoff", 0)], "turning it off is never refused");
+    if (refused === null) {
+      assert.deepEqual([...s.setLeadoff(true).bytes], [...P.encodeRequest("set_leadoff", 1)]);
+      assert.deepEqual(s.profile().controls.leadoff, { supported: true, options: [false, true] });
+    } else {
+      assert.throws(() => s.setLeadoff(true), (e: unknown) => e instanceof SessionError && e.message === refused);
+      assert.deepEqual(s.profile().controls.leadoff, { supported: false, options: [false], why: refused }, "the profile says why, in the same words");
+    }
+  }
 });
